@@ -1,0 +1,318 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ──────────────────────────────────────────
+// USER & AUTH
+// ──────────────────────────────────────────
+
+model User {
+  id               String    @id @default(cuid())
+  clerkId          String    @unique
+  email            String    @unique
+  name             String
+  avatarUrl        String?
+  subscriptionTier String    @default("free") // free | pro | elite
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  healthProfile    HealthProfile?
+  injuries         Injury[]
+  programs         WorkoutProgram[]
+  sessions         WorkoutSession[]
+  mealLogs         MealLog[]
+  nutritionGoal    NutritionGoal?
+  wearableDevices  WearableDevice[]
+  wearableReadings WearableReading[]
+  conversations    AIConversation[]
+  subscription     Subscription?
+
+  @@index([clerkId])
+  @@index([email])
+}
+
+model HealthProfile {
+  id                       String   @id @default(cuid())
+  userId                   String   @unique
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  age                      Int
+  gender                   String // male | female | other | prefer_not_to_say
+  heightCm                 Float
+  weightKg                 Float
+  fitnessLevel             String // beginner | intermediate | advanced | elite
+  goals                    String[] // array of FitnessGoal values
+  availableDaysPerWeek     Int
+  sessionDurationMinutes   Int
+  availableEquipment       String[]
+  updatedAt                DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Injury {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bodyPart    String
+  severity    String // mild | moderate | severe
+  description String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ──────────────────────────────────────────
+// WORKOUT PROGRAMS
+// ──────────────────────────────────────────
+
+model WorkoutProgram {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  description    String        @default("")
+  generatedByAi  Boolean       @default(false)
+  aiVersion      String?
+  isActive       Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  weeks          ProgramWeek[]
+  sessions       WorkoutSession[]
+
+  @@index([userId])
+}
+
+model ProgramWeek {
+  id         String       @id @default(cuid())
+  programId  String
+  program    WorkoutProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  weekNumber Int
+  days       ProgramDay[]
+
+  @@index([programId])
+}
+
+model ProgramDay {
+  id                       String            @id @default(cuid())
+  weekId                   String
+  week                     ProgramWeek       @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  dayNumber                Int
+  name                     String
+  estimatedDurationMinutes Int               @default(45)
+  notes                    String?
+  exercises                PlannedExercise[]
+  sessions                 WorkoutSession[]
+
+  @@index([weekId])
+}
+
+model Exercise {
+  id             String            @id @default(cuid())
+  name           String
+  slug           String            @unique
+  description    String
+  muscleGroups   String[]
+  equipment      String[]
+  difficultyLevel String
+  videoUrl       String?
+  thumbnailUrl   String?
+  animationKey   String
+  cues           String[]
+  commonMistakes String[]
+  poseConfig     Json?             // PoseKeypointConfig
+
+  plannedIn      PlannedExercise[]
+  completedSets  CompletedSet[]
+
+  @@index([slug])
+}
+
+model PlannedExercise {
+  id              String     @id @default(cuid())
+  dayId           String
+  day             ProgramDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  exerciseId      String
+  exercise        Exercise   @relation(fields: [exerciseId], references: [id])
+  sets            Int
+  reps            Int?
+  durationSeconds Int?
+  restSeconds     Int        @default(60)
+  rpe             Int?
+  notes           String?
+  order           Int
+
+  @@index([dayId])
+}
+
+// ──────────────────────────────────────────
+// WORKOUT SESSIONS
+// ──────────────────────────────────────────
+
+model WorkoutSession {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  programId        String?
+  program          WorkoutProgram? @relation(fields: [programId], references: [id])
+  programDayId     String?
+  programDay       ProgramDay?    @relation(fields: [programDayId], references: [id])
+  startedAt        DateTime       @default(now())
+  endedAt          DateTime?
+  durationSeconds  Int?
+  overallFormScore Float?
+  caloriesBurned   Float?
+  notes            String?
+  heartRateData    Json?          // HeartRateReading[]
+  poseAnalyses     Json?          // PoseAnalysisSummary[]
+
+  completedSets    CompletedSet[]
+
+  @@index([userId])
+  @@index([startedAt])
+}
+
+model CompletedSet {
+  id              String         @id @default(cuid())
+  sessionId       String
+  session         WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exerciseId      String
+  exercise        Exercise       @relation(fields: [exerciseId], references: [id])
+  setNumber       Int
+  reps            Int?
+  weightKg        Float?
+  durationSeconds Int?
+  formScore       Float
+  repData         Json           // RepData[]
+
+  @@index([sessionId])
+}
+
+// ──────────────────────────────────────────
+// NUTRITION
+// ──────────────────────────────────────────
+
+model MealLog {
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loggedAt      DateTime   @default(now())
+  mealType      String // breakfast | lunch | dinner | snack | pre_workout | post_workout
+  items         Json       // FoodItem[]
+  photoUrl      String?
+  aiAnalyzed    Boolean    @default(false)
+  totalCalories Float
+  totalProteinG Float
+  totalCarbsG   Float
+  totalFatG     Float
+  notes         String?
+
+  @@index([userId])
+  @@index([loggedAt])
+}
+
+model NutritionGoal {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyCalories  Float
+  proteinG       Float
+  carbsG         Float
+  fatG           Float
+  waterMl        Float    @default(2500)
+  generatedByAi  Boolean  @default(false)
+  updatedAt      DateTime @updatedAt
+}
+
+// ──────────────────────────────────────────
+// WEARABLES
+// ──────────────────────────────────────────
+
+model WearableDevice {
+  id            String            @id @default(cuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String // apple_watch | garmin | fitbit | google_fit | samsung_health
+  brand         String
+  model         String
+  isConnected   Boolean           @default(false)
+  lastSyncedAt  DateTime?
+  accessToken   String?           // encrypted
+
+  readings      WearableReading[]
+
+  @@index([userId])
+}
+
+model WearableReading {
+  id          String         @id @default(cuid())
+  deviceId    String
+  device      WearableDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String // heart_rate | steps | calories_burned | sleep_minutes | hrv | spo2
+  value       Float
+  unit        String
+  recordedAt  DateTime
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([recordedAt])
+}
+
+// ──────────────────────────────────────────
+// AI CONVERSATIONS
+// ──────────────────────────────────────────
+
+model AIConversation {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  context   String // program_generation | workout_coaching | nutrition_advice | health_assessment
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  messages  AIMessage[]
+
+  @@index([userId])
+}
+
+model AIMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String // user | assistant
+  content        String         @db.Text
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId])
+}
+
+// ──────────────────────────────────────────
+// SUBSCRIPTION
+// ──────────────────────────────────────────
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String    @unique
+  stripeSubscriptionId String?   @unique
+  tier                 String    @default("free") // free | pro | elite
+  status               String    @default("active") // active | canceled | past_due
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
