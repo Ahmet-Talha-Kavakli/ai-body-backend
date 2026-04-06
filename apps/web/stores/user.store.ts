@@ -1,11 +1,12 @@
+'use client'
+
 import { create } from 'zustand'
-import { devtools, persist } from 'zustand/middleware'
+import { devtools } from 'zustand/middleware'
 import type { SubscriptionTier } from '@fitai/shared-types'
 
 interface UserState {
   subscriptionTier: SubscriptionTier
   hasCompletedOnboarding: boolean
-  prefersDarkMode: boolean
   unitSystem: 'metric' | 'imperial'
   // Actions
   setSubscriptionTier: (tier: SubscriptionTier) => void
@@ -15,19 +16,15 @@ interface UserState {
 
 export const useUserStore = create<UserState>()(
   devtools(
-    persist(
-      (set) => ({
-        subscriptionTier: 'free',
-        hasCompletedOnboarding: false,
-        prefersDarkMode: true,
-        unitSystem: 'metric',
+    (set) => ({
+      subscriptionTier: 'free',
+      hasCompletedOnboarding: false,
+      unitSystem: 'metric',
 
-        setSubscriptionTier: (tier) => set({ subscriptionTier: tier }),
-        completeOnboarding: () => set({ hasCompletedOnboarding: true }),
-        setUnitSystem: (system) => set({ unitSystem: system }),
-      }),
-      { name: 'fitai-user-preferences' }
-    ),
+      setSubscriptionTier: (tier) => set({ subscriptionTier: tier }),
+      completeOnboarding: () => set({ hasCompletedOnboarding: true }),
+      setUnitSystem: (system) => set({ unitSystem: system }),
+    }),
     { name: 'user' }
   )
 )

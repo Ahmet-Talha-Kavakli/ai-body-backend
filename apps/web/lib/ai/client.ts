@@ -1,10 +1,10 @@
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 
-export const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
+export const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
 })
 
-export const AI_MODEL = 'claude-sonnet-4-6' as const
+export const AI_MODEL = 'gpt-4o-mini' as const
 
 export const AI_CONFIG = {
   maxTokens: 4096,
