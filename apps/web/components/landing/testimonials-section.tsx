@@ -1,119 +1,178 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { Star, Quote } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect } from 'react'
+import { ChevronLeft, ChevronRight, Star } from 'lucide-react'
 
-const testimonials = [
+const TESTIMONIALS = [
   {
-    name: 'Marcus Johnson',
-    handle: '@marcuslifts',
-    role: 'Powerlifter',
-    avatar: 'MJ',
-    content:
-      'The form analysis is insane. It caught that I was favoring my right side during squats — something I\'d been doing for years without noticing. My squat jumped 30kg in 3 months.',
+    name: 'Sarah Chen',
+    role: 'Fitness Enthusiast',
+    image: '👩‍🦰',
+    quote:
+      'The real-time form corrections have been a game-changer for my workouts. I finally feel confident with my technique.',
     rating: 5,
   },
   {
-    name: 'Sofia Chen',
-    handle: '@sofiafit',
-    role: 'Fitness enthusiast',
-    avatar: 'SC',
-    content:
-      'I\'ve tried every fitness app out there. FitAI is the only one that actually feels like having a real trainer. The 3D demonstrations make every exercise crystal clear.',
-    rating: 5,
-  },
-  {
-    name: 'James Parker',
-    handle: '@jamesrunner',
-    role: 'Marathon runner',
-    avatar: 'JP',
-    content:
-      'Injured my knee last year. The injury-aware programming is a game changer — it built a whole program around my limitation and I came back stronger than before.',
-    rating: 5,
-  },
-  {
-    name: 'Aisha Okafor',
-    handle: '@aishafitness',
-    role: 'CrossFit athlete',
-    avatar: 'AO',
-    content:
-      'The nutrition AI is like having a dietitian in my pocket. It analyzed my macros and adjusted my fueling strategy based on my training volume. My energy levels are through the roof.',
-    rating: 5,
-  },
-  {
-    name: 'David Kim',
-    handle: '@davidkstrength',
-    role: 'Personal trainer',
-    avatar: 'DK',
-    content:
-      'As a trainer myself, I was skeptical. But the AI\'s programming logic is genuinely impressive — periodization, progressive overload, deload weeks. It knows its stuff.',
+    name: 'Mike Johnson',
+    role: 'Professional Athlete',
+    image: '👨‍🦱',
+    quote:
+      'Training with FitAI is like having a personal coach in my pocket 24/7. The AI understands my body better than anyone.',
     rating: 5,
   },
   {
     name: 'Emma Rodriguez',
-    handle: '@emmafitlife',
-    role: 'Beginner',
-    avatar: 'ER',
-    content:
-      'I was completely lost at the gym before FitAI. Now I feel confident every session because I know exactly what I\'m doing and why. Lost 12kg in 4 months!',
+    role: 'Busy Professional',
+    image: '👩',
+    quote:
+      'Perfect for my schedule. I can fit in personalized workouts whenever I have time, and the app adapts to my progress.',
     rating: 5,
   },
 ]
 
 export function TestimonialsSection() {
+  const [current, setCurrent] = useState(0)
+  const [direction, setDirection] = useState(0)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setDirection(1)
+      setCurrent((prev) => (prev + 1) % TESTIMONIALS.length)
+    }, 5000)
+
+    return () => clearInterval(timer)
+  }, [])
+
+  const slideVariants = {
+    enter: (dir: number) => ({
+      x: dir > 0 ? 1000 : -1000,
+      opacity: 0,
+    }),
+    center: {
+      zIndex: 1,
+      x: 0,
+      opacity: 1,
+    },
+    exit: (dir: number) => ({
+      zIndex: 0,
+      x: dir > 0 ? -1000 : 1000,
+      opacity: 0,
+    }),
+  }
+
+  const paginate = (newDirection: number) => {
+    setDirection(newDirection)
+    setCurrent(
+      (prev) =>
+        (prev + newDirection + TESTIMONIALS.length) % TESTIMONIALS.length
+    )
+  }
+
   return (
-    <section className="bg-muted/20 py-24">
-      <div className="container">
+    <section className="py-20 px-4 bg-muted/20">
+      <div className="container mx-auto">
+        {/* Header */}
         <motion.div
-          className="mb-16 text-center"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          className="text-center mb-16"
         >
-          <h2 className="mb-4 text-3xl font-bold sm:text-4xl md:text-5xl">
-            Trusted by{' '}
-            <span className="bg-gradient-to-r from-primary to-neon-blue bg-clip-text text-transparent">
-              athletes worldwide
-            </span>
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            Loved by Athletes
           </h2>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            From beginners to professional athletes — real results from real people.
+          <p className="text-lg text-muted-foreground">
+            Join thousands of people transforming their fitness journey
           </p>
         </motion.div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {testimonials.map((t, index) => (
+        {/* Slider */}
+        <div className="max-w-3xl mx-auto relative h-80">
+          <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
-              key={t.name}
-              className="flex flex-col gap-4 rounded-xl border border-border/50 bg-card p-6"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: (index % 3) * 0.1 }}
+              key={current}
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{
+                x: { type: 'spring', stiffness: 300, damping: 30 },
+                opacity: { duration: 0.2 },
+              }}
+              className="absolute inset-0 w-full"
             >
-              <Quote className="h-6 w-6 text-primary/40" />
-              <p className="flex-1 text-sm leading-relaxed text-muted-foreground">
-                &ldquo;{t.content}&rdquo;
-              </p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                    {t.avatar}
+              <div className="bg-background border border-border/50 rounded-2xl p-8 h-full flex flex-col justify-between">
+                {/* Stars */}
+                <div className="flex gap-1">
+                  {Array(5)
+                    .fill(0)
+                    .map((_, i) => (
+                      <Star
+                        key={i}
+                        className="w-5 h-5 text-yellow-400 fill-yellow-400"
+                      />
+                    ))}
+                </div>
+
+                {/* Quote */}
+                <p className="text-xl font-semibold text-foreground">
+                  "{TESTIMONIALS[current].quote}"
+                </p>
+
+                {/* Author */}
+                <div className="flex items-center gap-4">
+                  <div className="text-4xl">
+                    {TESTIMONIALS[current].image}
                   </div>
                   <div>
-                    <div className="text-sm font-semibold">{t.name}</div>
-                    <div className="text-xs text-muted-foreground">{t.role}</div>
+                    <p className="font-semibold text-foreground">
+                      {TESTIMONIALS[current].name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {TESTIMONIALS[current].role}
+                    </p>
                   </div>
-                </div>
-                <div className="flex">
-                  {Array.from({ length: t.rating }).map((_, i) => (
-                    <Star key={i} className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                  ))}
                 </div>
               </div>
             </motion.div>
-          ))}
+          </AnimatePresence>
+
+          {/* Controls */}
+          <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-4">
+            <button
+              onClick={() => paginate(-1)}
+              className="p-2 rounded-lg border border-border hover:bg-accent transition-colors"
+              aria-label="Previous testimonial"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+
+            <div className="flex gap-2">
+              {TESTIMONIALS.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setDirection(i > current ? 1 : -1)
+                    setCurrent(i)
+                  }}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    i === current ? 'bg-green-500 w-8' : 'bg-muted-foreground'
+                  }`}
+                  aria-label={`Go to testimonial ${i + 1}`}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={() => paginate(1)}
+              className="p-2 rounded-lg border border-border hover:bg-accent transition-colors"
+              aria-label="Next testimonial"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
     </section>

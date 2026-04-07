@@ -2,23 +2,19 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Check, Zap } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils/cn'
+import { Check, Star } from 'lucide-react'
 
-const plans = [
+const PLANS = [
   {
     name: 'Free',
     price: '$0',
     period: 'forever',
-    description: 'Get started and experience AI coaching.',
+    description: 'Get started with basic AI coaching',
     features: [
-      '3 AI workout sessions/month',
-      'Basic pose detection',
-      'Pre-built workout programs',
-      'Nutrition logging (manual)',
+      '3 AI workouts/month',
+      'Basic form detection',
       'Progress tracking',
+      'Community access',
     ],
     cta: 'Get Started',
     href: '/sign-up',
@@ -28,20 +24,17 @@ const plans = [
     name: 'Pro',
     price: '$19',
     period: '/month',
-    description: 'Full AI coaching experience, unlimited sessions.',
+    description: 'Full AI coaching experience',
     badge: 'Most Popular',
     features: [
-      'Unlimited AI workout sessions',
-      'Real-time form analysis & corrections',
-      '3D trainer demonstrations',
-      'AI-generated personalized programs',
-      'Photo meal analysis (AI dietitian)',
-      'Smartwatch integration',
-      'Heart rate zone training',
-      'Injury-aware program adaptation',
-      'Priority AI response speed',
+      'Unlimited AI workouts',
+      'Real-time form analysis',
+      'Personalized programs',
+      'AI meal analysis',
+      'Smartwatch sync',
+      'Priority support',
     ],
-    cta: 'Start Pro Free',
+    cta: 'Start Free Trial',
     href: '/sign-up?plan=pro',
     highlighted: true,
   },
@@ -49,97 +42,128 @@ const plans = [
     name: 'Elite',
     price: '$49',
     period: '/month',
-    description: 'For serious athletes who want everything.',
+    description: 'Advanced features for serious athletes',
     features: [
       'Everything in Pro',
-      'Advanced biomechanics analysis',
-      'Multi-camera session support',
+      'Advanced biomechanics',
+      'Multi-camera support',
       'Body composition tracking',
-      'VR sessions (coming soon)',
-      'Export data to CSV/PDF',
-      'Priority support',
-      'Early access to new features',
+      'VR sessions (coming)',
+      'Dedicated coach',
+      'Early feature access',
     ],
-    cta: 'Go Elite',
+    cta: 'Start Free Trial',
     href: '/sign-up?plan=elite',
     highlighted: false,
   },
 ]
 
+function PricingCard({ plan, index }: any) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.1 }}
+      className={`relative rounded-2xl border transition-all duration-300 ${
+        plan.highlighted
+          ? 'border-green-500/50 bg-background shadow-2xl shadow-green-500/20 md:scale-105'
+          : 'border-border/50 bg-background/40 backdrop-blur'
+      }`}
+    >
+      {/* Badge */}
+      {plan.badge && (
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-green-500/10 border border-green-500/30">
+            <Star className="w-4 h-4 text-green-500 fill-green-500" />
+            <span className="text-sm font-semibold text-green-500">
+              {plan.badge}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div className="p-8">
+        {/* Header */}
+        <h3 className="text-2xl font-bold text-foreground mb-2">
+          {plan.name}
+        </h3>
+        <p className="text-sm text-muted-foreground mb-6">
+          {plan.description}
+        </p>
+
+        {/* Price */}
+        <div className="mb-8">
+          <div className="flex items-baseline gap-1">
+            <span className="text-4xl font-bold text-foreground">
+              {plan.price}
+            </span>
+            <span className="text-muted-foreground">{plan.period}</span>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <Link
+          href={plan.href}
+          className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 block text-center mb-8 ${
+            plan.highlighted
+              ? 'bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/20'
+              : 'border border-border hover:bg-accent'
+          }`}
+        >
+          {plan.cta}
+        </Link>
+
+        {/* Features */}
+        <div className="space-y-3">
+          {plan.features.map((feature) => (
+            <div key={feature} className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+              <span className="text-sm text-foreground">{feature}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 export function PricingSection() {
   return (
-    <section id="pricing" className="py-24">
-      <div className="container">
+    <section id="pricing" className="py-20 px-4">
+      <div className="container mx-auto">
+        {/* Header */}
         <motion.div
-          className="mb-16 text-center"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          className="text-center mb-16"
         >
-          <h2 className="mb-4 text-3xl font-bold sm:text-4xl md:text-5xl">
-            Simple, transparent{' '}
-            <span className="bg-gradient-to-r from-primary to-neon-blue bg-clip-text text-transparent">
-              pricing
-            </span>
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            Simple, Transparent Pricing
           </h2>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            Cancel anytime. No hidden fees. Start free and upgrade when you&apos;re ready.
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Choose the perfect plan for your fitness journey
           </p>
         </motion.div>
 
-        <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-3">
-          {plans.map((plan, index) => (
-            <motion.div
-              key={plan.name}
-              className={cn(
-                'relative flex flex-col rounded-2xl border p-8',
-                plan.highlighted
-                  ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
-                  : 'border-border bg-card'
-              )}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: index * 0.1 }}
-            >
-              {plan.badge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="gap-1 bg-primary px-3 py-1 text-primary-foreground">
-                    <Zap className="h-3 w-3" />
-                    {plan.badge}
-                  </Badge>
-                </div>
-              )}
-
-              <div className="mb-6">
-                <h3 className="mb-1 text-lg font-bold">{plan.name}</h3>
-                <div className="mb-2 flex items-end gap-1">
-                  <span className="text-4xl font-bold">{plan.price}</span>
-                  <span className="mb-1 text-muted-foreground">{plan.period}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{plan.description}</p>
-              </div>
-
-              <ul className="mb-8 flex-1 space-y-3">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2.5 text-sm">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Button
-                className={cn('w-full', !plan.highlighted && 'variant-outline')}
-                variant={plan.highlighted ? 'default' : 'outline'}
-                asChild
-              >
-                <Link href={plan.href}>{plan.cta}</Link>
-              </Button>
-            </motion.div>
+        {/* Pricing cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {PLANS.map((plan, i) => (
+            <PricingCard key={plan.name} plan={plan} index={i} />
           ))}
         </div>
+
+        {/* Footer note */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3 }}
+          className="text-center text-sm text-muted-foreground mt-12"
+        >
+          All plans include 7-day free trial. No credit card required.
+        </motion.p>
       </div>
     </section>
   )

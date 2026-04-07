@@ -1,108 +1,124 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ClipboardList, Dumbbell, TrendingUp } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 
-const steps = [
+const STEPS = [
   {
-    number: '01',
-    icon: ClipboardList,
-    title: 'Complete Your Profile',
-    description:
-      'Tell us about your fitness goals, health history, injuries, available equipment, and schedule. The more we know, the better your program.',
-    color: 'text-primary',
-    bg: 'bg-primary/10',
-    border: 'border-primary/30',
+    title: 'Set Up Your Profile',
+    description: 'Tell us about your fitness level, goals, and available equipment. Our AI learns your preferences.',
+    details: [
+      'Answer quick fitness assessment questions',
+      'Define your goals (strength, endurance, flexibility)',
+      'List available equipment',
+    ],
   },
   {
-    number: '02',
-    icon: Dumbbell,
-    title: 'Train With Your AI Coach',
-    description:
-      'Follow 3D demonstrations, get real-time form corrections from computer vision, and receive live voice coaching from your AI trainer.',
-    color: 'text-blue-400',
-    bg: 'bg-blue-400/10',
-    border: 'border-blue-400/30',
+    title: 'Start Your AI Workout',
+    description: 'Position your camera and begin your personalized workout session guided by our AI trainer.',
+    details: [
+      'Choose from 100+ personalized workouts',
+      'Get real-time form corrections',
+      'Receive instant feedback on every rep',
+    ],
   },
   {
-    number: '03',
-    icon: TrendingUp,
-    title: 'Adapt & Progress',
-    description:
-      'Your program automatically evolves based on your performance, recovery data, and progress. The AI adjusts intensity, exercises, and nutrition as you improve.',
-    color: 'text-purple-400',
-    bg: 'bg-purple-400/10',
-    border: 'border-purple-400/30',
+    title: 'Track & Improve',
+    description: 'Watch your progress with detailed analytics and AI-powered insights about your performance.',
+    details: [
+      'See detailed performance metrics',
+      'Get weekly progress reports',
+      'Receive personalized recommendations',
+    ],
   },
 ]
 
-export function HowItWorksSection() {
+function AccordionItem({ step, index, isOpen, onToggle }: any) {
   return (
-    <section id="how-it-works" className="bg-muted/20 py-24">
-      <div className="container">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.1 }}
+      className="border border-border/50 rounded-lg overflow-hidden bg-background/40 backdrop-blur"
+    >
+      <button
+        onClick={onToggle}
+        className="w-full px-6 py-4 flex items-center justify-between hover:bg-accent/50 transition-colors"
+      >
+        <div className="text-left flex-1">
+          <h3 className="text-lg font-semibold text-foreground flex items-center gap-3">
+            <span className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-500 font-bold">
+              {index + 1}
+            </span>
+            {step.title}
+          </h3>
+        </div>
+        <ChevronDown
+          className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {isOpen && (
         <motion.div
-          className="mb-16 text-center"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="border-t border-border/30"
+        >
+          <div className="px-6 py-4 bg-background/20">
+            <p className="text-muted-foreground mb-4">{step.description}</p>
+            <ul className="space-y-2">
+              {step.details.map((detail) => (
+                <li key={detail} className="flex items-start gap-3">
+                  <span className="text-green-500 mt-1">✓</span>
+                  <span className="text-sm text-foreground">{detail}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
+  )
+}
+
+export function HowItWorksSection() {
+  const [openIndex, setOpenIndex] = useState(0)
+
+  return (
+    <section id="how-it-works" className="py-20 px-4">
+      <div className="container mx-auto max-w-3xl">
+        {/* Header */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          className="text-center mb-16"
         >
-          <h2 className="mb-4 text-3xl font-bold sm:text-4xl md:text-5xl">
-            From setup to gains in{' '}
-            <span className="bg-gradient-to-r from-primary to-neon-blue bg-clip-text text-transparent">
-              minutes
-            </span>
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            How It Works
           </h2>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            No confusing settings or manual configurations. FitAI adapts to you automatically.
+          <p className="text-lg text-muted-foreground">
+            Get started in three simple steps with our AI-powered fitness platform
           </p>
         </motion.div>
 
-        <div className="relative">
-          {/* Connector line */}
-          <div className="absolute left-1/2 top-24 hidden h-[calc(100%-6rem)] w-px -translate-x-1/2 bg-gradient-to-b from-primary/50 via-blue-400/50 to-purple-400/50 lg:block" />
-
-          <div className="flex flex-col gap-12 lg:gap-0">
-            {steps.map((step, index) => {
-              const Icon = step.icon
-              const isEven = index % 2 === 1
-              return (
-                <motion.div
-                  key={step.number}
-                  className={`relative flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-0 ${
-                    isEven ? 'lg:flex-row-reverse' : ''
-                  }`}
-                  initial={{ opacity: 0, x: isEven ? 40 : -40 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6 }}
-                >
-                  {/* Content */}
-                  <div className={`flex-1 ${isEven ? 'lg:pl-20 lg:text-left' : 'lg:pr-20 lg:text-right'}`}>
-                    <div
-                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium ${step.bg} ${step.color} mb-4`}
-                    >
-                      Step {step.number}
-                    </div>
-                    <h3 className="mb-3 text-2xl font-bold">{step.title}</h3>
-                    <p className="text-muted-foreground">{step.description}</p>
-                  </div>
-
-                  {/* Center icon */}
-                  <div className="relative flex shrink-0 items-center justify-center lg:w-16">
-                    <div
-                      className={`flex h-16 w-16 items-center justify-center rounded-full border-2 ${step.border} ${step.bg} z-10`}
-                    >
-                      <Icon className={`h-7 w-7 ${step.color}`} />
-                    </div>
-                  </div>
-
-                  {/* Empty spacer for opposite side */}
-                  <div className="hidden flex-1 lg:block" />
-                </motion.div>
-              )
-            })}
-          </div>
+        {/* Accordion */}
+        <div className="space-y-3">
+          {STEPS.map((step, i) => (
+            <AccordionItem
+              key={step.title}
+              step={step}
+              index={i}
+              isOpen={openIndex === i}
+              onToggle={() => setOpenIndex(openIndex === i ? -1 : i)}
+            />
+          ))}
         </div>
       </div>
     </section>
