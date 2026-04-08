@@ -62,6 +62,7 @@ const PLANS = [
 import { RippleButton } from '@/components/ui/multi-type-ripple-buttons'
 import { UpgradeBanner } from '@/components/ui/upgrade-banner'
 import { CountdownBanner } from '@/components/ui/countdown-banner'
+import { GlowCard } from '@/components/ui/spotlight-card'
 
 function PricingCard({ plan, index }: any) {
   return (
@@ -70,67 +71,75 @@ function PricingCard({ plan, index }: any) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ delay: index * 0.1 }}
-      className={`relative rounded-2xl border transition-all duration-300 ${
+      className={`relative rounded-2xl transition-all duration-300 ${
         plan.highlighted
-          ? 'border-primary/50 bg-background shadow-2xl shadow-primary/20 md:scale-105'
-          : 'border-border/50 bg-background/40 backdrop-blur'
+          ? 'md:scale-105'
+          : ''
       }`}
     >
-      {/* Badge */}
-      {plan.badge && (
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-primary/10 border border-primary/30">
-            <Star className="w-4 h-4 text-primary fill-primary" />
-            <span className="text-sm font-semibold text-primary">
-              {plan.badge}
-            </span>
-          </div>
-        </div>
-      )}
-
-      <div className="p-8">
-        {/* Header */}
-        <h3 className="text-2xl font-bold text-foreground mb-2">
-          {plan.name}
-        </h3>
-        <p className="text-sm text-muted-foreground mb-6">
-          {plan.description}
-        </p>
-
-        {/* Price */}
-        <div className="mb-8">
-          <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-bold text-foreground">
-              {plan.price}
-            </span>
-            <span className="text-muted-foreground">{plan.period}</span>
-          </div>
-        </div>
-
-        {/* CTA - RippleButton */}
-        <div className="mb-8">
-          <RippleButton
-            href={plan.href}
-            className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 block text-center ${
-              plan.highlighted
-                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-lg hover:shadow-green-500/30'
-                : 'border border-border hover:bg-accent'
-            }`}
-          >
-            {plan.cta}
-          </RippleButton>
-        </div>
-
-        {/* Features */}
-        <div className="space-y-3">
-          {plan.features.map((feature) => (
-            <div key={feature} className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span className="text-sm text-foreground">{feature}</span>
+      <GlowCard
+        glowColor={plan.highlighted ? 'green' : 'blue'}
+        className="h-full"
+        customSize
+        width="100%"
+        height="100%"
+      >
+        {/* Badge */}
+        {plan.badge && (
+          <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
+            <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-primary/10 border border-primary/30">
+              <Star className="w-4 h-4 text-primary fill-primary" />
+              <span className="text-sm font-semibold text-primary">
+                {plan.badge}
+              </span>
             </div>
-          ))}
+          </div>
+        )}
+
+        <div className="p-8">
+          {/* Header */}
+          <h3 className="text-2xl font-bold text-foreground mb-2">
+            {plan.name}
+          </h3>
+          <p className="text-sm text-muted-foreground mb-6">
+            {plan.description}
+          </p>
+
+          {/* Price */}
+          <div className="mb-8">
+            <div className="flex items-baseline gap-1">
+              <span className="text-4xl font-bold text-foreground">
+                {plan.price}
+              </span>
+              <span className="text-muted-foreground">{plan.period}</span>
+            </div>
+          </div>
+
+          {/* CTA - RippleButton */}
+          <div className="mb-8">
+            <RippleButton
+              href={plan.href}
+              className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 block text-center ${
+                plan.highlighted
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-lg hover:shadow-green-500/30'
+                  : 'border border-border hover:bg-accent'
+              }`}
+            >
+              {plan.cta}
+            </RippleButton>
+          </div>
+
+          {/* Features */}
+          <div className="space-y-3">
+            {plan.features.map((feature) => (
+              <div key={feature} className="flex items-start gap-3">
+                <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <span className="text-sm text-foreground">{feature}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </GlowCard>
     </motion.div>
   )
 }
@@ -162,16 +171,32 @@ export function PricingSection() {
           ))}
         </div>
 
+        {/* Upgrade promotion banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="mt-16"
+        >
+          <UpgradeBanner />
+        </motion.div>
+
         {/* Footer note */}
-        <motion.p
+        <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ delay: 0.3 }}
-          className="text-center text-sm text-muted-foreground mt-12"
+          transition={{ delay: 0.4 }}
+          className="text-center mt-8"
         >
-          All plans include 7-day free trial. No credit card required.
-        </motion.p>
+          <p className="text-sm text-muted-foreground">
+            All plans include 7-day free trial. No credit card required.
+          </p>
+          <p className="text-sm text-muted-foreground mt-4">
+            Need a custom enterprise plan? <a href="/contact" className="text-primary hover:underline">Contact our sales team</a>
+          </p>
+        </motion.div>
       </div>
     </section>
   )

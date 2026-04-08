@@ -68,6 +68,19 @@ export function FeaturesSection() {
           </p>
         </motion.div>
 
+        {/* Enhanced Subtitle */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="text-center mb-12"
+        >
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            Leverage cutting-edge AI technology with real-time analysis and personalized coaching
+          </p>
+        </motion.div>
+
         {/* Feature Cards Grid - Glow Effect */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -79,12 +92,18 @@ export function FeaturesSection() {
           {features.map((item, idx) => (
             <motion.div
               key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              whileHover={{ y: -8 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: idx * 0.1 }}
+              transition={{
+                duration: 0.6,
+                delay: idx * 0.15,
+                type: "spring",
+                stiffness: 100
+              }}
             >
-              <GlowCard className="h-full">
+              <GlowCard className="h-full hover:shadow-xl transition-shadow" glowColor={['blue', 'purple', 'orange'][idx % 3] as any}>
                 <div className={`inline-block p-3 rounded-lg bg-gradient-to-br ${item.color} mb-4`}>
                   <div className="text-white">{item.icon}</div>
                 </div>

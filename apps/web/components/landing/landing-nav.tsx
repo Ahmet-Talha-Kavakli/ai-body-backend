@@ -7,6 +7,8 @@ import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-
 import { cn } from '@/lib/utils/cn'
 import { Dumbbell, Menu, X } from 'lucide-react'
 
+// ─── Scroll Detection ────────────────────────────────────────────────────────
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface NavLink {
@@ -67,36 +69,49 @@ export function LandingNav() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [hoveredHref, setHoveredHref] = useState<string | null>(null)
   const [activeHref, setActiveHref] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
   const { scrollY } = useScroll()
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
     setIsScrolled(latest > 20)
   })
 
+  // Only mount client-side to prevent hydration mismatch
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   // Close mobile menu on resize
   useEffect(() => {
+    if (!isMounted) return
     const handler = () => setMobileOpen(false)
     window.addEventListener('resize', handler)
     return () => window.removeEventListener('resize', handler)
-  }, [])
+  }, [isMounted])
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
+    if (!isMounted) return
     document.body.style.overflow = mobileOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
-  }, [mobileOpen])
+  }, [mobileOpen, isMounted])
 
   return (
     <motion.header
       className={cn(
-        'fixed inset-x-0 top-0 z-50 transition-all duration-500',
+        'fixed inset-x-0 top-0 z-50 transition-all duration-300',
         isScrolled
-          ? 'bg-background/80 shadow-sm shadow-border/5 backdrop-blur-xl'
-          : 'bg-transparent'
+          ? 'bg-background/85 shadow-lg shadow-primary/5 backdrop-blur-md border-b border-border/30'
+          : 'bg-transparent border-b border-transparent'
       )}
       initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 280, damping: 28, delay: 0.1 }}
+      style={{
+        boxShadow: isScrolled
+          ? '0 4px 20px rgba(0, 0, 0, 0.1)'
+          : '0 0px 0px rgba(0, 0, 0, 0)',
+      }}
     >
       <div className="container flex h-16 items-center justify-between">
 

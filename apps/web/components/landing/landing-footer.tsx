@@ -95,14 +95,20 @@ export function LandingFooter() {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
       >
-        <h3 className="text-center text-sm font-semibold text-foreground mb-8">TRUSTED BY LEADING BRANDS</h3>
-        <InfiniteSlider>
+        <h3 className="text-center text-sm font-semibold text-foreground mb-8 uppercase tracking-widest">
+          ✨ Trusted by Leading Brands ✨
+        </h3>
+        <InfiniteSlider duration={20}>
           <div className="flex gap-8 whitespace-nowrap">
-            <div className="px-6 py-2 bg-card/30 rounded-lg">Nike</div>
-            <div className="px-6 py-2 bg-card/30 rounded-lg">Adidas</div>
-            <div className="px-6 py-2 bg-card/30 rounded-lg">Apple Fitness</div>
-            <div className="px-6 py-2 bg-card/30 rounded-lg">Peloton</div>
-            <div className="px-6 py-2 bg-card/30 rounded-lg">Fitbit</div>
+            {['Nike', 'Adidas', 'Apple Fitness', 'Peloton', 'Fitbit'].map((brand) => (
+              <motion.div
+                key={brand}
+                whileHover={{ scale: 1.1 }}
+                className="px-6 py-3 bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg cursor-pointer transition-all hover:border-primary/40"
+              >
+                <span className="font-semibold text-foreground">{brand}</span>
+              </motion.div>
+            ))}
           </div>
         </InfiniteSlider>
       </motion.div>
@@ -129,8 +135,11 @@ export function LandingFooter() {
                 programs, and smarter nutrition.
               </p>
               {/* Social links */}
-              <div className="mt-6">
-                <SocialButtons variant="compact" layout="grid" />
+              <div className="mt-8">
+                <p className="text-xs font-semibold text-muted-foreground mb-4 uppercase tracking-wide">
+                  Follow Us
+                </p>
+                <SocialButtons variant="default" layout="row" />
               </div>
             </motion.div>
 
@@ -138,22 +147,30 @@ export function LandingFooter() {
             {FOOTER_SECTIONS.map((section, i) => (
               <motion.div
                 key={section.title}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
+                transition={{ delay: i * 0.1 }}
               >
-                <h4 className="mb-4 text-sm font-semibold text-foreground">{section.title}</h4>
+                <h4 className="mb-4 text-sm font-semibold text-foreground uppercase tracking-wide">
+                  {section.title}
+                </h4>
                 <ul className="space-y-2.5">
-                  {section.links.map((link) => (
-                    <li key={link.href}>
+                  {section.links.map((link, linkIdx) => (
+                    <motion.li
+                      key={link.href}
+                      initial={{ opacity: 0, x: -10 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.1 + linkIdx * 0.05 }}
+                    >
                       <Link
                         href={link.href}
-                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                        className="text-sm text-muted-foreground transition-colors hover:text-primary hover:translate-x-1 inline-block"
                       >
                         {link.label}
                       </Link>
-                    </li>
+                    </motion.li>
                   ))}
                 </ul>
               </motion.div>

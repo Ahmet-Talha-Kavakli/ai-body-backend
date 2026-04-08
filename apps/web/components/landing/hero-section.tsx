@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { ChevronDown } from 'lucide-react'
 import Link from 'next/link'
+import { ParticleTextEffect } from '@/components/ui/particle-text-effect'
+import { GlowCard } from '@/components/ui/spotlight-card'
 
 export function HeroSection() {
   const morphingWords = ['Stronger', 'Faster', 'Smarter', 'Better']
@@ -16,6 +18,30 @@ export function HeroSection() {
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-30" />
         <div className="absolute bottom-1/2 right-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl opacity-20" />
+      </div>
+
+      {/* Spotlight cards - background decoration */}
+      <div className="hidden lg:block absolute inset-0 pointer-events-none overflow-hidden">
+        <GlowCard
+          size="lg"
+          glowColor="blue"
+          className="absolute top-20 right-10 opacity-20"
+          customSize
+          width="300px"
+          height="300px"
+        >
+          <div className="text-xs text-muted-foreground/50 text-center p-4">AI Analysis</div>
+        </GlowCard>
+        <GlowCard
+          size="lg"
+          glowColor="purple"
+          className="absolute bottom-32 left-10 opacity-15"
+          customSize
+          width="250px"
+          height="250px"
+        >
+          <div className="text-xs text-muted-foreground/50 text-center p-4">Real-time Coaching</div>
+        </GlowCard>
       </div>
 
       {/* Main Content */}
@@ -34,15 +60,16 @@ export function HeroSection() {
           </div>
         </motion.div>
 
-        <motion.h1
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight mb-6"
+          className="mb-6"
         >
-          Your AI Personal <br />
-          <span className="text-primary">Trainer</span>
-        </motion.h1>
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight">
+            Your AI Personal Trainer
+          </h1>
+        </motion.div>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}

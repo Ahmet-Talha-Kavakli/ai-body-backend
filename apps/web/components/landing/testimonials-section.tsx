@@ -62,6 +62,24 @@ export function TestimonialsSection() {
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-6">
             Loved by Fitness<br />Professionals & Athletes
           </h2>
+
+          {/* Testimonial count badge */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="flex justify-center gap-8 mt-8 flex-wrap"
+          >
+            <div className="text-center">
+              <div className="text-3xl font-bold text-primary">10K+</div>
+              <p className="text-sm text-muted-foreground">5-Star Reviews</p>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-primary">4.9/5</div>
+              <p className="text-sm text-muted-foreground">Average Rating</p>
+            </div>
+          </motion.div>
         </motion.div>
 
         {/* Featured Testimonial with Star Rating */}
@@ -131,12 +149,40 @@ export function TestimonialsSection() {
           ))}
         </motion.div>
 
+        {/* Transaction-style testimonials for premium feel */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+          className="mb-12"
+        >
+          <h3 className="text-center text-xl font-semibold text-foreground mb-8">
+            Real Results from Real Users
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            <div className="p-6 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20">
+              <h4 className="font-bold text-lg text-green-500 mb-2">Form Accuracy</h4>
+              <p className="text-sm text-muted-foreground mb-3">98% accuracy in real-time form analysis</p>
+              <div className="text-3xl font-bold text-green-500">+45%</div>
+              <p className="text-xs text-muted-foreground mt-1">improvement in 30 days</p>
+            </div>
+            <div className="p-6 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20">
+              <h4 className="font-bold text-lg text-blue-500 mb-2">Consistency Boost</h4>
+              <p className="text-sm text-muted-foreground mb-3">Users maintain more consistent schedules</p>
+              <div className="text-3xl font-bold text-blue-500">+220%</div>
+              <p className="text-xs text-muted-foreground mt-1">workout frequency increase</p>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Stagger Testimonials Component - Fancy animation */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.5 }}
+          className="rounded-2xl overflow-hidden bg-gradient-to-br from-primary/5 to-background p-8"
         >
           <StaggerTestimonials />
         </motion.div>
