@@ -93,15 +93,6 @@ export function StatsSection() {
             <CommitsGrid text="FITAI" />
           </motion.div>
 
-          {/* Particle Canvas */}
-          <motion.div
-            variants={itemVariants}
-            className="flex justify-center items-center min-h-[300px] bg-card/30 rounded-2xl border border-border/30 backdrop-blur overflow-hidden"
-          >
-            <div className="w-full h-full">
-              <ParticleCanvas colors={['#3b82f6', '#8b5cf6', '#ec4899']} />
-            </div>
-          </motion.div>
 
           {/* Particle Text Effect */}
           <motion.div

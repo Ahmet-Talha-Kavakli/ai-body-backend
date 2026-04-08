@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { GlobePulse } from '@/components/ui/cobe-globe-pulse'
 import { WeatherCard } from '@/components/ui/weather-card'
-import { WiFiLoader } from '@/components/ui/wifi-loader'
+import { WifiLoader } from '@/components/ui/wifi-loader'
 import { ShakeSpinLoader } from '@/components/ui/shake-spin-loader'
 import {
   Watch,
@@ -73,7 +73,7 @@ export default function DevicesPage() {
             Manage your fitness tracker connections
           </p>
         </div>
-        <WiFiLoader />
+        <WifiLoader />
       </motion.div>
 
       {/* Weather Card - Environmental Context */}

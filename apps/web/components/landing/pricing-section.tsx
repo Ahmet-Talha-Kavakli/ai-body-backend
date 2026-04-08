@@ -139,15 +139,6 @@ export function PricingSection() {
   return (
     <section id="pricing" className="py-20 px-4">
       <div className="container mx-auto">
-        {/* Countdown Banner - Limited Time Offer */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-16"
-        >
-          <CountdownBanner />
-        </motion.div>
 
         {/* Header */}
         <motion.div

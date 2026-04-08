@@ -10,10 +10,6 @@ import { SendMessageButton } from '@/components/ui/send-message-button'
 export function CtaSection() {
   return (
     <section className="relative py-24 px-4 w-full bg-background overflow-hidden">
-      {/* Scroll Expansion Background */}
-      <div className="absolute inset-0 opacity-30">
-        <ScrollExpandMedia />
-      </div>
 
       <div className="relative z-10 max-w-4xl mx-auto text-center">
         <motion.div

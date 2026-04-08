@@ -4,27 +4,13 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { ChevronDown } from 'lucide-react'
 import Link from 'next/link'
-import { ContainerScroll } from '@/components/ui/container-scroll-animation'
-import { GlobePulse } from '@/components/ui/cobe-globe-pulse'
-import { GooeyText } from '@/components/ui/gooey-text-morphing'
-import { ScrollMorphHero } from '@/components/ui/scroll-morph-hero'
-import { WarpBackground } from '@/components/ui/warp-background'
-import { AnimatedShaderHero } from '@/components/ui/animated-shader-hero'
 
 export function HeroSection() {
   const morphingWords = ['Stronger', 'Faster', 'Smarter', 'Better']
 
   return (
     <section className="relative min-h-screen w-full overflow-hidden bg-background flex items-center justify-center">
-      {/* Warp Background Effect */}
-      <div className="absolute inset-0">
-        <WarpBackground />
-      </div>
 
-      {/* Animated Shader Background */}
-      <div className="absolute inset-0 opacity-30">
-        <AnimatedShaderHero />
-      </div>
 
       {/* Glowing blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -55,9 +41,7 @@ export function HeroSection() {
           className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight mb-6"
         >
           Your AI Personal <br />
-          <span className="text-primary inline-block">
-            <GooeyText words={morphingWords} />
-          </span>
+          <span className="text-primary">Trainer</span>
         </motion.h1>
 
         <motion.p
@@ -87,17 +71,6 @@ export function HeroSection() {
           </Link>
         </motion.div>
 
-        {/* Globe Pulse - Interactive Globe */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
-          className="mb-12 flex justify-center"
-        >
-          <div className="w-80 h-80">
-            <GlobePulse />
-          </div>
-        </motion.div>
 
         {/* Stats Grid */}
         <motion.div

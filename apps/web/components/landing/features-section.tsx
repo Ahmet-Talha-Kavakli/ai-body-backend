@@ -98,17 +98,6 @@ export function FeaturesSection() {
           ))}
         </motion.div>
 
-        {/* Reveal Images List */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          className="mt-20"
-        >
-          <h3 className="text-3xl font-bold mb-12 text-center">How FitAI Works</h3>
-          <RevealImageList images={imageData} />
-        </motion.div>
       </div>
     </section>
   )
