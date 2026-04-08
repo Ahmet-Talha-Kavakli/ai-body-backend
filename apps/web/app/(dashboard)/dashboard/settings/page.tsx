@@ -6,7 +6,6 @@ import { Loader } from '@/components/ui/loader'
 import { MacbookLoader } from '@/components/ui/macbook-loader'
 import { NewtonsCradle } from '@/components/ui/newtons-cradle'
 import { AlertBoxes } from '@/components/ui/alert-boxes'
-import { Error as ErrorComponent } from '@/components/ui/error'
 import { Bell, Lock, Trash2, LogOut, User } from 'lucide-react'
 
 const SETTINGS_SECTIONS = [
@@ -15,9 +14,9 @@ const SETTINGS_SECTIONS = [
     title: 'Account Settings',
     description: 'Manage your profile information',
     items: [
-      { label: 'Full Name', value: 'John Doe', editable: true },
-      { label: 'Email', value: 'john@example.com', editable: false },
-      { label: 'Username', value: '@johndoe', editable: true },
+      { label: 'Full Name', value: 'John Doe', editable: true, action: '' },
+      { label: 'Email', value: 'john@example.com', editable: false, action: '' },
+      { label: 'Username', value: '@johndoe', editable: true, action: '' },
     ],
   },
   {
@@ -39,9 +38,10 @@ const SETTINGS_SECTIONS = [
       {
         label: 'Two-Factor Authentication',
         value: 'Enabled',
+        editable: false,
         action: 'Disable',
       },
-      { label: 'Last Password Change', value: '30 days ago', action: 'Change' },
+      { label: 'Last Password Change', value: '30 days ago', editable: false, action: 'Change' },
     ],
   },
 ]

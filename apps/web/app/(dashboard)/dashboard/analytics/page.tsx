@@ -84,7 +84,7 @@ export default function AnalyticsPage() {
         transition={{ delay: 0.05 }}
         className="mb-12"
       >
-        <ActionSearchBar placeholder="Search workouts, achievements..." />
+        <ActionSearchBar />
       </motion.div>
 
       {/* Stats Grid */}

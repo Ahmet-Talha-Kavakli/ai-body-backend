@@ -6,7 +6,6 @@ import { Loader } from '@/components/ui/loader'
 import { GooeyDotsLoader } from '@/components/ui/gooey-dots-loader'
 import { MusicBarLoader } from '@/components/ui/music-bar-loader'
 import { NotificationsWithActions } from '@/components/ui/notifications-with-actions'
-import { GlowCard } from '@/components/ui/spotlight-card'
 
 const MACROS = [
   {
