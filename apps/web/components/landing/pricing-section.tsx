@@ -59,6 +59,10 @@ const PLANS = [
   },
 ]
 
+import { RippleButton } from '@/components/ui/multi-type-ripple-buttons'
+import { UpgradeBanner } from '@/components/ui/upgrade-banner'
+import { CountdownBanner } from '@/components/ui/countdown-banner'
+
 function PricingCard({ plan, index }: any) {
   return (
     <motion.div
@@ -103,17 +107,19 @@ function PricingCard({ plan, index }: any) {
           </div>
         </div>
 
-        {/* CTA */}
-        <Link
-          href={plan.href}
-          className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 block text-center mb-8 ${
-            plan.highlighted
-              ? 'bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/20'
-              : 'border border-border hover:bg-accent'
-          }`}
-        >
-          {plan.cta}
-        </Link>
+        {/* CTA - RippleButton */}
+        <div className="mb-8">
+          <RippleButton
+            href={plan.href}
+            className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 block text-center ${
+              plan.highlighted
+                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-lg hover:shadow-green-500/30'
+                : 'border border-border hover:bg-accent'
+            }`}
+          >
+            {plan.cta}
+          </RippleButton>
+        </div>
 
         {/* Features */}
         <div className="space-y-3">
@@ -133,6 +139,16 @@ export function PricingSection() {
   return (
     <section id="pricing" className="py-20 px-4">
       <div className="container mx-auto">
+        {/* Countdown Banner - Limited Time Offer */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-16"
+        >
+          <CountdownBanner />
+        </motion.div>
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

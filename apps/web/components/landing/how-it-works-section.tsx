@@ -1,6 +1,10 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { LandingAccordionItem } from '@/components/ui/interactive-image-accordion'
+import { InteractiveFolderCard } from '@/components/ui/interactive-folder-card'
+import { BookFlip } from '@/components/ui/book-flip'
+import { useState } from 'react'
 
 const STEPS = [
   {
@@ -36,6 +40,8 @@ const STEPS = [
 ]
 
 export function HowItWorksSection() {
+  const [expandedIdx, setExpandedIdx] = useState(0)
+
   return (
     <section
       id="how-it-works"
@@ -66,8 +72,8 @@ export function HowItWorksSection() {
           </p>
         </motion.div>
 
-        {/* Accordion using steps */}
-        <div className="space-y-6">
+        {/* Interactive Accordion Steps */}
+        <div className="space-y-6 mb-16">
           {STEPS.map((step, idx) => (
             <motion.div
               key={idx}
@@ -75,8 +81,10 @@ export function HowItWorksSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: idx * 0.1 }}
+              className="cursor-pointer"
+              onClick={() => setExpandedIdx(expandedIdx === idx ? -1 : idx)}
             >
-              <div className="border border-border/50 rounded-xl overflow-hidden bg-card/50 backdrop-blur hover:border-primary/30 transition-colors">
+              <div className="border border-border/50 rounded-xl overflow-hidden bg-card/50 backdrop-blur hover:border-primary/30 transition-all">
                 <div className="p-8">
                   <div className="flex items-start gap-6">
                     <div className="flex-shrink-0">
@@ -87,17 +95,26 @@ export function HowItWorksSection() {
                     <div className="flex-1">
                       <h3 className="text-2xl font-bold mb-2">{step.title}</h3>
                       <p className="text-muted-foreground mb-4">{step.description}</p>
-                      <ul className="space-y-2">
-                        {step.details.map((detail, i) => (
-                          <li
-                            key={i}
-                            className="flex items-center gap-3 text-sm"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                            {detail}
-                          </li>
-                        ))}
-                      </ul>
+                      {expandedIdx === idx && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-6"
+                        >
+                          <ul className="space-y-2">
+                            {step.details.map((detail, i) => (
+                              <li
+                                key={i}
+                                className="flex items-center gap-3 text-sm"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                {detail}
+                              </li>
+                            ))}
+                          </ul>
+                        </motion.div>
+                      )}
                     </div>
                     <div className="hidden lg:block flex-shrink-0">
                       <img
@@ -112,6 +129,20 @@ export function HowItWorksSection() {
             </motion.div>
           ))}
         </div>
+
+        {/* BookFlip Component - Additional Interactive Element */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+          className="flex justify-center mt-20"
+        >
+          <div className="text-center">
+            <h3 className="text-2xl font-bold mb-8">Explore FitAI Workouts</h3>
+            <BookFlip />
+          </div>
+        </motion.div>
       </div>
     </section>
   )

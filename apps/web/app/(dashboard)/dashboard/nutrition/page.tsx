@@ -3,6 +3,10 @@
 import { motion } from 'framer-motion'
 import { Apple, Flame, Droplets, Zap } from 'lucide-react'
 import { Loader } from '@/components/ui/loader'
+import { GooeyDotsLoader } from '@/components/ui/gooey-dots-loader'
+import { MusicBarLoader } from '@/components/ui/music-bar-loader'
+import { NotificationsWithActions } from '@/components/ui/notifications-with-actions'
+import { GlowCard } from '@/components/ui/spotlight-card'
 
 const MACROS = [
   {
@@ -51,11 +55,24 @@ export default function NutritionPage() {
     Math.min((current / goal) * 100, 100)
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-4xl font-black mb-2">Nutrition Tracker</h1>
-        <p className="text-muted-foreground">Monitor your daily macronutrients</p>
+    <div className="min-h-screen bg-background p-8">
+      {/* Header with Loader */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-12 flex items-center justify-between"
+      >
+        <div>
+          <h1 className="text-4xl font-black mb-2">Nutrition Tracker</h1>
+          <p className="text-muted-foreground">Monitor your daily macronutrients</p>
+        </div>
+        <GooeyDotsLoader />
+      </motion.div>
+
+      {/* Music Bar Loader for meal tracking */}
+      <motion.div className="mb-12 text-center">
+        <h2 className="text-xl font-bold mb-4">Daily Progress</h2>
+        <MusicBarLoader />
       </motion.div>
 
       {/* Macro Cards */}
@@ -106,6 +123,17 @@ export default function NutritionPage() {
             </motion.div>
           )
         })}
+      </motion.div>
+
+      {/* Notifications with meal alerts */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mb-12"
+      >
+        <h2 className="text-2xl font-bold mb-6">Meal Notifications</h2>
+        <NotificationsWithActions />
       </motion.div>
 
       {/* Meal Log */}

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Dumbbell, Mail, Github, Linkedin, Twitter } from 'lucide-react'
 import { SocialButtons } from '@/components/ui/social-buttons'
+import { InfiniteSlider } from '@/components/ui/infinite-slider'
 
 interface FooterLink {
   label: string
@@ -85,6 +86,25 @@ export function LandingFooter() {
             </form>
           </div>
         </div>
+      </motion.div>
+
+      {/* Partners Infinite Slider */}
+      <motion.div
+        className="border-b border-border/50 py-12 overflow-hidden"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+      >
+        <h3 className="text-center text-sm font-semibold text-foreground mb-8">TRUSTED BY LEADING BRANDS</h3>
+        <InfiniteSlider>
+          <div className="flex gap-8 whitespace-nowrap">
+            <div className="px-6 py-2 bg-card/30 rounded-lg">Nike</div>
+            <div className="px-6 py-2 bg-card/30 rounded-lg">Adidas</div>
+            <div className="px-6 py-2 bg-card/30 rounded-lg">Apple Fitness</div>
+            <div className="px-6 py-2 bg-card/30 rounded-lg">Peloton</div>
+            <div className="px-6 py-2 bg-card/30 rounded-lg">Fitbit</div>
+          </div>
+        </InfiniteSlider>
       </motion.div>
 
       {/* Main footer */}

@@ -1,10 +1,15 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Dumbbell, Flame, Clock, Target } from 'lucide-react'
+import { Dumbbell, Flame, Clock, Target, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
 import { CommitsGrid } from '@/components/ui/commits-grid'
+import { RippleButton } from '@/components/ui/multi-type-ripple-buttons'
+import { GeometricLoader } from '@/components/ui/geometric-loader'
+import { CardDevice } from '@/components/ui/card-device'
+import { SmartWatchDisplay } from '@/components/ui/smartwatch-display'
+import { GlowCard } from '@/components/ui/spotlight-card'
 
 const WORKOUTS = [
   {
@@ -61,17 +66,37 @@ const WEEK_DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 
 export default function WorkoutsPage() {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
+    <div className="min-h-screen bg-background p-8">
+      {/* Loading State */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-12"
+        className="mb-12 flex items-center justify-between"
       >
-        <h1 className="text-4xl font-black mb-2">Workouts</h1>
-        <p className="text-muted-foreground">
-          Choose from our AI-generated personalized workouts
-        </p>
+        <div>
+          <h1 className="text-4xl font-black mb-2">Workouts</h1>
+          <p className="text-muted-foreground">
+            Choose from our AI-generated personalized workouts
+          </p>
+        </div>
+        <GeometricLoader />
+      </motion.div>
+
+      {/* Smart Watch Status */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="mb-12 grid md:grid-cols-2 gap-6"
+      >
+        <div>
+          <h2 className="text-lg font-bold mb-4">Connected Devices</h2>
+          <CardDevice />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold mb-4">Watch Stats</h2>
+          <SmartWatchDisplay />
+        </div>
       </motion.div>
 
       {/* Weekly Streak */}
@@ -150,9 +175,9 @@ export default function WorkoutsPage() {
                 </div>
               </div>
 
-              <Button className="w-full" size="sm">
+              <RippleButton className="w-full text-center py-2 rounded-lg bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
                 Start Workout
-              </Button>
+              </RippleButton>
             </motion.div>
           ))}
         </div>

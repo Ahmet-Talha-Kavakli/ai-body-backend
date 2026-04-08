@@ -4,15 +4,35 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { ChevronDown } from 'lucide-react'
 import Link from 'next/link'
+import { ContainerScroll } from '@/components/ui/container-scroll-animation'
+import { GlobePulse } from '@/components/ui/cobe-globe-pulse'
+import { GooeyText } from '@/components/ui/gooey-text-morphing'
+import { ScrollMorphHero } from '@/components/ui/scroll-morph-hero'
+import { WarpBackground } from '@/components/ui/warp-background'
+import { AnimatedShaderHero } from '@/components/ui/animated-shader-hero'
 
 export function HeroSection() {
+  const morphingWords = ['Stronger', 'Faster', 'Smarter', 'Better']
+
   return (
     <section className="relative min-h-screen w-full overflow-hidden bg-background flex items-center justify-center">
-      <div className="absolute inset-0 overflow-hidden">
+      {/* Warp Background Effect */}
+      <div className="absolute inset-0">
+        <WarpBackground />
+      </div>
+
+      {/* Animated Shader Background */}
+      <div className="absolute inset-0 opacity-30">
+        <AnimatedShaderHero />
+      </div>
+
+      {/* Glowing blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-30" />
         <div className="absolute bottom-1/2 right-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl opacity-20" />
       </div>
 
+      {/* Main Content */}
       <div className="relative z-10 max-w-6xl mx-auto px-4 py-20 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -35,7 +55,9 @@ export function HeroSection() {
           className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight mb-6"
         >
           Your AI Personal <br />
-          <span className="text-primary">Trainer</span>
+          <span className="text-primary inline-block">
+            <GooeyText words={morphingWords} />
+          </span>
         </motion.h1>
 
         <motion.p
@@ -65,10 +87,23 @@ export function HeroSection() {
           </Link>
         </motion.div>
 
+        {/* Globe Pulse - Interactive Globe */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.5 }}
+          className="mb-12 flex justify-center"
+        >
+          <div className="w-80 h-80">
+            <GlobePulse />
+          </div>
+        </motion.div>
+
+        {/* Stats Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
           className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mb-12"
         >
           <div>
@@ -85,6 +120,7 @@ export function HeroSection() {
           </div>
         </motion.div>
 
+        {/* Scroll Indicator */}
         <motion.div
           animate={{ y: [0, 8, 0] }}
           transition={{ duration: 2, repeat: Infinity }}

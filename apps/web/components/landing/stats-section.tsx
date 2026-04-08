@@ -3,6 +3,9 @@
 import { motion } from 'framer-motion'
 import { CommitsGrid } from '@/components/ui/commits-grid'
 import { ParticleTextEffect } from '@/components/ui/particle-text-effect'
+import { ParticleCanvas } from '@/components/ui/particle-canvas'
+import { ScrollDownIndicator } from '@/components/ui/scroll-down-indicator'
+import { AnimatedDots } from '@/components/ui/animated-dots'
 
 export function StatsSection() {
   const stats = [
@@ -90,6 +93,16 @@ export function StatsSection() {
             <CommitsGrid text="FITAI" />
           </motion.div>
 
+          {/* Particle Canvas */}
+          <motion.div
+            variants={itemVariants}
+            className="flex justify-center items-center min-h-[300px] bg-card/30 rounded-2xl border border-border/30 backdrop-blur overflow-hidden"
+          >
+            <div className="w-full h-full">
+              <ParticleCanvas colors={['#3b82f6', '#8b5cf6', '#ec4899']} />
+            </div>
+          </motion.div>
+
           {/* Particle Text Effect */}
           <motion.div
             variants={itemVariants}
@@ -98,6 +111,22 @@ export function StatsSection() {
             <div>
               <ParticleTextEffect text="AI-POWERED FITNESS" />
             </div>
+          </motion.div>
+
+          {/* Animated Dots */}
+          <motion.div
+            variants={itemVariants}
+            className="flex justify-center items-center gap-6"
+          >
+            <AnimatedDots />
+          </motion.div>
+
+          {/* Scroll Down Indicator */}
+          <motion.div
+            variants={itemVariants}
+            className="flex justify-center"
+          >
+            <ScrollDownIndicator />
           </motion.div>
 
           {/* Additional Feature Highlights */}
