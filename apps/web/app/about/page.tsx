@@ -5,6 +5,10 @@ import { HeroParallax } from '@/components/ui/hero-parallax'
 import { ImageTrail } from '@/components/ui/image-trail'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { HamburgerMenu } from '@/components/ui/hamburger-menu'
+import { ComicColorPicker } from '@/components/ui/comic-color-picker'
+import { InfiniteSlider } from '@/components/ui/infinite-slider'
+import { GlowCard } from '@/components/ui/spotlight-card'
 
 const PARALLAX_PRODUCTS = [
   {
@@ -42,18 +46,21 @@ const PARALLAX_PRODUCTS = [
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
+      {/* Navigation with Hamburger Menu */}
       <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-background/80 backdrop-blur-md border-b border-border/30">
         <Link href="/" className="text-2xl font-black">
           FitAI
         </Link>
-        <div className="flex gap-4">
+        <div className="hidden md:flex gap-4">
           <Link href="/">
             <Button variant="ghost">Home</Button>
           </Link>
           <Link href="/sign-up">
             <Button>Get Started</Button>
           </Link>
+        </div>
+        <div className="md:hidden">
+          <HamburgerMenu />
         </div>
       </div>
 
@@ -117,6 +124,17 @@ export default function AboutPage() {
               enhances human potential without replacing human connection and motivation.
             </p>
 
+            {/* Color Picker for Customization */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="mb-12 p-8 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20"
+            >
+              <h3 className="text-2xl font-bold mb-6">Personalize Your Experience</h3>
+              <ComicColorPicker />
+            </motion.div>
+
             <div className="grid md:grid-cols-3 gap-8 mt-12">
               {[
                 {
@@ -141,10 +159,11 @@ export default function AboutPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.1 }}
-                  className="p-6 rounded-xl bg-background border border-border/30"
                 >
-                  <h3 className="text-xl font-bold mb-3">{value.title}</h3>
-                  <p className="text-muted-foreground">{value.description}</p>
+                  <GlowCard className="h-full">
+                    <h3 className="text-xl font-bold mb-3">{value.title}</h3>
+                    <p className="text-muted-foreground">{value.description}</p>
+                  </GlowCard>
                 </motion.div>
               ))}
             </div>

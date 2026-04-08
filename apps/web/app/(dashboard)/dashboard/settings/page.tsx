@@ -3,6 +3,10 @@
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
+import { MacbookLoader } from '@/components/ui/macbook-loader'
+import { NewtonsCradle } from '@/components/ui/newtons-cradle'
+import { AlertBoxes } from '@/components/ui/alert-boxes'
+import { Error as ErrorComponent } from '@/components/ui/error'
 import { Bell, Lock, Trash2, LogOut, User } from 'lucide-react'
 
 const SETTINGS_SECTIONS = [
@@ -44,11 +48,35 @@ const SETTINGS_SECTIONS = [
 
 export default function SettingsPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background p-8">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-4xl font-black mb-2">Settings</h1>
-        <p className="text-muted-foreground">Manage your account and preferences</p>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-12 flex items-center justify-between"
+      >
+        <div>
+          <h1 className="text-4xl font-black mb-2">Settings</h1>
+          <p className="text-muted-foreground">Manage your account and preferences</p>
+        </div>
+        <MacbookLoader />
+      </motion.div>
+
+      {/* Loaders and Components Demo */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="mb-12 grid md:grid-cols-2 gap-6"
+      >
+        <div className="text-center p-6 rounded-xl bg-card/50 border border-border/30">
+          <h3 className="text-lg font-bold mb-4">Loading Animation</h3>
+          <NewtonsCradle />
+        </div>
+        <div className="text-center p-6 rounded-xl bg-card/50 border border-border/30">
+          <h3 className="text-lg font-bold mb-4">System Alert</h3>
+          <AlertBoxes />
+        </div>
       </motion.div>
 
       {/* Settings Sections */}

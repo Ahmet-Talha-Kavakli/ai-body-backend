@@ -4,6 +4,10 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
 import { Heart, Target, TrendingUp, Zap } from 'lucide-react'
+import { HourglassLoader } from '@/components/ui/hourglass-loader'
+import { PencilLoader } from '@/components/ui/pencil-loader'
+import { HeartCheckbox } from '@/components/ui/heart-checkbox'
+import { NeonCheckbox } from '@/components/ui/neon-checkbox'
 
 const FORM_FIELDS = [
   {
@@ -35,13 +39,20 @@ const FORM_FIELDS = [
 
 export default function HealthPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background p-8">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-4xl font-black mb-2">Health Profile</h1>
-        <p className="text-muted-foreground">
-          Keep your health information up to date
-        </p>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-12 flex items-center justify-between"
+      >
+        <div>
+          <h1 className="text-4xl font-black mb-2">Health Profile</h1>
+          <p className="text-muted-foreground">
+            Keep your health information up to date
+          </p>
+        </div>
+        <PencilLoader />
       </motion.div>
 
       {/* Health Metrics */}
@@ -92,6 +103,23 @@ export default function HealthPage() {
             </motion.div>
           )
         })}
+      </motion.div>
+
+      {/* Checkboxes Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="mb-12 flex gap-8"
+      >
+        <div>
+          <h3 className="text-lg font-bold mb-4">Health Confirmations</h3>
+          <HeartCheckbox />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold mb-4">Neon Options</h3>
+          <NeonCheckbox />
+        </div>
       </motion.div>
 
       {/* Profile Form */}

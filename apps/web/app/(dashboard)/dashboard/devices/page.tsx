@@ -3,6 +3,9 @@
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { GlobePulse } from '@/components/ui/cobe-globe-pulse'
+import { WeatherCard } from '@/components/ui/weather-card'
+import { WiFiLoader } from '@/components/ui/wifi-loader'
+import { ShakeSpinLoader } from '@/components/ui/shake-spin-loader'
 import {
   Watch,
   Smartphone,
@@ -57,13 +60,31 @@ const DEVICES = [
 
 export default function DevicesPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background p-8">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-4xl font-black mb-2">Connected Devices</h1>
-        <p className="text-muted-foreground">
-          Manage your fitness tracker connections
-        </p>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-12 flex items-center justify-between"
+      >
+        <div>
+          <h1 className="text-4xl font-black mb-2">Connected Devices</h1>
+          <p className="text-muted-foreground">
+            Manage your fitness tracker connections
+          </p>
+        </div>
+        <WiFiLoader />
+      </motion.div>
+
+      {/* Weather Card - Environmental Context */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="mb-12"
+      >
+        <h2 className="text-xl font-bold mb-4">Environmental Conditions</h2>
+        <WeatherCard />
       </motion.div>
 
       {/* Globe Visualization */}
@@ -80,6 +101,19 @@ export default function DevicesPage() {
         <p className="text-center text-sm text-muted-foreground mt-4">
           Your devices syncing data across the globe
         </p>
+      </motion.div>
+
+      {/* Shake Spin Loader */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="mb-12 text-center"
+      >
+        <h2 className="text-xl font-bold mb-4">Syncing Devices...</h2>
+        <div className="flex justify-center">
+          <ShakeSpinLoader />
+        </div>
       </motion.div>
 
       {/* Devices Grid */}

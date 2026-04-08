@@ -14,6 +14,9 @@ import {
   Bar,
 } from 'recharts'
 import { TrendingUp, Activity, Zap, Target } from 'lucide-react'
+import { TypewriterLoader } from '@/components/ui/typewriter-loader'
+import { MorphingLoader } from '@/components/ui/morphing-loader'
+import { ActionSearchBar } from '@/components/ui/action-search-bar'
 
 const CHART_DATA = [
   { day: 'Mon', workouts: 1, calories: 520 },
@@ -58,13 +61,30 @@ const STATS = [
 
 export default function AnalyticsPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background p-8">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-4xl font-black mb-2">Analytics</h1>
-        <p className="text-muted-foreground">
-          Track your fitness progress and achievements
-        </p>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-12 flex items-center justify-between"
+      >
+        <div>
+          <h1 className="text-4xl font-black mb-2">Analytics</h1>
+          <p className="text-muted-foreground">
+            Track your fitness progress and achievements
+          </p>
+        </div>
+        <TypewriterLoader />
+      </motion.div>
+
+      {/* Search Bar */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="mb-12"
+      >
+        <ActionSearchBar placeholder="Search workouts, achievements..." />
       </motion.div>
 
       {/* Stats Grid */}
@@ -97,6 +117,19 @@ export default function AnalyticsPage() {
             </motion.div>
           )
         })}
+      </motion.div>
+
+      {/* Morphing Loader */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="mb-12 text-center"
+      >
+        <h2 className="text-xl font-bold mb-4">Loading Analytics</h2>
+        <div className="flex justify-center">
+          <MorphingLoader />
+        </div>
       </motion.div>
 
       {/* Charts */}
