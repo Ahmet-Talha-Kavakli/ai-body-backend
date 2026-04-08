@@ -1,178 +1,68 @@
 'use client'
 
-import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, Star } from 'lucide-react'
+import { motion } from 'framer-motion'
 
-const TESTIMONIALS = [
+const testimonials = [
   {
+    id: 1,
     name: 'Sarah Chen',
-    role: 'Fitness Enthusiast',
-    image: '👩‍🦰',
-    quote:
-      'The real-time form corrections have been a game-changer for my workouts. I finally feel confident with my technique.',
-    rating: 5,
+    role: 'Fitness Coach',
+    text: 'The real-time form corrections have been absolutely transformative. My clients see results faster than ever.',
   },
   {
+    id: 2,
     name: 'Mike Johnson',
     role: 'Professional Athlete',
-    image: '👨‍🦱',
-    quote:
-      'Training with FitAI is like having a personal coach in my pocket 24/7. The AI understands my body better than anyone.',
-    rating: 5,
+    text: 'Training with FitAI is like having a championship coach available 24/7. Incredible experience.',
   },
   {
+    id: 3,
     name: 'Emma Rodriguez',
     role: 'Busy Professional',
-    image: '👩',
-    quote:
-      'Perfect for my schedule. I can fit in personalized workouts whenever I have time, and the app adapts to my progress.',
-    rating: 5,
+    text: 'Perfect for my schedule. Personalized workouts whenever I want, and the app adapts to my progress.',
   },
 ]
 
 export function TestimonialsSection() {
-  const [current, setCurrent] = useState(0)
-  const [direction, setDirection] = useState(0)
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setDirection(1)
-      setCurrent((prev) => (prev + 1) % TESTIMONIALS.length)
-    }, 5000)
-
-    return () => clearInterval(timer)
-  }, [])
-
-  const slideVariants = {
-    enter: (dir: number) => ({
-      x: dir > 0 ? 1000 : -1000,
-      opacity: 0,
-    }),
-    center: {
-      zIndex: 1,
-      x: 0,
-      opacity: 1,
-    },
-    exit: (dir: number) => ({
-      zIndex: 0,
-      x: dir > 0 ? -1000 : 1000,
-      opacity: 0,
-    }),
-  }
-
-  const paginate = (newDirection: number) => {
-    setDirection(newDirection)
-    setCurrent(
-      (prev) =>
-        (prev + newDirection + TESTIMONIALS.length) % TESTIMONIALS.length
-    )
-  }
-
   return (
-    <section className="py-20 px-4 bg-muted/20">
-      <div className="container mx-auto">
-        {/* Header */}
+    <section
+      id="testimonials"
+      className="relative min-h-screen w-full py-24 px-4 bg-background"
+    >
+      <div className="relative z-10 max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Loved by Athletes
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full mb-4">
+            <span className="w-2 h-2 bg-primary rounded-full" />
+            <span className="text-sm font-medium text-primary">Testimonials</span>
+          </div>
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-6">
+            Loved by Fitness<br />Professionals & Athletes
           </h2>
-          <p className="text-lg text-muted-foreground">
-            Join thousands of people transforming their fitness journey
-          </p>
         </motion.div>
 
-        {/* Slider */}
-        <div className="max-w-3xl mx-auto relative h-80">
-          <AnimatePresence initial={false} custom={direction} mode="wait">
+        <div className="grid md:grid-cols-3 gap-8">
+          {testimonials.map((testimonial, idx) => (
             <motion.div
-              key={current}
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                x: { type: 'spring', stiffness: 300, damping: 30 },
-                opacity: { duration: 0.2 },
-              }}
-              className="absolute inset-0 w-full"
+              key={testimonial.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: idx * 0.1 }}
+              className="p-6 rounded-xl bg-card/50 border border-border/30 hover:border-primary/20 transition-colors"
             >
-              <div className="bg-background border border-border/50 rounded-2xl p-8 h-full flex flex-col justify-between">
-                {/* Stars */}
-                <div className="flex gap-1">
-                  {Array(5)
-                    .fill(0)
-                    .map((_, i) => (
-                      <Star
-                        key={i}
-                        className="w-5 h-5 text-yellow-400 fill-yellow-400"
-                      />
-                    ))}
-                </div>
-
-                {/* Quote */}
-                <p className="text-xl font-semibold text-foreground">
-                  "{TESTIMONIALS[current].quote}"
-                </p>
-
-                {/* Author */}
-                <div className="flex items-center gap-4">
-                  <div className="text-4xl">
-                    {TESTIMONIALS[current].image}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">
-                      {TESTIMONIALS[current].name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {TESTIMONIALS[current].role}
-                    </p>
-                  </div>
-                </div>
+              <p className="text-muted-foreground mb-4 italic">"{testimonial.text}"</p>
+              <div>
+                <p className="font-bold">{testimonial.name}</p>
+                <p className="text-sm text-muted-foreground">{testimonial.role}</p>
               </div>
             </motion.div>
-          </AnimatePresence>
-
-          {/* Controls */}
-          <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-4">
-            <button
-              onClick={() => paginate(-1)}
-              className="p-2 rounded-lg border border-border hover:bg-accent transition-colors"
-              aria-label="Previous testimonial"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-
-            <div className="flex gap-2">
-              {TESTIMONIALS.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setDirection(i > current ? 1 : -1)
-                    setCurrent(i)
-                  }}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    i === current ? 'bg-green-500 w-8' : 'bg-muted-foreground'
-                  }`}
-                  aria-label={`Go to testimonial ${i + 1}`}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={() => paginate(1)}
-              className="p-2 rounded-lg border border-border hover:bg-accent transition-colors"
-              aria-label="Next testimonial"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+          ))}
         </div>
       </div>
     </section>

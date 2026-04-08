@@ -60,9 +60,10 @@ const SOCIAL_LINKS = [
 
 interface SocialButtonsProps {
   variant?: 'compact' | 'expanded'
+  layout?: 'grid' | 'row'
 }
 
-export function SocialButtons({ variant = 'expanded' }: SocialButtonsProps) {
+export function SocialButtons({ variant = 'expanded', layout = 'row' }: SocialButtonsProps) {
   const isCompact = variant === 'compact'
   const topLinks = SOCIAL_LINKS.slice(0, 2)
   const bottomLinks = SOCIAL_LINKS.slice(2, 4)
@@ -121,17 +122,27 @@ export function SocialButtons({ variant = 'expanded' }: SocialButtonsProps) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex gap-2">
-        {topLinks.map((link) => (
-          <SocialButton key={link.name} link={link} />
-        ))}
-      </div>
-      <div className="flex gap-2">
-        {bottomLinks.map((link) => (
-          <SocialButton key={link.name} link={link} />
-        ))}
-      </div>
+    <div className={layout === 'grid' ? 'grid grid-cols-2 gap-2' : 'flex flex-col gap-2'}>
+      {layout === 'grid' ? (
+        <>
+          {SOCIAL_LINKS.map((link) => (
+            <SocialButton key={link.name} link={link} />
+          ))}
+        </>
+      ) : (
+        <>
+          <div className="flex gap-2">
+            {topLinks.map((link) => (
+              <SocialButton key={link.name} link={link} />
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {bottomLinks.map((link) => (
+              <SocialButton key={link.name} link={link} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Check, Star } from 'lucide-react'
+import { MultiTypeRippleButtons } from '@/components/ui/multi-type-ripple-buttons'
 
 const PLANS = [
   {
@@ -67,16 +68,16 @@ function PricingCard({ plan, index }: any) {
       transition={{ delay: index * 0.1 }}
       className={`relative rounded-2xl border transition-all duration-300 ${
         plan.highlighted
-          ? 'border-green-500/50 bg-background shadow-2xl shadow-green-500/20 md:scale-105'
+          ? 'border-primary/50 bg-background shadow-2xl shadow-primary/20 md:scale-105'
           : 'border-border/50 bg-background/40 backdrop-blur'
       }`}
     >
       {/* Badge */}
       {plan.badge && (
         <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-green-500/10 border border-green-500/30">
-            <Star className="w-4 h-4 text-green-500 fill-green-500" />
-            <span className="text-sm font-semibold text-green-500">
+          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-primary/10 border border-primary/30">
+            <Star className="w-4 h-4 text-primary fill-primary" />
+            <span className="text-sm font-semibold text-primary">
               {plan.badge}
             </span>
           </div>

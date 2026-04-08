@@ -49,6 +49,9 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        red: {
+          900: 'var(--color-red-900)',
+        },
         // FitAI brand colors
         brand: {
           50: '#f0fdf4',
@@ -91,12 +94,28 @@ const config: Config = {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        'js-ripple-animation': {
+          '0%': { transform: 'scale(0)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '0' },
+        },
+        highlight: {
+          '0%': { backgroundColor: 'transparent' },
+          '100%': { backgroundColor: 'var(--highlight)' },
+        },
+        flash: {
+          '0%': { backgroundColor: 'hsl(var(--card))' },
+          '50%': { backgroundColor: 'var(--highlight)' },
+          '100%': { backgroundColor: 'hsl(var(--card))' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'pulse-ring': 'pulse-ring 2s ease-in-out infinite',
         shimmer: 'shimmer 2s linear infinite',
+        'js-ripple-effect': 'js-ripple-animation var(--ripple-duration) ease-out forwards',
+        highlight: 'highlight 0.6s ease forwards',
+        flash: 'flash 0.6s ease forwards',
       },
       fontFamily: {
         sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],

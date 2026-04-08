@@ -1,8 +1,6 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useState } from 'react'
-import { ChevronDown } from 'lucide-react'
 
 const STEPS = [
   {
@@ -13,6 +11,7 @@ const STEPS = [
       'Define your goals (strength, endurance, flexibility)',
       'List available equipment',
     ],
+    image: 'https://images.unsplash.com/photo-1566886387580-e4f08f78d7f9?w=500&auto=format&fit=crop&q=60',
   },
   {
     title: 'Start Your AI Workout',
@@ -22,6 +21,7 @@ const STEPS = [
       'Get real-time form corrections',
       'Receive instant feedback on every rep',
     ],
+    image: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=500&auto=format&fit=crop&q=60',
   },
   {
     title: 'Track & Improve',
@@ -31,93 +31,85 @@ const STEPS = [
       'Get weekly progress reports',
       'Receive personalized recommendations',
     ],
+    image: 'https://images.unsplash.com/photo-1516321314726-8acf3b289635?w=500&auto=format&fit=crop&q=60',
   },
 ]
 
-function AccordionItem({ step, index, isOpen, onToggle }: any) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.1 }}
-      className="border border-border/50 rounded-lg overflow-hidden bg-background/40 backdrop-blur"
-    >
-      <button
-        onClick={onToggle}
-        className="w-full px-6 py-4 flex items-center justify-between hover:bg-accent/50 transition-colors"
-      >
-        <div className="text-left flex-1">
-          <h3 className="text-lg font-semibold text-foreground flex items-center gap-3">
-            <span className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-500 font-bold">
-              {index + 1}
-            </span>
-            {step.title}
-          </h3>
-        </div>
-        <ChevronDown
-          className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${
-            isOpen ? 'rotate-180' : ''
-          }`}
-        />
-      </button>
-
-      {isOpen && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="border-t border-border/30"
-        >
-          <div className="px-6 py-4 bg-background/20">
-            <p className="text-muted-foreground mb-4">{step.description}</p>
-            <ul className="space-y-2">
-              {step.details.map((detail) => (
-                <li key={detail} className="flex items-start gap-3">
-                  <span className="text-green-500 mt-1">✓</span>
-                  <span className="text-sm text-foreground">{detail}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </motion.div>
-      )}
-    </motion.div>
-  )
-}
-
 export function HowItWorksSection() {
-  const [openIndex, setOpenIndex] = useState(0)
-
   return (
-    <section id="how-it-works" className="py-20 px-4">
-      <div className="container mx-auto max-w-3xl">
-        {/* Header */}
+    <section
+      id="how-it-works"
+      className="relative min-h-screen w-full py-24 px-4 bg-background"
+    >
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/2 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl opacity-30" />
+      </div>
+
+      <div className="relative z-10 max-w-5xl mx-auto">
+        {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            How It Works
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full mb-4">
+            <span className="w-2 h-2 bg-primary rounded-full" />
+            <span className="text-sm font-medium text-primary">How It Works</span>
+          </div>
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-6">
+            Three Simple Steps <br />to Transform Your Fitness
           </h2>
-          <p className="text-lg text-muted-foreground">
-            Get started in three simple steps with our AI-powered fitness platform
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
+            Get started with FitAI in minutes and begin your fitness transformation
           </p>
         </motion.div>
 
-        {/* Accordion */}
-        <div className="space-y-3">
-          {STEPS.map((step, i) => (
-            <AccordionItem
-              key={step.title}
-              step={step}
-              index={i}
-              isOpen={openIndex === i}
-              onToggle={() => setOpenIndex(openIndex === i ? -1 : i)}
-            />
+        {/* Accordion using steps */}
+        <div className="space-y-6">
+          {STEPS.map((step, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: idx * 0.1 }}
+            >
+              <div className="border border-border/50 rounded-xl overflow-hidden bg-card/50 backdrop-blur hover:border-primary/30 transition-colors">
+                <div className="p-8">
+                  <div className="flex items-start gap-6">
+                    <div className="flex-shrink-0">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/20 text-primary font-bold text-lg">
+                        {idx + 1}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-bold mb-2">{step.title}</h3>
+                      <p className="text-muted-foreground mb-4">{step.description}</p>
+                      <ul className="space-y-2">
+                        {step.details.map((detail, i) => (
+                          <li
+                            key={i}
+                            className="flex items-center gap-3 text-sm"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            {detail}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="hidden lg:block flex-shrink-0">
+                      <img
+                        src={step.image}
+                        alt={step.title}
+                        className="w-48 h-48 rounded-lg object-cover"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           ))}
         </div>
       </div>
