@@ -55,23 +55,20 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.05 }}
+                whileHover={{ x: 4 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <Link href={item.href} prefetch>
-                  <motion.div
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
+                  <Button
+                    variant={isActive ? 'default' : 'ghost'}
+                    className={cn(
+                      'w-full justify-start gap-3 transition-all',
+                      isActive && 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                    )}
                   >
-                    <Button
-                      variant={isActive ? 'default' : 'ghost'}
-                      className={cn(
-                        'w-full justify-start gap-3 transition-all',
-                        isActive && 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                      )}
-                    >
-                      <Image src={item.icon} alt={item.label} width={16} height={16} unoptimized className="w-4 h-4" />
-                      {item.label}
-                    </Button>
-                  </motion.div>
+                    <Image src={item.icon} alt={item.label} width={16} height={16} unoptimized className="w-4 h-4" />
+                    {item.label}
+                  </Button>
                 </Link>
               </motion.div>
             )
@@ -79,15 +76,16 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
         </nav>
 
         <div className="px-4 py-6 border-t border-border/30">
-          <motion.div
+          <motion.button
             whileHover={{ x: 4 }}
             whileTap={{ scale: 0.98 }}
+            className="w-full"
           >
             <Button variant="ghost" className="w-full justify-start gap-3 transition-all">
               <LogOut className="w-4 h-4" />
               Sign Out
             </Button>
-          </motion.div>
+          </motion.button>
         </div>
       </motion.div>
 
@@ -114,27 +112,24 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
+                  whileHover={{ x: 4 }}
+                  whileTap={{ scale: 0.98 }}
                 >
                   <Link
                     href={item.href}
                     onClick={onClose}
                     prefetch
                   >
-                    <motion.div
-                      whileHover={{ x: 4 }}
-                      whileTap={{ scale: 0.98 }}
+                    <Button
+                      variant={isActive ? 'default' : 'ghost'}
+                      className={cn(
+                        'w-full justify-start gap-3 transition-all',
+                        isActive && 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                      )}
                     >
-                      <Button
-                        variant={isActive ? 'default' : 'ghost'}
-                        className={cn(
-                          'w-full justify-start gap-3 transition-all',
-                          isActive && 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                        )}
-                      >
-                        <Image src={item.icon} alt={item.label} width={16} height={16} unoptimized className="w-4 h-4" />
-                        {item.label}
-                      </Button>
-                    </motion.div>
+                      <Image src={item.icon} alt={item.label} width={16} height={16} unoptimized className="w-4 h-4" />
+                      {item.label}
+                    </Button>
                   </Link>
                 </motion.div>
               )
@@ -142,15 +137,16 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
           </nav>
 
           <div className="absolute bottom-6 left-4 right-4">
-            <motion.div
+            <motion.button
               whileHover={{ x: 4 }}
               whileTap={{ scale: 0.98 }}
+              className="w-full"
             >
               <Button variant="ghost" className="w-full justify-start gap-3 transition-all">
                 <LogOut className="w-4 h-4" />
                 Sign Out
               </Button>
-            </motion.div>
+            </motion.button>
           </div>
         </motion.div>
       )}

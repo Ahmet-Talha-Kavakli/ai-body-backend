@@ -174,6 +174,20 @@ export default function NutritionPage() {
         </div>
       </motion.div>
 
+      {/* AI fotoğraf banner */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+        className="flex items-center gap-4 p-5 bg-blue-500/5 border border-blue-500/20 rounded-2xl"
+      >
+        <Image src={THIINGS.salad} alt="salad" width={48} height={48} unoptimized className="shrink-0 drop-shadow-md" />
+        <div className="flex-1">
+          <p className="font-semibold text-sm">Fotoğraflı Kalori Analizi</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Yemeğini fotoğrafla, AI besin değerlerini otomatik hesaplasın</p>
+        </div>
+        <button onClick={() => setShowPhotoAnalyzer(true)} className="shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors">
+          Fotoğraf Çek
+        </button>
+      </motion.div>
+
       {/* Makro kartlar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {MACROS.map((macro, i) => {
@@ -271,20 +285,6 @@ export default function NutritionPage() {
             </motion.button>
           ))}
         </div>
-      </motion.div>
-
-      {/* AI fotoğraf banner */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-        className="flex items-center gap-4 p-5 bg-blue-500/5 border border-blue-500/20 rounded-2xl"
-      >
-        <Image src={THIINGS.salad} alt="salad" width={48} height={48} unoptimized className="shrink-0 drop-shadow-md" />
-        <div className="flex-1">
-          <p className="font-semibold text-sm">Fotoğraflı Kalori Analizi</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Yemeğini fotoğrafla, AI besin değerlerini otomatik hesaplasın</p>
-        </div>
-        <button onClick={() => setShowPhotoAnalyzer(true)} className="shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors">
-          Fotoğraf Çek
-        </button>
       </motion.div>
 
       {/* Öğün ekleme modal */}
