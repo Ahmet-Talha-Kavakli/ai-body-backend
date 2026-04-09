@@ -244,10 +244,10 @@ export function Navbar() {
               <div className="ambient-background-shapes">
                 {/* Shape 1: Floating circles */}
                 <svg className="bg-shape bg-shape-1" viewBox="0 0 400 400" fill="none">
-                  <circle className="shape-element" cx="80" cy="120" r="40" fill="rgba(99,102,241,0.15)" />
-                  <circle className="shape-element" cx="300" cy="80" r="60" fill="rgba(139,92,246,0.12)" />
-                  <circle className="shape-element" cx="200" cy="300" r="80" fill="rgba(236,72,153,0.1)" />
-                  <circle className="shape-element" cx="350" cy="280" r="30" fill="rgba(99,102,241,0.15)" />
+                  <circle className="shape-element" cx="80" cy="120" r="40" fill="rgba(99,102,241,0.5)" />
+                  <circle className="shape-element" cx="300" cy="80" r="60" fill="rgba(139,92,246,0.45)" />
+                  <circle className="shape-element" cx="200" cy="300" r="80" fill="rgba(236,72,153,0.4)" />
+                  <circle className="shape-element" cx="350" cy="280" r="30" fill="rgba(99,102,241,0.5)" />
                 </svg>
 
                 {/* Shape 2: Wave pattern */}
@@ -255,14 +255,14 @@ export function Navbar() {
                   <path
                     className="shape-element"
                     d="M0 200 Q100 100, 200 200 T 400 200"
-                    stroke="rgba(99,102,241,0.2)"
+                    stroke="rgba(99,102,241,0.6)"
                     strokeWidth="60"
                     fill="none"
                   />
                   <path
                     className="shape-element"
                     d="M0 280 Q100 180, 200 280 T 400 280"
-                    stroke="rgba(139,92,246,0.15)"
+                    stroke="rgba(139,92,246,0.55)"
                     strokeWidth="40"
                     fill="none"
                   />
@@ -270,20 +270,20 @@ export function Navbar() {
 
                 {/* Shape 3: Grid dots */}
                 <svg className="bg-shape bg-shape-3" viewBox="0 0 400 400" fill="none">
-                  <circle className="shape-element" cx="50" cy="50" r="8" fill="rgba(99,102,241,0.3)" />
+                  <circle className="shape-element" cx="50" cy="50" r="8" fill="rgba(99,102,241,0.65)" />
                   <circle className="shape-element" cx="150" cy="50" r="8" fill="rgba(139,92,246,0.3)" />
-                  <circle className="shape-element" cx="250" cy="50" r="8" fill="rgba(236,72,153,0.3)" />
-                  <circle className="shape-element" cx="350" cy="50" r="8" fill="rgba(99,102,241,0.3)" />
-                  <circle className="shape-element" cx="100" cy="150" r="12" fill="rgba(139,92,246,0.25)" />
-                  <circle className="shape-element" cx="200" cy="150" r="12" fill="rgba(236,72,153,0.25)" />
+                  <circle className="shape-element" cx="250" cy="50" r="8" fill="rgba(236,72,153,0.65)" />
+                  <circle className="shape-element" cx="350" cy="50" r="8" fill="rgba(99,102,241,0.65)" />
+                  <circle className="shape-element" cx="100" cy="150" r="12" fill="rgba(139,92,246,0.6)" />
+                  <circle className="shape-element" cx="200" cy="150" r="12" fill="rgba(236,72,153,0.6)" />
                   <circle className="shape-element" cx="300" cy="150" r="12" fill="rgba(99,102,241,0.25)" />
-                  <circle className="shape-element" cx="50" cy="250" r="10" fill="rgba(236,72,153,0.3)" />
-                  <circle className="shape-element" cx="150" cy="250" r="10" fill="rgba(99,102,241,0.3)" />
+                  <circle className="shape-element" cx="50" cy="250" r="10" fill="rgba(236,72,153,0.65)" />
+                  <circle className="shape-element" cx="150" cy="250" r="10" fill="rgba(99,102,241,0.65)" />
                   <circle className="shape-element" cx="250" cy="250" r="10" fill="rgba(139,92,246,0.3)" />
-                  <circle className="shape-element" cx="350" cy="250" r="10" fill="rgba(236,72,153,0.3)" />
-                  <circle className="shape-element" cx="100" cy="350" r="6" fill="rgba(99,102,241,0.3)" />
+                  <circle className="shape-element" cx="350" cy="250" r="10" fill="rgba(236,72,153,0.65)" />
+                  <circle className="shape-element" cx="100" cy="350" r="6" fill="rgba(99,102,241,0.65)" />
                   <circle className="shape-element" cx="200" cy="350" r="6" fill="rgba(139,92,246,0.3)" />
-                  <circle className="shape-element" cx="300" cy="350" r="6" fill="rgba(236,72,153,0.3)" />
+                  <circle className="shape-element" cx="300" cy="350" r="6" fill="rgba(236,72,153,0.65)" />
                 </svg>
 
                 {/* Shape 4: Organic blobs */}
@@ -296,15 +296,15 @@ export function Navbar() {
                   <path
                     className="shape-element"
                     d="M250 200 Q300 150, 350 200 Q400 250, 350 300 Q400 250, 350 300 Q300 350, 250 300 Q200 250, 250 200"
-                    fill="rgba(236,72,153,0.1)"
+                    fill="rgba(236,72,153,0.4)"
                   />
                 </svg>
 
                 {/* Shape 5: Diagonal lines */}
                 <svg className="bg-shape bg-shape-5" viewBox="0 0 400 400" fill="none">
-                  <line className="shape-element" x1="0" y1="100" x2="300" y2="400" stroke="rgba(99,102,241,0.15)" strokeWidth="30" />
-                  <line className="shape-element" x1="100" y1="0" x2="400" y2="300" stroke="rgba(139,92,246,0.12)" strokeWidth="25" />
-                  <line className="shape-element" x1="200" y1="0" x2="400" y2="200" stroke="rgba(236,72,153,0.1)" strokeWidth="20" />
+                  <line className="shape-element" x1="0" y1="100" x2="300" y2="400" stroke="rgba(99,102,241,0.5)" strokeWidth="30" />
+                  <line className="shape-element" x1="100" y1="0" x2="400" y2="300" stroke="rgba(139,92,246,0.45)" strokeWidth="25" />
+                  <line className="shape-element" x1="200" y1="0" x2="400" y2="200" stroke="rgba(236,72,153,0.4)" strokeWidth="20" />
                 </svg>
               </div>
             </div>

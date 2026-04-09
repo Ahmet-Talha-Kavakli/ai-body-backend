@@ -44,7 +44,7 @@ interface RootLayoutProps {
   children: React.ReactNode
 }
 
-import { Navbar } from '@/components/ui/sterling-gate-kinetic-navigation'
+import { PillBase } from '@/components/ui/3d-adaptive-navigation-bar'
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
@@ -52,7 +52,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <html lang="en" suppressHydrationWarning>
         <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}>
           <Providers>
-            <Navbar />
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+              <PillBase />
+            </div>
             {children}
           </Providers>
         </body>

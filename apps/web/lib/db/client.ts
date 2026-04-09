@@ -1,13 +1,17 @@
-import { PrismaClient } from '@prisma/client'
+// TODO: Fix Prisma v7 schema configuration
+// import { PrismaClient } from '@prisma/client'
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
+// const globalForPrisma = globalThis as unknown as {
+//   prisma: PrismaClient | undefined
+// }
 
-export const db =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  })
+// export const db =
+//   globalForPrisma.prisma ??
+//   new PrismaClient({
+//     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+//   })
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
+// if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
+
+// Placeholder export for now
+export const db = null as any
