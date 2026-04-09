@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { GlowCard } from '@/components/ui/spotlight-card'
 import { GradientHoverButton } from '@/components/ui/gradient-hover-button'
+import { SectionAnimations } from '@/components/landing/section-animations'
 
 const plans = [
   {
@@ -114,7 +115,8 @@ export function PricingSection() {
   const [annual, setAnnual] = useState(false)
 
   return (
-    <section id="pricing" className="py-24 lg:py-32 bg-[#080808]">
+    <SectionAnimations>
+      <section id="pricing" className="py-24 lg:py-32 bg-[#080808]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -161,6 +163,7 @@ export function PricingSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
               className={plan.highlight ? 'md:-mt-4 md:mb-4' : ''}
+              data-animate="true"
             >
               {plan.highlight ? (
                 <GlowCard glowColor="green" customSize className="w-full !h-auto p-8">
@@ -176,5 +179,6 @@ export function PricingSection() {
         </div>
       </div>
     </section>
+    </SectionAnimations>
   )
 }

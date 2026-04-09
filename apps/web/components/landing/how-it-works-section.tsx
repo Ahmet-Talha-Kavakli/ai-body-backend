@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { ContainerScroll } from '@/components/ui/container-scroll-animation'
+import { SectionAnimations } from '@/components/landing/section-animations'
 
 const steps = [
   {
@@ -28,8 +29,9 @@ const steps = [
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-24 lg:py-32 bg-[#080808]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <SectionAnimations>
+      <section id="how-it-works" className="py-24 lg:py-32 bg-[#080808]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <ContainerScroll
           titleComponent={
             <div className="mb-16 text-center">
@@ -68,6 +70,7 @@ export function HowItWorksSection() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: i * 0.15 }}
                   className="relative flex flex-col items-center text-center px-4"
+                  data-animate="true"
                 >
                   <div className="relative z-10 w-20 h-20 rounded-full bg-[#080808] border-2 border-primary/50 flex items-center justify-center mb-6">
                     <span className="text-2xl font-black text-primary">{step.icon}</span>
@@ -80,7 +83,8 @@ export function HowItWorksSection() {
             </div>
           </div>
         </ContainerScroll>
-      </div>
-    </section>
+        </div>
+      </section>
+    </SectionAnimations>
   )
 }

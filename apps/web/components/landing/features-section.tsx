@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { GlowCard } from '@/components/ui/spotlight-card'
 import { BackgroundPaths } from '@/components/ui/background-paths'
+import { SectionAnimations } from '@/components/landing/section-animations'
 
 const features = [
   {
@@ -41,13 +42,14 @@ const features = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="relative py-24 lg:py-32 bg-[#080808] overflow-hidden">
-      {/* Background paths texture */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none">
-        <BackgroundPaths title="" />
-      </div>
+    <SectionAnimations>
+      <section id="features" className="relative py-24 lg:py-32 bg-[#080808] overflow-hidden">
+        {/* Background paths texture */}
+        <div className="absolute inset-0 opacity-20 pointer-events-none">
+          <BackgroundPaths title="" />
+        </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -71,6 +73,7 @@ export function FeaturesSection() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: '-80px' }}
               transition={{ duration: 0.6, ease: 'easeOut' }}
+              data-animate="true"
             >
               {feature.featured ? (
                 <GlowCard
@@ -130,5 +133,6 @@ export function FeaturesSection() {
         </div>
       </div>
     </section>
+    </SectionAnimations>
   )
 }

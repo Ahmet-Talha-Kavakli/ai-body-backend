@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { StarRating } from '@/components/ui/star-rating'
+import { SectionAnimations } from '@/components/landing/section-animations'
 
 const testimonials = [
   {
@@ -59,8 +60,9 @@ const cardVariants = {
 
 export function TestimonialsSection() {
   return (
-    <section className="py-24 lg:py-32 bg-[#080808]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <SectionAnimations>
+      <section className="py-24 lg:py-32 bg-[#080808]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -88,6 +90,7 @@ export function TestimonialsSection() {
               whileInView="visible"
               viewport={{ once: true, margin: '-40px' }}
               className="break-inside-avoid bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition-colors duration-300"
+              data-animate="true"
             >
               <StarRating defaultValue={t.rating} readOnly />
               <p className="text-zinc-300 text-sm leading-relaxed mt-4 mb-5">
@@ -105,7 +108,8 @@ export function TestimonialsSection() {
             </motion.div>
           ))}
         </div>
-      </div>
-    </section>
+        </div>
+      </section>
+    </SectionAnimations>
   )
 }
