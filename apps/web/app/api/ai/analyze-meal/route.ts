@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { openai } from '@/lib/ai/client'
 import { db } from '@/lib/db/client'
+import { canUseFeatureWithLimit, getPlanLimits, isUsageResetNeeded } from '@/lib/stripe/plans'
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +14,55 @@ export async function POST(req: NextRequest) {
 
     if (!imageBase64) {
       return NextResponse.json({ error: 'Fotoğraf gerekli' }, { status: 400 })
+    }
+
+    // Get user and subscription info
+    const user = await db.user.findUnique({
+      where: { clerkId },
+      include: { subscription: true },
+    })
+    if (!user) {
+      return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 404 })
+    }
+
+    // Check feature limits
+    const tier = user.subscriptionTier
+    const limits = getPlanLimits(tier)
+
+    if (limits.aiMeals === 0) {
+      return NextResponse.json(
+        { error: 'Bu özelliğe erişim yok. Lütfen bir plan yükseltin.', errorCode: 'UPGRADE_REQUIRED' },
+        { status: 403 }
+      )
+    }
+
+    // Reset usage if needed
+    let subscription = user.subscription
+    if (subscription && isUsageResetNeeded(subscription.usageResetAt)) {
+      await db.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          aiProgramsUsed: 0,
+          aiMealsUsed: 0,
+          aiCoachUsed: 0,
+          monthlySessionsUsed: 0,
+          usageResetAt: new Date(),
+        },
+      })
+      subscription.aiMealsUsed = 0
+    }
+
+    // Check if user has remaining meal analyses
+    if (!canUseFeatureWithLimit(tier, 'aiMeals', subscription?.aiMealsUsed ?? 0)) {
+      return NextResponse.json(
+        {
+          error: `Aylık ${limits.aiMeals} yemek analizi limitine ulaştınız. Ay sonuna kadar bekleyin veya bir plan yükseltin.`,
+          errorCode: 'LIMIT_REACHED',
+          used: subscription?.aiMealsUsed ?? 0,
+          limit: limits.aiMeals,
+        },
+        { status: 429 }
+      )
     }
 
     const response = await openai.chat.completions.create({
@@ -51,20 +101,25 @@ Türkçe yanıt ver. Sadece JSON döndür:
     const analysis = JSON.parse(response.choices[0]?.message?.content ?? '{}')
 
     // Otomatik kaydet
-    const user = await db.user.findUnique({ where: { clerkId } })
-    if (user) {
-      await db.mealLog.create({
-        data: {
-          userId: user.id,
-          mealType: mealType ?? 'snack',
-          items: analysis.foodItems ?? [],
-          totalCalories: analysis.totalCalories ?? 0,
-          totalProteinG: analysis.totalProteinG ?? 0,
-          totalCarbsG: analysis.totalCarbsG ?? 0,
-          totalFatG: analysis.totalFatG ?? 0,
-          aiAnalyzed: true,
-          notes: analysis.notes,
-        },
+    await db.mealLog.create({
+      data: {
+        userId: user.id,
+        mealType: mealType ?? 'snack',
+        items: analysis.foodItems ?? [],
+        totalCalories: analysis.totalCalories ?? 0,
+        totalProteinG: analysis.totalProteinG ?? 0,
+        totalCarbsG: analysis.totalCarbsG ?? 0,
+        totalFatG: analysis.totalFatG ?? 0,
+        aiAnalyzed: true,
+        notes: analysis.notes,
+      },
+    })
+
+    // Increment usage counter
+    if (subscription) {
+      await db.subscription.update({
+        where: { id: subscription.id },
+        data: { aiMealsUsed: { increment: 1 } },
       })
     }
 

@@ -94,3 +94,11 @@ export function canUseFeatureWithLimit(
   if (limit === Infinity) return true
   return used < limit
 }
+
+/**
+ * Check if usage has reset (monthly reset at subscription renewal)
+ */
+export function isUsageResetNeeded(usageResetAt: Date): boolean {
+  const now = new Date()
+  return now.getMonth() !== usageResetAt.getMonth() || now.getFullYear() !== usageResetAt.getFullYear()
+}
