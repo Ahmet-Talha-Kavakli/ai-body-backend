@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 import { DashboardShell } from '@/components/dashboard/shared/layout'
+import { UserInitializer } from '@/components/dashboard/shared/UserInitializer'
 
 export const metadata: Metadata = {
   title: {
@@ -15,5 +16,10 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  return <DashboardShell>{children}</DashboardShell>
+  return (
+    <DashboardShell>
+      <UserInitializer />
+      {children}
+    </DashboardShell>
+  )
 }

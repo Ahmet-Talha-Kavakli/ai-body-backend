@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Dumbbell, Mail, Github, Linkedin, Twitter } from 'lucide-react'
+import { Dumbbell } from 'lucide-react'
 import { SocialButtons } from '@/components/ui/social-buttons'
 import { InfiniteSlider } from '@/components/ui/infinite-slider'
 
@@ -43,13 +43,6 @@ const FOOTER_SECTIONS: FooterSection[] = [
       { label: 'Cookie Policy', href: '/cookies' },
     ],
   },
-]
-
-const SOCIAL_LINKS = [
-  { icon: Twitter, href: 'https://twitter.com/fitai', label: 'Twitter' },
-  { icon: Github, href: 'https://github.com/fitai', label: 'GitHub' },
-  { icon: Linkedin, href: 'https://linkedin.com/company/fitai', label: 'LinkedIn' },
-  { icon: Mail, href: 'mailto:hello@fitai.app', label: 'Email' },
 ]
 
 export function LandingFooter() {
@@ -139,7 +132,7 @@ export function LandingFooter() {
                 <p className="text-xs font-semibold text-muted-foreground mb-4 uppercase tracking-wide">
                   Follow Us
                 </p>
-                <SocialButtons variant="default" layout="row" />
+                <SocialButtons layout="row" />
               </div>
             </motion.div>
 

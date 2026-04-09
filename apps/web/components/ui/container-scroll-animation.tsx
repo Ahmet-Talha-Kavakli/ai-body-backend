@@ -77,7 +77,7 @@ export const Header = ({
 export const Card = ({
   rotate,
   scale,
-  translate,
+  translate: _translate,
   children,
 }: {
   rotate: MotionValue<number>

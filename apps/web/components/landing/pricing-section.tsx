@@ -1,9 +1,7 @@
 'use client'
 
-import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Check, Star } from 'lucide-react'
-import { MultiTypeRippleButtons } from '@/components/ui/multi-type-ripple-buttons'
 
 const PLANS = [
   {
@@ -59,9 +57,7 @@ const PLANS = [
   },
 ]
 
-import { RippleButton } from '@/components/ui/multi-type-ripple-buttons'
 import { UpgradeBanner } from '@/components/ui/upgrade-banner'
-import { CountdownBanner } from '@/components/ui/countdown-banner'
 import { GlowCard } from '@/components/ui/spotlight-card'
 
 function PricingCard({ plan, index }: any) {
@@ -115,9 +111,9 @@ function PricingCard({ plan, index }: any) {
             </div>
           </div>
 
-          {/* CTA - RippleButton */}
+          {/* CTA - Button */}
           <div className="mb-8">
-            <RippleButton
+            <a
               href={plan.href}
               className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 block text-center ${
                 plan.highlighted
@@ -126,12 +122,12 @@ function PricingCard({ plan, index }: any) {
               }`}
             >
               {plan.cta}
-            </RippleButton>
+            </a>
           </div>
 
           {/* Features */}
           <div className="space-y-3">
-            {plan.features.map((feature) => (
+            {plan.features.map((feature: string) => (
               <div key={feature} className="flex items-start gap-3">
                 <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                 <span className="text-sm text-foreground">{feature}</span>

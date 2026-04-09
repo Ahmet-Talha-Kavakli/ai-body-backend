@@ -81,17 +81,6 @@ export function InteractiveFolderCard() {
     },
   ]
 
-  const getTransform = (fileId: number, isHovered: boolean = false) => {
-    const baseOffset = (5 - fileId) * 15
-    const hoverOffset = isHovered ? 10 : 0
-    const rotations = [0, -5, 12, -15, 8, -10]
-    const xOffsets = [0, 12, -8, 18, -15]
-
-    return {
-      transform: `translateY(-${baseOffset + hoverOffset}px) rotate(${rotations[fileId - 1]}deg) translateX(${xOffsets[fileId - 1]}px)`,
-    }
-  }
-
   return (
     <div className="flex items-center justify-center p-8">
       <label className="relative w-[170px] h-[130px] cursor-pointer perspective" style={{ perspective: '1200px' }}>

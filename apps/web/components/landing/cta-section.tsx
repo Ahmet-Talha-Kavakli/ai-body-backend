@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import ScrollExpandMedia from '@/components/ui/scroll-expansion-hero'
 import { JoinButton } from '@/components/ui/join-button'
 import { SendMessageButton } from '@/components/ui/send-message-button'
 import { Check } from 'lucide-react'
@@ -91,7 +90,7 @@ export function CtaSection() {
               whileTap={{ scale: 0.95 }}
             >
               <Link href="/sign-up">
-                <JoinButton>Start Free Trial</JoinButton>
+                <JoinButton />
               </Link>
             </motion.div>
 

@@ -73,7 +73,7 @@ export function UpgradeBanner({
           <motion.div
             initial="hidden"
             animate={isHovered ? 'visible' : 'hidden'}
-            variants={iconVariants}
+            variants={iconVariants as any}
             custom={{ x: -10, y: -10 }}
             className="pointer-events-none absolute left-[4px] top-[2px]"
           >
@@ -82,7 +82,7 @@ export function UpgradeBanner({
           <motion.div
             initial="hidden"
             animate={isHovered ? 'visible' : 'hidden'}
-            variants={iconVariants}
+            variants={iconVariants as any}
             custom={{ x: 10, y: 10 }}
             className="pointer-events-none absolute bottom-[2px] left-[6rem]"
           >

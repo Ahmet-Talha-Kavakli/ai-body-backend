@@ -4,12 +4,9 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { ChevronDown } from 'lucide-react'
 import Link from 'next/link'
-import { ParticleTextEffect } from '@/components/ui/particle-text-effect'
 import { GlowCard } from '@/components/ui/spotlight-card'
 
 export function HeroSection() {
-  const morphingWords = ['Stronger', 'Faster', 'Smarter', 'Better']
-
   return (
     <section className="relative min-h-screen w-full overflow-hidden bg-background flex items-center justify-center">
 

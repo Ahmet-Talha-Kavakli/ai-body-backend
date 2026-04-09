@@ -51,7 +51,7 @@ const ImageTrail = ({
   const trailRef = useRef<TrailItem[]>([])
 
   const lastAddedTimeRef = useRef<number>(0)
-  const { position: mousePosition, vector: mouseVector } =
+  const { position: mousePosition } =
     useMouseVector(containerRef)
   const lastMousePosRef = useRef(mousePosition)
   const currentIndexRef = useRef(0)
@@ -91,7 +91,7 @@ const ImageTrail = ({
     }
   }, [])
 
-  useAnimationFrame((time, delta) => {
+  useAnimationFrame((time, _delta) => {
     // Skip if mouse hasn't moved
     if (
       lastMousePosRef.current.x === mousePosition.x &&

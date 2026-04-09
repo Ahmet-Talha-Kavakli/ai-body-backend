@@ -1,241 +1,364 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { LogOut, ChevronRight, Moon, Sun, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Loader } from '@/components/ui/loader'
-import { MacbookLoader } from '@/components/ui/macbook-loader'
-import { NewtonsCradle } from '@/components/ui/newtons-cradle'
-import { AlertBoxes } from '@/components/ui/alert-boxes'
-import { Bell, Lock, Trash2, LogOut, User } from 'lucide-react'
+import { useClerk, useUser } from '@clerk/nextjs'
+import { useTheme } from 'next-themes'
+import Image from 'next/image'
+import { THIINGS } from '@/lib/thiings'
 
-const SETTINGS_SECTIONS = [
-  {
-    icon: User,
-    title: 'Account Settings',
-    description: 'Manage your profile information',
-    items: [
-      { label: 'Full Name', value: 'John Doe', editable: true, action: '' },
-      { label: 'Email', value: 'john@example.com', editable: false, action: '' },
-      { label: 'Username', value: '@johndoe', editable: true, action: '' },
-    ],
-  },
-  {
-    icon: Bell,
-    title: 'Notifications',
-    description: 'Manage your notification preferences',
-    toggles: [
-      { label: 'Workout Reminders', enabled: true },
-      { label: 'Achievement Badges', enabled: true },
-      { label: 'Weekly Reports', enabled: false },
-      { label: 'Marketing Emails', enabled: false },
-    ],
-  },
-  {
-    icon: Lock,
-    title: 'Privacy & Security',
-    description: 'Control your privacy settings',
-    items: [
-      {
-        label: 'Two-Factor Authentication',
-        value: 'Enabled',
-        editable: false,
-        action: 'Disable',
-      },
-      { label: 'Last Password Change', value: '30 days ago', editable: false, action: 'Change' },
-    ],
-  },
+interface ProfileData {
+  user: {
+    name: string | null
+    email: string
+    clerkId: string
+    healthProfile: {
+      fitnessLevel: string
+      goals: string[]
+    } | null
+  } | null
+}
+
+const NOTIFICATIONS = [
+  { label: 'Antrenman Hatırlatıcısı', desc: 'Günlük seans saatinde bildirim al', key: 'workout', default: true },
+  { label: 'Başarı Rozetleri', desc: 'Yeni başarı kazandığında bildirim al', key: 'badges', default: true },
+  { label: 'Haftalık Rapor', desc: 'Her Pazartesi haftalık özet', key: 'weekly', default: false },
+  { label: 'AI Koç Tavsiyeleri', desc: 'Kişiselleştirilmiş öneriler', key: 'ai', default: true },
+  { label: 'Pazarlama E-postaları', desc: 'Kampanya ve fırsatlardan haberdar ol', key: 'marketing', default: false },
 ]
 
-export default function SettingsPage() {
+const FITNESS_LEVELS: Record<string, string> = {
+  beginner: 'Başlangıç',
+  intermediate: 'Orta',
+  advanced: 'İleri',
+}
+
+function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
   return (
-    <div className="min-h-screen bg-background p-8">
-      {/* Header */}
+    <button
+      onClick={onChange}
+      className={`relative w-11 h-6 rounded-full transition-colors ${enabled ? 'bg-blue-600' : 'bg-muted'}`}
+    >
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-12 flex items-center justify-between"
-      >
-        <div>
-          <h1 className="text-4xl font-black mb-2">Settings</h1>
-          <p className="text-muted-foreground">Manage your account and preferences</p>
-        </div>
-        <MacbookLoader />
+        animate={{ x: enabled ? 20 : 2 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        className="absolute top-1 w-4 h-4 bg-white rounded-full shadow"
+      />
+    </button>
+  )
+}
+
+export default function SettingsPage() {
+  const { signOut } = useClerk()
+  const { user: clerkUser } = useUser()
+  const { theme, setTheme } = useTheme()
+  const [profileData, setProfileData] = useState<ProfileData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [name, setName] = useState('')
+  const [editName, setEditName] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [toggles, setToggles] = useState(
+    Object.fromEntries(NOTIFICATIONS.map(n => [n.key, n.default]))
+  )
+
+  useEffect(() => {
+    fetch('/api/user/profile')
+      .then(r => r.json())
+      .then((data: ProfileData) => {
+        setProfileData(data)
+        setName(data.user?.name ?? clerkUser?.fullName ?? '')
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [clerkUser])
+
+  const flipToggle = (key: string) => {
+    setToggles(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const handleSaveName = async () => {
+    if (!name.trim()) return
+    setSaving(true)
+    try {
+      await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      setEditName(false)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 2000)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const email = clerkUser?.primaryEmailAddress?.emailAddress ?? profileData?.user?.email ?? '–'
+  const fitnessLevel = profileData?.user?.healthProfile?.fitnessLevel
+  const goals = profileData?.user?.healthProfile?.goals ?? []
+
+  return (
+    <div className="space-y-8 max-w-2xl">
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-3xl font-black mb-1">Ayarlar</h1>
+        <p className="text-muted-foreground">Hesap ve tercihlerini yönet</p>
       </motion.div>
 
-      {/* Loaders and Components Demo */}
+      {/* Profil */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="mb-12 grid md:grid-cols-2 gap-6"
+        transition={{ delay: 0.1 }}
+        className="bg-card/50 border border-border/30 rounded-2xl p-5"
       >
-        <div className="text-center p-6 rounded-xl bg-card/50 border border-border/30">
-          <h3 className="text-lg font-bold mb-4">Loading Animation</h3>
-          <NewtonsCradle />
+        <div className="flex items-center gap-3 mb-5">
+          <Image src={THIINGS.profileIcon} alt="profile" width={36} height={36} unoptimized className="rounded-xl" />
+          <div>
+            <h3 className="font-bold">Profil Bilgileri</h3>
+            <p className="text-xs text-muted-foreground">Hesap bilgilerini düzenle</p>
+          </div>
         </div>
-        <div className="text-center p-6 rounded-xl bg-card/50 border border-border/30">
-          <h3 className="text-lg font-bold mb-4">System Alert</h3>
-          <AlertBoxes />
-        </div>
-      </motion.div>
 
-      {/* Settings Sections */}
-      <div className="space-y-8 my-12">
-        {SETTINGS_SECTIONS.map((section, sectionIdx) => {
-          const SectionIcon = section.icon
-          return (
-            <motion.div
-              key={sectionIdx}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + sectionIdx * 0.1 }}
-              className="p-8 rounded-xl bg-card/50 border border-border/30"
-            >
-              <div className="flex items-start gap-4 mb-6">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <SectionIcon className="w-6 h-6 text-primary" />
-                </div>
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-12 bg-muted/30 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {/* Ad Soyad */}
+            <div className="flex items-center justify-between py-3 border-b border-border/20">
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground">Ad Soyad</p>
+                {editName ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      autoFocus
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleSaveName()}
+                      className="text-sm font-semibold bg-transparent border-b border-blue-500 outline-none flex-1"
+                    />
+                    <button
+                      onClick={handleSaveName}
+                      disabled={saving}
+                      className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+                    >
+                      <Save size={12} /> {saving ? 'Kaydediliyor...' : 'Kaydet'}
+                    </button>
+                    <button
+                      onClick={() => setEditName(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      İptal
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm font-semibold">
+                    {name || '–'}
+                    {saveSuccess && <span className="ml-2 text-xs text-green-400">✓ Kaydedildi</span>}
+                  </p>
+                )}
+              </div>
+              {!editName && (
+                <button
+                  onClick={() => setEditName(true)}
+                  className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+                >
+                  Düzenle
+                </button>
+              )}
+            </div>
+
+            {[
+              { label: 'E-posta', value: email },
+              { label: 'Fitness Seviyesi', value: fitnessLevel ? FITNESS_LEVELS[fitnessLevel] ?? fitnessLevel : '–' },
+              { label: 'Hedefler', value: goals.length > 0 ? goals.join(', ') : '–' },
+            ].map(field => (
+              <div key={field.label} className="flex items-center justify-between py-3 border-b border-border/20 last:border-0">
                 <div>
-                  <h2 className="text-2xl font-bold">{section.title}</h2>
-                  <p className="text-muted-foreground">{section.description}</p>
+                  <p className="text-xs text-muted-foreground">{field.label}</p>
+                  <p className="text-sm font-semibold">{field.value}</p>
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+      </motion.div>
 
-              {/* Settings Items */}
-              {section.items && (
-                <div className="space-y-4 mb-6">
-                  {section.items.map((item, idx) => (
-                    <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.15 + idx * 0.05 }}
-                      className="flex items-center justify-between py-4 border-b border-border/30 last:border-0"
-                    >
-                      <div>
-                        <p className="font-semibold">{item.label}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.value}
-                        </p>
-                      </div>
-                      {item.editable && (
-                        <Button variant="outline" size="sm">
-                          Edit
-                        </Button>
-                      )}
-                      {item.action && (
-                        <Button variant="outline" size="sm">
-                          {item.action}
-                        </Button>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-
-              {/* Notification Toggles */}
-              {section.toggles && (
-                <div className="space-y-4">
-                  {section.toggles.map((toggle, idx) => (
-                    <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.15 + idx * 0.05 }}
-                      className="flex items-center justify-between py-3 px-4 bg-background rounded-lg hover:bg-primary/5 transition-colors"
-                    >
-                      <p className="font-semibold">{toggle.label}</p>
-                      <label className="relative cursor-pointer">
-                        <input
-                          type="checkbox"
-                          defaultChecked={toggle.enabled}
-                          className="hidden"
-                        />
-                        <div
-                          className={`w-12 h-6 rounded-full transition-colors ${
-                            toggle.enabled ? 'bg-primary' : 'bg-muted'
-                          }`}
-                        />
-                        <div
-                          className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                            toggle.enabled ? 'translate-x-6' : ''
-                          }`}
-                        />
-                      </label>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )
-        })}
-      </div>
-
-      {/* Danger Zone */}
+      {/* Tema */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="p-8 rounded-xl bg-red-500/10 border border-red-500/20 mb-12"
+        transition={{ delay: 0.15 }}
+        className="bg-card/50 border border-border/30 rounded-2xl p-5"
       >
-        <div className="flex items-start gap-4 mb-6">
-          <div className="p-3 rounded-lg bg-red-500/20">
-            <Trash2 className="w-6 h-6 text-red-500" />
-          </div>
+        <div className="flex items-center gap-3 mb-5">
+          <Image src={THIINGS.settings} alt="settings" width={36} height={36} unoptimized className="rounded-xl" />
           <div>
-            <h2 className="text-2xl font-bold text-red-500">Danger Zone</h2>
-            <p className="text-muted-foreground">
-              Irreversible actions related to your account
-            </p>
+            <h3 className="font-bold">Görünüm ve Dil</h3>
+            <p className="text-xs text-muted-foreground">Tema ve dil tercihlerini seç</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between py-3 border-b border-border/20">
+          <div>
+            <p className="text-sm font-semibold">Tema</p>
+            <p className="text-xs text-muted-foreground">Açık veya koyu mod</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setTheme('light')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                theme === 'light' ? 'bg-blue-600 text-white' : 'bg-muted/30 text-muted-foreground'
+              }`}
+            >
+              <Sun size={12} /> Açık
+            </button>
+            <button
+              onClick={() => setTheme('dark')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                theme === 'dark' || theme === 'system' ? 'bg-blue-600 text-white' : 'bg-muted/30 text-muted-foreground'
+              }`}
+            >
+              <Moon size={12} /> Koyu
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between py-3">
+          <div>
+            <p className="text-sm font-semibold">Dil</p>
+            <p className="text-xs text-muted-foreground">Uygulama dili</p>
+          </div>
+          <select className="text-sm bg-muted/30 border border-border/30 rounded-lg px-3 py-1.5 focus:outline-none">
+            <option>Türkçe</option>
+            <option>English</option>
+          </select>
+        </div>
+      </motion.div>
+
+      {/* Bildirimler */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="bg-card/50 border border-border/30 rounded-2xl p-5"
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <Image src={THIINGS.bell} alt="notifications" width={36} height={36} unoptimized className="rounded-xl" />
+          <div>
+            <h3 className="font-bold">Bildirimler</h3>
+            <p className="text-xs text-muted-foreground">Bildirim tercihlerini yönet</p>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          {NOTIFICATIONS.map(notif => (
+            <div key={notif.key} className="flex items-center justify-between py-3 border-b border-border/20 last:border-0">
+              <div>
+                <p className="text-sm font-semibold">{notif.label}</p>
+                <p className="text-xs text-muted-foreground">{notif.desc}</p>
+              </div>
+              <Toggle
+                enabled={!!toggles[notif.key]}
+                onChange={() => flipToggle(notif.key)}
+              />
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Güvenlik */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="bg-card/50 border border-border/30 rounded-2xl p-5"
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <Image src={THIINGS.settings} alt="security" width={36} height={36} unoptimized className="rounded-xl" />
+          <div>
+            <h3 className="font-bold">Gizlilik ve Güvenlik</h3>
+            <p className="text-xs text-muted-foreground">Hesap güvenliğini yönet</p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {[
+            { label: 'İki Faktörlü Doğrulama', value: 'Aktif', action: 'Devre Dışı Bırak' },
+            { label: 'Son Şifre Değişimi', value: '30 gün önce', action: 'Değiştir' },
+            { label: 'Oturum Geçmişi', value: '3 aktif cihaz', action: 'Görüntüle' },
+          ].map(item => (
+            <div key={item.label} className="flex items-center justify-between py-3 border-b border-border/20 last:border-0">
+              <div>
+                <p className="text-sm font-semibold">{item.label}</p>
+                <p className="text-xs text-muted-foreground">{item.value}</p>
+              </div>
+              <button className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+                {item.action} <ChevronRight size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Tehlikeli Alan */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5"
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <Image src={THIINGS.trashBin} alt="danger" width={36} height={36} unoptimized className="rounded-xl" />
+          <div>
+            <h3 className="font-bold text-red-400">Tehlikeli Alan</h3>
+            <p className="text-xs text-muted-foreground">Geri alınamaz işlemler</p>
           </div>
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between py-4 border-b border-red-500/20">
+          <div className="flex items-center justify-between py-3 border-b border-red-500/20">
             <div>
-              <p className="font-semibold">Delete Account</p>
-              <p className="text-sm text-muted-foreground">
-                Permanently delete your FitAI account and all data
-              </p>
+              <p className="text-sm font-semibold">Tüm Verilerimi Sil</p>
+              <p className="text-xs text-muted-foreground">Antrenman geçmişi ve beslenme verileri silinir</p>
             </div>
-            <Button variant="destructive" size="sm">
-              Delete
+            <Button variant="outline" size="sm" className="border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs">
+              Sil
             </Button>
           </div>
 
-          <div className="flex items-center justify-between py-4">
+          <div className="flex items-center justify-between py-3 border-b border-red-500/20">
             <div>
-              <p className="font-semibold">Sign Out</p>
-              <p className="text-sm text-muted-foreground">
-                Sign out of your account on all devices
-              </p>
+              <p className="text-sm font-semibold">Hesabı Sil</p>
+              <p className="text-xs text-muted-foreground">FitAI hesabın kalıcı olarak silinir</p>
+            </div>
+            <Button variant="destructive" size="sm" className="text-xs">
+              Hesabı Sil
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between py-3">
+            <div>
+              <p className="text-sm font-semibold">Çıkış Yap</p>
+              <p className="text-xs text-muted-foreground">Tüm cihazlardan çıkış yap</p>
             </div>
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 border-red-500/30 text-red-500 hover:bg-red-500/10"
+              onClick={() => signOut({ redirectUrl: '/' })}
+              className="gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs"
             >
-              <LogOut className="w-4 h-4" />
-              Sign Out
+              <LogOut size={12} />
+              Çıkış Yap
             </Button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Saving State */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-        className="p-6 rounded-xl bg-card/50 border border-border/30"
-      >
-        <div className="flex items-center gap-4">
-          <Loader variant="terminal" />
-          <div>
-            <p className="font-semibold">Auto-saving changes</p>
-            <p className="text-sm text-muted-foreground">
-              Your settings are being updated...
-            </p>
           </div>
         </div>
       </motion.div>

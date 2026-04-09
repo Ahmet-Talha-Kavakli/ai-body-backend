@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils/cn'
@@ -68,7 +68,7 @@ export function LandingNav() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [hoveredHref, setHoveredHref] = useState<string | null>(null)
-  const [activeHref, setActiveHref] = useState<string | null>(null)
+  const [activeHref] = useState<string | null>(null)
   const [isMounted, setIsMounted] = useState(false)
   const { scrollY } = useScroll()
 

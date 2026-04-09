@@ -1,8 +1,6 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { LandingAccordionItem } from '@/components/ui/interactive-image-accordion'
-import { InteractiveFolderCard } from '@/components/ui/interactive-folder-card'
 import { BookFlip } from '@/components/ui/book-flip'
 import { useState } from 'react'
 

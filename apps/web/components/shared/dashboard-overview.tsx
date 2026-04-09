@@ -228,7 +228,7 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        {QUICK_ACTIONS.map((action, i) => (
+        {QUICK_ACTIONS.map((action) => (
           <Link
             key={action.href}
             href={action.href}

@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion'
 import { CommitsGrid } from '@/components/ui/commits-grid'
 import { ParticleTextEffect } from '@/components/ui/particle-text-effect'
-import { ParticleCanvas } from '@/components/ui/particle-canvas'
 import { ScrollDownIndicator } from '@/components/ui/scroll-down-indicator'
 import { AnimatedDots } from '@/components/ui/animated-dots'
 
@@ -31,7 +30,7 @@ export function StatsSection() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: 'easeOut' },
+      transition: { duration: 0.6, ease: 'easeOut' as const },
     },
   }
 
@@ -100,7 +99,7 @@ export function StatsSection() {
             className="flex justify-center items-center min-h-[300px] bg-card/30 rounded-2xl border border-border/30 backdrop-blur"
           >
             <div>
-              <ParticleTextEffect text="AI-POWERED FITNESS" />
+              <ParticleTextEffect />
             </div>
           </motion.div>
 

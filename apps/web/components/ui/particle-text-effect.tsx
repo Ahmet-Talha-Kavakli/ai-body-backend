@@ -144,7 +144,7 @@ const DEFAULT_WORDS = ['HELLO', '21st.dev', 'ParticleTextEffect', 'BY', 'KAINXU'
 
 export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffectProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number | undefined>(undefined)
   const particlesRef = useRef<Particle[]>([])
   const frameCountRef = useRef(0)
   const wordIndexRef = useRef(0)
@@ -210,21 +210,21 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
     // Shuffle coordinates for fluid motion
     for (let i = coordsIndexes.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
-      ;[coordsIndexes[i], coordsIndexes[j]] = [coordsIndexes[j], coordsIndexes[i]]
+      ;[coordsIndexes[i], coordsIndexes[j]] = [coordsIndexes[j]!, coordsIndexes[i]!]
     }
 
     for (const coordIndex of coordsIndexes) {
       const pixelIndex = coordIndex
       const alpha = pixels[pixelIndex + 3]
 
-      if (alpha > 0) {
+      if ((alpha ?? 0) > 0) {
         const x = (pixelIndex / 4) % canvas.width
         const y = Math.floor(pixelIndex / 4 / canvas.width)
 
         let particle: Particle
 
         if (particleIndex < particles.length) {
-          particle = particles[particleIndex]
+          particle = particles[particleIndex]!
           particle.isKilled = false
           particleIndex++
         } else {
@@ -258,7 +258,7 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
 
     // Kill remaining particles
     for (let i = particleIndex; i < particles.length; i++) {
-      particles[i].kill(canvas.width, canvas.height)
+      particles[i]?.kill(canvas.width, canvas.height)
     }
   }
 
@@ -275,7 +275,7 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
 
     // Update and draw particles
     for (let i = particles.length - 1; i >= 0; i--) {
-      const particle = particles[i]
+      const particle = particles[i]!
       particle.move()
       particle.draw(ctx, drawAsPoints)
 
@@ -308,7 +308,7 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
     frameCountRef.current++
     if (frameCountRef.current % 240 === 0) {
       wordIndexRef.current = (wordIndexRef.current + 1) % words.length
-      nextWord(words[wordIndexRef.current], canvas)
+      nextWord(words[wordIndexRef.current]!, canvas)
     }
 
     animationRef.current = requestAnimationFrame(animate)
@@ -322,7 +322,7 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
     canvas.height = 500
 
     // Initialize with first word
-    nextWord(words[0], canvas)
+    nextWord(words[0]!, canvas)
 
     // Start animation
     animate()

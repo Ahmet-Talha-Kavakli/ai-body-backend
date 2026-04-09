@@ -18,7 +18,7 @@ interface FlipCardProps {
 const IMG_WIDTH = 60
 const IMG_HEIGHT = 85
 
-function FlipCard({ src, index, total, phase, target }: FlipCardProps) {
+function FlipCard({ src, index, total: _total, phase: _phase, target }: FlipCardProps) {
   return (
     <motion.div
       animate={{
@@ -154,10 +154,10 @@ export default function IntroAnimation() {
     // Touch support
     let touchStartY = 0
     const handleTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0].clientY
+      touchStartY = e.touches[0]?.clientY ?? 0
     }
     const handleTouchMove = (e: TouchEvent) => {
-      const touchY = e.touches[0].clientY
+      const touchY = e.touches[0]?.clientY ?? 0
       const deltaY = touchStartY - touchY
       touchStartY = touchY
 
@@ -298,7 +298,7 @@ export default function IntroAnimation() {
 
             // 1. Intro Phases
             if (introPhase === 'scatter') {
-              target = scatterPositions[i]
+              target = scatterPositions[i]!
             } else if (introPhase === 'line') {
               const lineSpacing = 70
               const lineTotalWidth = TOTAL_IMAGES * lineSpacing

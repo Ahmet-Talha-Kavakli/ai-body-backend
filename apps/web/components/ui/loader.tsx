@@ -464,33 +464,34 @@ function Loader({
   text,
   className,
 }: LoaderProps) {
+  const props = { size, ...(className !== undefined && { className }) }
   switch (variant) {
     case 'circular':
-      return <CircularLoader size={size} className={className} />
+      return <CircularLoader {...props} />
     case 'classic':
-      return <ClassicLoader size={size} className={className} />
+      return <ClassicLoader {...props} />
     case 'pulse':
-      return <PulseLoader size={size} className={className} />
+      return <PulseLoader {...props} />
     case 'pulse-dot':
-      return <PulseDotLoader size={size} className={className} />
+      return <PulseDotLoader {...props} />
     case 'dots':
-      return <DotsLoader size={size} className={className} />
+      return <DotsLoader {...props} />
     case 'typing':
-      return <TypingLoader size={size} className={className} />
+      return <TypingLoader {...props} />
     case 'wave':
-      return <WaveLoader size={size} className={className} />
+      return <WaveLoader {...props} />
     case 'bars':
-      return <BarsLoader size={size} className={className} />
+      return <BarsLoader {...props} />
     case 'terminal':
-      return <TerminalLoader size={size} className={className} />
+      return <TerminalLoader {...props} />
     case 'text-blink':
-      return <TextBlinkLoader text={text} size={size} className={className} />
+      return <TextBlinkLoader {...props} {...(text !== undefined && { text })} />
     case 'text-shimmer':
-      return <TextShimmerLoader text={text} size={size} className={className} />
+      return <TextShimmerLoader {...props} {...(text !== undefined && { text })} />
     case 'loading-dots':
-      return <TextDotsLoader text={text} size={size} className={className} />
+      return <TextDotsLoader {...props} {...(text !== undefined && { text })} />
     default:
-      return <CircularLoader size={size} className={className} />
+      return <CircularLoader {...props} />
   }
 }
 

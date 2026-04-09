@@ -2,8 +2,6 @@
 
 import { motion } from 'framer-motion'
 import { StaggerTestimonials } from '@/components/ui/stagger-testimonials'
-import { TestimonialSlider } from '@/components/ui/testimonial-slider-1'
-import { TransactionCard } from '@/components/ui/transaction-card'
 import { StarRating } from '@/components/ui/star-rating'
 import { useState } from 'react'
 
@@ -94,10 +92,10 @@ export function TestimonialsSection() {
             <StarRating />
           </div>
           <p className="text-2xl font-bold mb-4 max-w-2xl mx-auto">
-            "{testimonials[activeIdx].text}"
+            "{testimonials[activeIdx]?.text}"
           </p>
-          <p className="font-bold text-lg">{testimonials[activeIdx].name}</p>
-          <p className="text-muted-foreground">{testimonials[activeIdx].role}</p>
+          <p className="font-bold text-lg">{testimonials[activeIdx]?.name}</p>
+          <p className="text-muted-foreground">{testimonials[activeIdx]?.role}</p>
 
           {/* Navigation dots */}
           <div className="flex justify-center gap-2 mt-6">

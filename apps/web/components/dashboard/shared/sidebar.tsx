@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { useMemo } from 'react'
 import {
   Home,
   Video,
@@ -34,6 +35,8 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
   const pathname = usePathname()
 
+  const sidebarItems = useMemo(() => NAV_ITEMS, [])
+
   return (
     <>
       {/* Desktop Sidebar */}
@@ -50,12 +53,12 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
         </div>
 
         <nav className="flex-1 px-4 space-y-2">
-          {NAV_ITEMS.map((item) => {
+          {sidebarItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
 
             return (
-              <Link key={item.href} href={item.href}>
+              <Link key={item.href} href={item.href} prefetch>
                 <Button
                   variant={isActive ? 'default' : 'ghost'}
                   className={cn(
@@ -93,7 +96,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
           </div>
 
           <nav className="px-4 space-y-2">
-            {NAV_ITEMS.map((item) => {
+            {sidebarItems.map((item) => {
               const Icon = item.icon
               const isActive = pathname === item.href
 
@@ -102,6 +105,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
                   key={item.href}
                   href={item.href}
                   onClick={onClose}
+                  prefetch
                 >
                   <Button
                     variant={isActive ? 'default' : 'ghost'}

@@ -36,7 +36,7 @@ export function ComicColorPicker() {
         <div className="rounded-lg border-4 border-black bg-white p-5 shadow-lg" style={{ boxShadow: '4px 4px 0px rgba(0, 0, 0, 1)' }}>
           {/* Color Container */}
           <div className="flex items-center justify-center" style={{ perspective: '1000px' }}>
-            {COLORS.map((color, index) => (
+            {COLORS.map((color) => (
               <button
                 key={color.hex}
                 onClick={() => handleColorClick(color.hex)}

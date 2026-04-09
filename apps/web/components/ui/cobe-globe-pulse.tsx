@@ -122,7 +122,7 @@ export function GlobePulse({
       init()
     } else {
       const ro = new ResizeObserver((entries) => {
-        if (entries[0]?.contentRect.width > 0) {
+        if ((entries[0]?.contentRect.width ?? 0) > 0) {
           ro.disconnect()
           init()
         }
@@ -162,7 +162,7 @@ export function GlobePulse({
           key={m.id}
           style={{
             position: 'absolute',
-            // @ts-expect-error CSS Anchor Positioning
+            // @ts-ignore CSS Anchor Positioning
             positionAnchor: `--cobe-${m.id}`,
             bottom: 'anchor(center)',
             left: 'anchor(center)',

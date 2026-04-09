@@ -52,7 +52,7 @@ export const AnimatedDots: React.FC<AnimatedDotsProps> = ({
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const ctx = canvas.getContext('2d')
+    const ctx = canvas.getContext('2d')!
     if (!ctx) return
 
     const TWO_PI = 2 * Math.PI
@@ -85,9 +85,9 @@ export const AnimatedDots: React.FC<AnimatedDotsProps> = ({
       draw() {
         this.velocity += this.ranVelocity
         const colorIncrement = 255 - Math.round(this.velocity * (255 / (height + this.radius)))
-        ctx.fillStyle = this.updateColors(colors[this.ranColor], colorIncrement)
+        ctx.fillStyle = this.updateColors(colors[this.ranColor]!, colorIncrement)
         ctx.globalAlpha = opacity
-        ctx.globalCompositeOperation = blendMode
+        ctx.globalCompositeOperation = blendMode as GlobalCompositeOperation
 
         if (this.velocity >= height + this.radius) {
           this.velocity = 0

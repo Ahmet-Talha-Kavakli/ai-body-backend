@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion'
 import { GlowCard } from '@/components/ui/spotlight-card'
 import { ProgressiveBlur } from '@/components/ui/progressive-blur'
-import { RevealImageList } from '@/components/ui/reveal-images'
 import { Sparkles, Zap, Target } from 'lucide-react'
 
 const features = [
@@ -30,12 +29,6 @@ const features = [
   },
 ]
 
-const imageData = [
-  { src: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=500&auto=format&fit=crop&q=60', alt: 'AI Form Analysis' },
-  { src: 'https://images.unsplash.com/photo-1517836357463-d25ddfcbf042?w=500&auto=format&fit=crop&q=60', alt: 'Personal Training' },
-  { src: 'https://images.unsplash.com/photo-1566886387580-e4f08f78d7f9?w=500&auto=format&fit=crop&q=60', alt: 'Workout Tracking' },
-]
-
 export function FeaturesSection() {
   return (
     <section
@@ -44,7 +37,7 @@ export function FeaturesSection() {
     >
       {/* Progressive Blur Background */}
       <div className="absolute inset-0 opacity-20">
-        <ProgressiveBlur angle={45} colors={['#3b82f6', '#8b5cf6', '#ec4899']} />
+        <ProgressiveBlur direction="bottom" blurIntensity={3} />
       </div>
 
       <div className="relative z-10 max-w-6xl mx-auto">
