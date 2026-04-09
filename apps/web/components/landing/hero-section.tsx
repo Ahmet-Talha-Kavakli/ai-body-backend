@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { GradientHoverButton } from '@/components/ui/gradient-hover-button'
 import { ParticleTextEffect } from '@/components/ui/particle-text-effect'
 import { ScrollDownIndicator } from '@/components/ui/scroll-down-indicator'
+import { TextReveal } from '@/components/landing/text-reveal'
 
 const socialProofAvatars = ['JK', 'AM', 'SR', 'TL', 'DM']
 
@@ -45,18 +46,14 @@ export function HeroSection() {
             </motion.div>
 
             {/* Headline */}
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-[1.05] tracking-tight mb-6"
-            >
-              Your AI
-              <br />
-              <span className="text-primary">Personal</span>
-              <br />
-              Trainer
-            </motion.h1>
+            <div className="mb-6">
+              <TextReveal
+                text="Your AI Personal Trainer"
+                variant="h1"
+                accentWords={['AI', 'Personal']}
+                className="text-white leading-[1.05]"
+              />
+            </div>
 
             {/* Subheadline */}
             <motion.p
