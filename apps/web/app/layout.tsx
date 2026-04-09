@@ -44,12 +44,17 @@ interface RootLayoutProps {
   children: React.ReactNode
 }
 
+import { Navbar } from '@/components/ui/sterling-gate-kinetic-navigation'
+
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}>
-          <Providers>{children}</Providers>
+          <Providers>
+            <Navbar />
+            {children}
+          </Providers>
         </body>
       </html>
     </ClerkProvider>
