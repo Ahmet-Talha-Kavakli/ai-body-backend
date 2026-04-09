@@ -183,6 +183,28 @@ All already installed:
 
 ---
 
+## Component Modifications Required
+
+Before implementation, two existing UI components need minor modifications:
+
+### `components/ui/gradient-hover-button.tsx`
+- Add `children` prop (or `label: string`) so button text is configurable
+- Currently hardcoded to "Hover me"
+- Used in: Nav ("Get Started"), Hero ("Start Free Trial"), CTA ("Get Started Free")
+
+### `components/ui/star-rating.tsx`
+- Add optional `defaultValue` + `readOnly` props for display-only mode
+- Currently only supports interactive input
+- Used in: Testimonials (static 5-star display)
+
+---
+
+## Stats Section
+
+`stats-section.tsx` exists and is imported in `page.tsx` but intentionally excluded from redesign scope — it will be removed from `page.tsx` or kept as-is. Decision: **remove from page.tsx** to keep the section count clean and avoid redundancy with the Features section data.
+
+---
+
 ## Non-Goals
 
 - No new pages created
