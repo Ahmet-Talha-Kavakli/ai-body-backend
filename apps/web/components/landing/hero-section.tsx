@@ -1,132 +1,140 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { GlowCard } from '@/components/ui/spotlight-card'
+import { GradientHoverButton } from '@/components/ui/gradient-hover-button'
+import { ParticleTextEffect } from '@/components/ui/particle-text-effect'
+import { ScrollDownIndicator } from '@/components/ui/scroll-down-indicator'
+
+const socialProofAvatars = ['JK', 'AM', 'SR', 'TL', 'DM']
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-screen w-full overflow-hidden bg-background flex items-center justify-center">
+    <section className="relative min-h-screen w-full overflow-hidden bg-[#080808] flex flex-col">
+      {/* Subtle grid overlay */}
+      <div
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+          backgroundSize: '80px 80px',
+        }}
+      />
 
+      {/* Single focused glow — top center */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/8 blur-[120px] pointer-events-none" />
 
-      {/* Glowing blobs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-30" />
-        <div className="absolute bottom-1/2 right-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl opacity-20" />
+      {/* Particle text canvas — background layer */}
+      <div className="absolute inset-0 pointer-events-none opacity-60">
+        <ParticleTextEffect words={['FITAI', 'AI TRAINER', 'YOUR COACH', 'GET FIT']} />
       </div>
 
-      {/* Spotlight cards - background decoration */}
-      <div className="hidden lg:block absolute inset-0 pointer-events-none overflow-hidden">
-        <GlowCard
-          size="lg"
-          glowColor="blue"
-          className="absolute top-20 right-10 opacity-20"
-          customSize
-          width="300px"
-          height="300px"
-        >
-          <div className="text-xs text-muted-foreground/50 text-center p-4">AI Analysis</div>
-        </GlowCard>
-        <GlowCard
-          size="lg"
-          glowColor="purple"
-          className="absolute bottom-32 left-10 opacity-15"
-          customSize
-          width="250px"
-          height="250px"
-        >
-          <div className="text-xs text-muted-foreground/50 text-center p-4">Real-time Coaching</div>
-        </GlowCard>
+      {/* Main content */}
+      <div className="relative z-10 flex-1 flex items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 w-full">
+          <div className="max-w-3xl">
+            {/* Eyebrow label */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary text-xs font-medium mb-6"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              Powered by AI — Personalized for You
+            </motion.div>
+
+            {/* Headline */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-[1.05] tracking-tight mb-6"
+            >
+              Your AI
+              <br />
+              <span className="text-primary">Personal</span>
+              <br />
+              Trainer
+            </motion.h1>
+
+            {/* Subheadline */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.35 }}
+              className="text-lg text-zinc-400 max-w-md leading-relaxed mb-10"
+            >
+              AI-generated workout programs, real-time form feedback, and nutrition tracking — all in one place.
+            </motion.p>
+
+            {/* CTAs */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="flex flex-wrap items-center gap-4 mb-12"
+            >
+              <GradientHoverButton href="/sign-up">
+                Start Free Trial
+              </GradientHoverButton>
+              <Link
+                href="#how-it-works"
+                className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-medium"
+              >
+                <span className="w-8 h-8 rounded-full border border-zinc-700 flex items-center justify-center">
+                  <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor">
+                    <path d="M8.5 6L2 2v8l6.5-4z" />
+                  </svg>
+                </span>
+                Watch Demo
+              </Link>
+            </motion.div>
+
+            {/* Social proof */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.7 }}
+              className="flex items-center gap-3"
+            >
+              <div className="flex -space-x-2">
+                {socialProofAvatars.map((initials, i) => (
+                  <div
+                    key={i}
+                    className="w-8 h-8 rounded-full bg-zinc-700 border-2 border-[#080808] flex items-center justify-center text-[10px] font-bold text-zinc-300"
+                  >
+                    {initials}
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div className="flex items-center gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <svg key={i} className="w-3 h-3 fill-yellow-400" viewBox="0 0 24 24">
+                      <path d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" />
+                    </svg>
+                  ))}
+                </div>
+                <p className="text-xs text-zinc-500 mt-0.5">10,000+ active users</p>
+              </div>
+            </motion.div>
+          </div>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="relative z-10 max-w-6xl mx-auto px-4 py-20 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-6"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full">
-            <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-            <span className="text-sm font-medium text-primary">
-              Powered by Advanced AI
-            </span>
-          </div>
-        </motion.div>
+      {/* Scroll indicator */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2 }}
+        className="relative z-10 flex justify-center pb-8"
+      >
+        <ScrollDownIndicator />
+      </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-6"
-        >
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight">
-            Your AI Personal Trainer
-          </h1>
-        </motion.div>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-8"
-        >
-          Experience the future of fitness with real-time form analysis, AI-powered coaching, and personalized workout plans tailored to your goals.
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
-        >
-          <Link href="/sign-up">
-            <Button size="lg" className="text-base">
-              Get Started Free
-            </Button>
-          </Link>
-          <Link href="#features">
-            <Button size="lg" variant="outline">
-              Learn More
-            </Button>
-          </Link>
-        </motion.div>
-
-
-        {/* Stats Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mb-12"
-        >
-          <div>
-            <div className="text-3xl font-bold text-primary">100K+</div>
-            <p className="text-sm text-muted-foreground">Active Users</p>
-          </div>
-          <div>
-            <div className="text-3xl font-bold text-primary">98%</div>
-            <p className="text-sm text-muted-foreground">Form Accuracy</p>
-          </div>
-          <div>
-            <div className="text-3xl font-bold text-primary">24/7</div>
-            <p className="text-sm text-muted-foreground">AI Coach</p>
-          </div>
-        </motion.div>
-
-        {/* Scroll Indicator */}
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-        >
-          <div className="w-6 h-6 text-primary/50 border-2 border-current rounded-full flex items-center justify-center">
-            <div className="w-1 h-2 bg-current rounded-sm" />
-          </div>
-        </motion.div>
-      </div>
+      {/* Bottom fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#080808] to-transparent pointer-events-none" />
     </section>
   )
 }

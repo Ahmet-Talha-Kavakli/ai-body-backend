@@ -1,217 +1,179 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import Image from 'next/image'
-import { THIINGS } from '@/lib/thiings'
+import Link from 'next/link'
+import { GlowCard } from '@/components/ui/spotlight-card'
+import { GradientHoverButton } from '@/components/ui/gradient-hover-button'
 
-const PLANS = [
+const plans = [
   {
-    name: 'Ücretsiz',
-    price: '₺0',
-    period: 'sonsuza kadar',
-    description: 'Temel AI koçluğu ile başla',
-    features: [
-      '3 seans/ay',
-      'Temel form tespiti',
-      'İlerleme takibi',
-      'Topluluk erişimi',
-    ],
-    cta: 'Başla',
+    name: 'Free',
+    monthly: 0,
+    annual: 0,
+    description: 'For curious beginners',
+    features: ['3 AI workouts / month', 'Basic nutrition logging', 'Progress tracking', 'Mobile app access'],
+    cta: 'Get started free',
     href: '/sign-up',
-    highlighted: false,
-  },
-  {
-    name: 'Basic',
-    price: '₺149',
-    period: '/ay',
-    description: 'Geliştirilmiş AI koçluğu deneyimi',
-    features: [
-      '10 seans/ay',
-      'Gerçek zamanlı form analizi',
-      '1 kişiselleştirilmiş program/ay',
-      '5 AI koç mesajı',
-      'Akıllı saat senkronizasyonu',
-    ],
-    cta: 'Ücretsiz Deneyin',
-    href: '/sign-up?plan=basic',
-    highlighted: false,
-  },
-  {
-    name: 'Standart',
-    price: '₺299',
-    period: '/ay',
-    description: 'Kapsamlı AI koçluğu ve analitikler',
-    badge: 'En Popüler',
-    features: [
-      '30 seans/ay',
-      'Sınırsız AI koç mesajları',
-      '5 kişiselleştirilmiş program/ay',
-      '10 AI yemek analizi',
-      'Gelişmiş ilerleme analizi',
-      'Akıllı saat senkronizasyonu',
-      'Öncelikli destek',
-    ],
-    cta: 'Ücretsiz Deneyin',
-    href: '/sign-up?plan=standard',
-    highlighted: true,
+    highlight: false,
   },
   {
     name: 'Pro',
-    price: '₺599',
-    period: '/ay',
-    description: 'Ciddi sporcular için sınırsız özellikler',
+    monthly: 19,
+    annual: 15,
+    description: 'For serious progress',
     features: [
-      'Sınırsız seans',
-      'Sınırsız AI özellikleri',
-      'Sınırsız kişiselleştirilmiş programlar',
-      'Sınırsız AI yemek analizi',
-      'Gelişmiş ilerleme analizi',
-      'Akıllı saat senkronizasyonu',
-      'Öncelikli destek',
-      'Öncü özellik erişimi',
+      'Unlimited AI workouts',
+      'Real-time form analysis',
+      'Full nutrition AI coach',
+      'Advanced analytics',
+      'Priority support',
     ],
-    cta: 'Ücretsiz Deneyin',
+    cta: 'Start Pro trial',
     href: '/sign-up?plan=pro',
-    highlighted: false,
+    highlight: true,
+  },
+  {
+    name: 'Elite',
+    monthly: 49,
+    annual: 39,
+    description: 'For peak performance',
+    features: [
+      'Everything in Pro',
+      '1-on-1 AI coaching sessions',
+      'Custom meal plans',
+      'Wearable device sync',
+      'Team challenges',
+    ],
+    cta: 'Go Elite',
+    href: '/sign-up?plan=elite',
+    highlight: false,
   },
 ]
 
-import { UpgradeBanner } from '@/components/ui/upgrade-banner'
-import { GlowCard } from '@/components/ui/spotlight-card'
+function PricingCardContent({
+  plan,
+  annual,
+}: {
+  plan: (typeof plans)[0]
+  annual: boolean
+}) {
+  const price = annual ? plan.annual : plan.monthly
 
-function PricingCard({ plan, index }: any) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.1 }}
-      className={`relative rounded-2xl transition-all duration-300 ${
-        plan.highlighted
-          ? 'md:scale-105'
-          : ''
-      }`}
-    >
-      <GlowCard
-        glowColor={plan.highlighted ? 'green' : 'blue'}
-        className="h-full"
-        customSize
-        width="100%"
-        height="100%"
-      >
-        {/* Badge */}
-        {plan.badge && (
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
-            <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-primary/10 border border-primary/30">
-              <Image src={THIINGS.star} alt="badge" width={16} height={16} unoptimized className="w-4 h-4" />
-              <span className="text-sm font-semibold text-primary">
-                {plan.badge}
-              </span>
-            </div>
-          </div>
-        )}
-
-        <div className="p-8">
-          {/* Header */}
-          <h3 className="text-2xl font-bold text-foreground mb-2">
-            {plan.name}
-          </h3>
-          <p className="text-sm text-muted-foreground mb-6">
-            {plan.description}
-          </p>
-
-          {/* Price */}
-          <div className="mb-8">
-            <div className="flex items-baseline gap-1">
-              <span className="text-4xl font-bold text-foreground">
-                {plan.price}
-              </span>
-              <span className="text-muted-foreground">{plan.period}</span>
-            </div>
-          </div>
-
-          {/* CTA - Button */}
-          <div className="mb-8">
-            <a
-              href={plan.href}
-              className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 block text-center ${
-                plan.highlighted
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-lg hover:shadow-green-500/30'
-                  : 'border border-border hover:bg-accent'
-              }`}
-            >
-              {plan.cta}
-            </a>
-          </div>
-
-          {/* Features */}
-          <div className="space-y-3">
-            {plan.features.map((feature: string) => (
-              <div key={feature} className="flex items-start gap-3">
-                <Image src={THIINGS.checkMark} alt="check" width={20} height={20} unoptimized className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <span className="text-sm text-foreground">{feature}</span>
-              </div>
-            ))}
-          </div>
+    <>
+      {plan.highlight && (
+        <div className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-primary/20 text-primary border border-primary/30 mb-4">
+          Most Popular
         </div>
-      </GlowCard>
-    </motion.div>
+      )}
+      <h3 className="text-2xl font-black text-white mb-1">{plan.name}</h3>
+      <p className="text-zinc-500 text-sm mb-6">{plan.description}</p>
+
+      {/* Price */}
+      <div className="flex items-end gap-1 mb-8">
+        <motion.span
+          key={price}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-5xl font-black text-white"
+        >
+          {price === 0 ? 'Free' : `$${price}`}
+        </motion.span>
+        {price > 0 && <span className="text-zinc-500 text-sm mb-2">/mo</span>}
+      </div>
+
+      {/* Features */}
+      <ul className="space-y-3 mb-8">
+        {plan.features.map((feature) => (
+          <li key={feature} className="flex items-start gap-2.5 text-sm text-zinc-400">
+            <span className="text-primary mt-0.5 flex-shrink-0">✓</span>
+            {feature}
+          </li>
+        ))}
+      </ul>
+
+      {/* CTA */}
+      {plan.highlight ? (
+        <GradientHoverButton href={plan.href} className="!w-full !justify-center">
+          {plan.cta}
+        </GradientHoverButton>
+      ) : (
+        <Link
+          href={plan.href}
+          className="block w-full text-center py-3 px-6 rounded-full border border-zinc-700 text-zinc-300 text-sm font-medium hover:border-zinc-500 hover:text-white transition-colors"
+        >
+          {plan.cta}
+        </Link>
+      )}
+    </>
   )
 }
 
 export function PricingSection() {
-  return (
-    <section id="pricing" className="py-20 px-4">
-      <div className="container mx-auto">
+  const [annual, setAnnual] = useState(false)
 
+  return (
+    <section id="pricing" className="py-24 lg:py-32 bg-[#080808]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          transition={{ duration: 0.5 }}
+          className="text-center mb-12"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Basit ve Şeffaf Fiyatlandırma
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Fitness yolculuğun için mükemmel planı seç
-          </p>
+          <p className="text-primary text-sm font-medium uppercase tracking-widest mb-3">Pricing</p>
+          <h2 className="text-4xl lg:text-5xl font-black text-white mb-6">Simple, honest pricing</h2>
+
+          {/* Billing toggle */}
+          <div className="inline-flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-full px-4 py-2">
+            <span className={`text-sm transition-colors ${!annual ? 'text-white' : 'text-zinc-500'}`}>
+              Monthly
+            </span>
+            <button
+              onClick={() => setAnnual(!annual)}
+              className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${
+                annual ? 'bg-primary' : 'bg-zinc-700'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-300 ${
+                  annual ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+            <span className={`text-sm transition-colors ${annual ? 'text-white' : 'text-zinc-500'}`}>
+              Annual
+              <span className="ml-1.5 text-xs text-primary font-medium">Save 20%</span>
+            </span>
+          </div>
         </motion.div>
 
         {/* Pricing cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
-          {PLANS.map((plan, i) => (
-            <PricingCard key={plan.name} plan={plan} index={i} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          {plans.map((plan, i) => (
+            <motion.div
+              key={plan.name}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              className={plan.highlight ? 'md:-mt-4 md:mb-4' : ''}
+            >
+              {plan.highlight ? (
+                <GlowCard glowColor="green" customSize className="w-full !h-auto p-8">
+                  <PricingCardContent plan={plan} annual={annual} />
+                </GlowCard>
+              ) : (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 hover:border-zinc-700 transition-colors">
+                  <PricingCardContent plan={plan} annual={annual} />
+                </div>
+              )}
+            </motion.div>
           ))}
         </div>
-
-        {/* Upgrade promotion banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="mt-16"
-        >
-          <UpgradeBanner />
-        </motion.div>
-
-        {/* Footer note */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
-          className="text-center mt-8"
-        >
-          <p className="text-sm text-muted-foreground">
-            Tüm planlar 7 gün ücretsiz deneme içerir. Kredi kartı gerekli değildir.
-          </p>
-          <p className="text-sm text-muted-foreground mt-4">
-            Özel kurumsal plan mı gerekli? <a href="/contact" className="text-primary hover:underline">Satış ekibimize ulaş</a>
-          </p>
-        </motion.div>
       </div>
     </section>
   )

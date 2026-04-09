@@ -1,189 +1,110 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { StaggerTestimonials } from '@/components/ui/stagger-testimonials'
 import { StarRating } from '@/components/ui/star-rating'
-import { useState } from 'react'
 
 const testimonials = [
   {
-    id: 1,
-    name: 'Sarah Chen',
-    role: 'Fitness Coach',
-    text: 'The real-time form corrections have been absolutely transformative. My clients see results faster than ever.',
+    quote: "I've tried every fitness app out there. FitAI is the first one that actually adapts to me — not a template.",
+    name: 'Sarah K.',
+    role: 'Busy mom of two',
     rating: 5,
-    avatar: 'SC',
+    initials: 'SK',
   },
   {
-    id: 2,
-    name: 'Mike Johnson',
-    role: 'Professional Athlete',
-    text: 'Training with FitAI is like having a championship coach available 24/7. Incredible experience.',
+    quote: 'Lost 12kg in 4 months. The AI nutrition coach changed everything about how I eat.',
+    name: 'Marcus T.',
+    role: 'Software engineer',
     rating: 5,
-    avatar: 'MJ',
+    initials: 'MT',
   },
   {
-    id: 3,
-    name: 'Emma Rodriguez',
-    role: 'Busy Professional',
-    text: 'Perfect for my schedule. Personalized workouts whenever I want, and the app adapts to my progress.',
+    quote: 'Form feedback during workouts is insane. Like having a PT in your pocket for 1% of the cost.',
+    name: 'Aisha R.',
+    role: 'Nurse, amateur runner',
     rating: 5,
-    avatar: 'ER',
+    initials: 'AR',
+  },
+  {
+    quote: 'Finally hit my first pull-up after years of trying. The progressive programming just works.',
+    name: 'Jake L.',
+    role: 'Office worker',
+    rating: 5,
+    initials: 'JL',
+  },
+  {
+    quote: 'The weekly plan adjustments are scary accurate. It knows when I need a rest day before I do.',
+    name: 'Diana M.',
+    role: 'Yoga instructor',
+    rating: 5,
+    initials: 'DM',
+  },
+  {
+    quote: 'Recommended FitAI to my entire team. We do weekly challenges now. Productivity is actually up.',
+    name: 'Ravi P.',
+    role: 'Startup founder',
+    rating: 5,
+    initials: 'RP',
   },
 ]
 
+const cardVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, delay: i * 0.08, ease: 'easeOut' },
+  }),
+}
+
 export function TestimonialsSection() {
-  const [activeIdx, setActiveIdx] = useState(0)
-
   return (
-    <section
-      id="testimonials"
-      className="relative min-h-screen w-full py-24 px-4 bg-background"
-    >
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl opacity-20" />
-        <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl opacity-20" />
-      </div>
-
-      <div className="relative z-10 max-w-6xl mx-auto">
+    <section className="py-24 lg:py-32 bg-[#080808]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.5 }}
+          className="mb-16"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full mb-4">
-            <span className="w-2 h-2 bg-primary rounded-full" />
-            <span className="text-sm font-medium text-primary">Testimonials</span>
-          </div>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-6">
-            Loved by Fitness<br />Professionals & Athletes
+          <p className="text-primary text-sm font-medium uppercase tracking-widest mb-3">Testimonials</p>
+          <h2 className="text-4xl lg:text-5xl font-black text-white">
+            Real people.
+            <br />
+            Real results.
           </h2>
-
-          {/* Testimonial count badge */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="flex justify-center gap-8 mt-8 flex-wrap"
-          >
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary">10K+</div>
-              <p className="text-sm text-muted-foreground">5-Star Reviews</p>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary">4.9/5</div>
-              <p className="text-sm text-muted-foreground">Average Rating</p>
-            </div>
-          </motion.div>
         </motion.div>
 
-        {/* Featured Testimonial with Star Rating */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mb-16 p-8 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 text-center"
-        >
-          <div className="flex justify-center mb-4">
-            <StarRating />
-          </div>
-          <p className="text-2xl font-bold mb-4 max-w-2xl mx-auto">
-            "{testimonials[activeIdx]?.text}"
-          </p>
-          <p className="font-bold text-lg">{testimonials[activeIdx]?.name}</p>
-          <p className="text-muted-foreground">{testimonials[activeIdx]?.role}</p>
-
-          {/* Navigation dots */}
-          <div className="flex justify-center gap-2 mt-6">
-            {testimonials.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setActiveIdx(idx)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  idx === activeIdx ? 'bg-primary w-8' : 'bg-primary/40'
-                }`}
-              />
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Grid of Testimonials with Cards */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="grid md:grid-cols-3 gap-8 mb-16"
-        >
-          {testimonials.map((testimonial, idx) => (
+        {/* Staggered masonry grid */}
+        <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5">
+          {testimonials.map((t, i) => (
             <motion.div
-              key={testimonial.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.1 }}
-              className="p-6 rounded-xl bg-card/50 border border-border/30 hover:border-primary/20 transition-colors"
+              key={i}
+              custom={i}
+              variants={cardVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-40px' }}
+              className="break-inside-avoid bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition-colors duration-300"
             >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-sm">
-                  {testimonial.avatar}
+              <StarRating defaultValue={t.rating} readOnly />
+              <p className="text-zinc-300 text-sm leading-relaxed mt-4 mb-5">
+                &ldquo;{t.quote}&rdquo;
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-400">
+                  {t.initials}
                 </div>
                 <div>
-                  <p className="font-bold text-sm">{testimonial.name}</p>
-                  <p className="text-xs text-muted-foreground">{testimonial.role}</p>
+                  <p className="text-white text-sm font-medium">{t.name}</p>
+                  <p className="text-zinc-500 text-xs">{t.role}</p>
                 </div>
               </div>
-              <div className="flex gap-1 mb-3">
-                {Array(testimonial.rating).fill(null).map((_, i) => (
-                  <span key={i} className="text-yellow-400">★</span>
-                ))}
-              </div>
-              <p className="text-muted-foreground text-sm italic">"{testimonial.text}"</p>
             </motion.div>
           ))}
-        </motion.div>
-
-        {/* Transaction-style testimonials for premium feel */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="mb-12"
-        >
-          <h3 className="text-center text-xl font-semibold text-foreground mb-8">
-            Real Results from Real Users
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-            <div className="p-6 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20">
-              <h4 className="font-bold text-lg text-green-500 mb-2">Form Accuracy</h4>
-              <p className="text-sm text-muted-foreground mb-3">98% accuracy in real-time form analysis</p>
-              <div className="text-3xl font-bold text-green-500">+45%</div>
-              <p className="text-xs text-muted-foreground mt-1">improvement in 30 days</p>
-            </div>
-            <div className="p-6 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20">
-              <h4 className="font-bold text-lg text-blue-500 mb-2">Consistency Boost</h4>
-              <p className="text-sm text-muted-foreground mb-3">Users maintain more consistent schedules</p>
-              <div className="text-3xl font-bold text-blue-500">+220%</div>
-              <p className="text-xs text-muted-foreground mt-1">workout frequency increase</p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Stagger Testimonials Component - Fancy animation */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.5 }}
-          className="rounded-2xl overflow-hidden bg-gradient-to-br from-primary/5 to-background p-8"
-        >
-          <StaggerTestimonials />
-        </motion.div>
+        </div>
       </div>
     </section>
   )
