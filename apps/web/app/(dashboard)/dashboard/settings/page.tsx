@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { LogOut, ChevronRight, Moon, Sun, Save } from 'lucide-react'
+import { LogOut, ChevronRight, Moon, Sun, Save, Star, Zap, CheckCircle, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useClerk, useUser } from '@clerk/nextjs'
 import { useTheme } from 'next-themes'
@@ -19,6 +19,21 @@ interface ProfileData {
       goals: string[]
     } | null
   } | null
+}
+
+interface SubscriptionData {
+  tier: string
+  usage: {
+    sessions: { used: number; limit: number; canUse: boolean }
+    aiPrograms: { used: number; limit: number; canUse: boolean }
+    aiMeals: { used: number; limit: number; canUse: boolean }
+    aiCoach: { used: number; limit: number; canUse: boolean }
+  }
+  features: {
+    wearableSync: boolean
+    advancedAnalytics: boolean
+    prioritySupport: boolean
+  }
 }
 
 const NOTIFICATIONS = [
@@ -55,7 +70,9 @@ export default function SettingsPage() {
   const { user: clerkUser } = useUser()
   const { theme, setTheme } = useTheme()
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
+  const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [subLoading, setSubLoading] = useState(true)
   const [name, setName] = useState('')
   const [editName, setEditName] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -63,16 +80,26 @@ export default function SettingsPage() {
   const [toggles, setToggles] = useState(
     Object.fromEntries(NOTIFICATIONS.map(n => [n.key, n.default]))
   )
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [portalLoading, setPortalLoading] = useState(false)
 
   useEffect(() => {
-    fetch('/api/user/profile')
-      .then(r => r.json())
-      .then((data: ProfileData) => {
-        setProfileData(data)
-        setName(data.user?.name ?? clerkUser?.fullName ?? '')
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    Promise.all([
+      fetch('/api/user/profile')
+        .then(r => r.json())
+        .then((data: ProfileData) => {
+          setProfileData(data)
+          setName(data.user?.name ?? clerkUser?.fullName ?? '')
+        })
+        .catch(console.error),
+      fetch('/api/subscription/usage')
+        .then(r => r.json())
+        .then((data: SubscriptionData) => {
+          setSubscriptionData(data)
+        })
+        .catch(console.error)
+        .finally(() => setSubLoading(false)),
+    ]).finally(() => setLoading(false))
   }, [clerkUser])
 
   const flipToggle = (key: string) => {
@@ -95,6 +122,40 @@ export default function SettingsPage() {
       console.error(e)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleUpgrade = async (plan: string) => {
+    setCheckoutLoading(plan)
+    try {
+      const res = await fetch('/api/subscription/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setCheckoutLoading(null)
+    }
+  }
+
+  const handlePortal = async () => {
+    setPortalLoading(true)
+    try {
+      const res = await fetch('/api/subscription/portal', { method: 'POST' })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setPortalLoading(false)
     }
   }
 
@@ -190,6 +251,126 @@ export default function SettingsPage() {
             ))}
           </div>
         )}
+      </motion.div>
+
+      {/* Abonelik */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12 }}
+        className="bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 border border-blue-500/20 rounded-2xl p-5"
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <div className="p-2 bg-blue-500/10 rounded-lg">
+            <Star size={24} className="text-blue-400" />
+          </div>
+          <div>
+            <h3 className="font-bold">Abonelik Planı</h3>
+            <p className="text-xs text-muted-foreground">Mevcut planını yönet ve özellik limitleri</p>
+          </div>
+        </div>
+
+        {subLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-10 bg-muted/30 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : subscriptionData ? (
+          <div className="space-y-4">
+            {/* Mevcut Plan */}
+            <div className="flex items-center justify-between p-3 bg-card/50 rounded-xl border border-border/30">
+              <div>
+                <p className="text-xs text-muted-foreground">Mevcut Plan</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-lg font-bold capitalize">
+                    {subscriptionData.tier === 'free' && 'Ücretsiz'}
+                    {subscriptionData.tier === 'basic' && 'Basic'}
+                    {subscriptionData.tier === 'standard' && 'Standart'}
+                    {subscriptionData.tier === 'pro' && 'Pro'}
+                  </p>
+                  {subscriptionData.tier !== 'pro' && (
+                    <Zap size={16} className="text-yellow-500" />
+                  )}
+                </div>
+              </div>
+              {subscriptionData.tier !== 'pro' && (
+                <Button
+                  onClick={() => handleUpgrade(subscriptionData.tier === 'free' ? 'basic' : subscriptionData.tier === 'basic' ? 'standard' : 'pro')}
+                  disabled={checkoutLoading === (subscriptionData.tier === 'free' ? 'basic' : subscriptionData.tier === 'basic' ? 'standard' : 'pro')}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs h-8"
+                >
+                  {checkoutLoading ? 'Yükleniyor...' : 'Yükselten'}
+                </Button>
+              )}
+            </div>
+
+            {/* Kullanım */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground">AYLIK KULLANIM</p>
+              {[
+                { label: 'Seans', usage: subscriptionData.usage.sessions },
+                { label: 'AI Program', usage: subscriptionData.usage.aiPrograms },
+                { label: 'Yemek Analizi', usage: subscriptionData.usage.aiMeals },
+                { label: 'Koç Mesajı', usage: subscriptionData.usage.aiCoach },
+              ].map(item => (
+                <div key={item.label} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.usage.used}/{item.usage.limit === Infinity ? '∞' : item.usage.limit}
+                    </p>
+                  </div>
+                  {item.usage.limit !== Infinity && (
+                    <div className="w-full bg-muted/30 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-all ${
+                          item.usage.used >= item.usage.limit ? 'bg-red-500' : 'bg-blue-500'
+                        }`}
+                        style={{ width: `${Math.min((item.usage.used / item.usage.limit) * 100, 100)}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Özellikler */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground">PREMIUM ÖZELLIKLER</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  { label: 'Akıllı Saat Sync', enabled: subscriptionData.features.wearableSync },
+                  { label: 'Gelişmiş Analiz', enabled: subscriptionData.features.advancedAnalytics },
+                  { label: 'Öncelikli Destek', enabled: subscriptionData.features.prioritySupport },
+                ].map(feature => (
+                  <div key={feature.label} className="flex items-center gap-2 p-2 bg-card/50 rounded-lg border border-border/30">
+                    {feature.enabled ? (
+                      <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
+                    ) : (
+                      <Lock size={14} className="text-muted-foreground flex-shrink-0" />
+                    )}
+                    <span className={`text-xs font-medium ${!feature.enabled && 'text-muted-foreground'}`}>
+                      {feature.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Fatura Yönetimi */}
+            {subscriptionData.tier !== 'free' && (
+              <Button
+                onClick={handlePortal}
+                disabled={portalLoading}
+                variant="outline"
+                className="w-full text-xs h-9"
+              >
+                {portalLoading ? 'Yükleniyor...' : 'Fatura Yönetimi'}
+              </Button>
+            )}
+          </div>
+        ) : null}
       </motion.div>
 
       {/* Tema */}
