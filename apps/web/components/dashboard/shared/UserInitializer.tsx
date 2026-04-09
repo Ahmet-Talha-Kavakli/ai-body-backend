@@ -12,12 +12,18 @@ export function UserInitializer() {
     if (!isLoaded || !user) return
 
     const init = async () => {
-      const res = await fetch('/api/user/sync', { method: 'POST' })
-      const data = await res.json()
+      try {
+        const res = await fetch('/api/user/sync', { method: 'POST' })
+        if (!res.ok) return
 
-      // Onboarding tamamlanmamışsa yönlendir
-      if (!data.onboardingCompleted && window.location.pathname !== '/onboarding') {
-        router.push('/onboarding')
+        const data = await res.json()
+
+        // Onboarding tamamlanmamışsa yönlendir
+        if (!data.onboardingCompleted && typeof window !== 'undefined' && window.location.pathname !== '/onboarding') {
+          router.push('/onboarding')
+        }
+      } catch (error) {
+        console.error('UserInitializer error:', error)
       }
     }
 

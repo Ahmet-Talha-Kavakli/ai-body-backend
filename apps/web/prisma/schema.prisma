@@ -21,7 +21,7 @@ model User {
   email            String    @unique
   name             String
   avatarUrl        String?
-  subscriptionTier String    @default("free") // free | pro | elite
+  subscriptionTier String    @default("free") // free | basic | standard | pro
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -310,9 +310,16 @@ model Subscription {
   user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   stripeCustomerId     String    @unique
   stripeSubscriptionId String?   @unique
-  tier                 String    @default("free") // free | pro | elite
+  tier                 String    @default("free") // free | basic | standard | pro
   status               String    @default("active") // active | canceled | past_due
   currentPeriodEnd     DateTime?
+  monthlySessionsUsed  Int       @default(0)
+  aiProgramsUsed       Int       @default(0)
+  aiMealsUsed          Int       @default(0)
+  aiCoachUsed          Int       @default(0)
+  usageResetAt         DateTime  @default(now())
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+
+  @@index([userId])
 }

@@ -6,6 +6,7 @@ import { TrendingUp, Award, Dumbbell, Activity } from 'lucide-react'
 import Image from 'next/image'
 import { THIINGS } from '@/lib/thiings'
 import { NeonIcon } from '@/components/ui/neon-icon'
+import { MacbookLoader } from '@/components/ui/macbook-loader'
 
 interface ProgressData {
   monthlyActivity: { month: string; sessions: number; calories: number; minutes: number }[]
@@ -35,17 +36,10 @@ export default function ProgressPage() {
 
   if (loading) {
     return (
-      <div className="space-y-8 max-w-5xl">
-        <div className="h-12 bg-muted/30 rounded-xl animate-pulse" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 bg-muted/30 rounded-2xl animate-pulse" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="h-64 bg-muted/30 rounded-2xl animate-pulse" />
-          <div className="h-64 bg-muted/30 rounded-2xl animate-pulse" />
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="scale-[2]">
+          <MacbookLoader />
+        </motion.div>
       </div>
     )
   }

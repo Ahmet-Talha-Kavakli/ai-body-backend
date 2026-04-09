@@ -6,54 +6,72 @@ import { THIINGS } from '@/lib/thiings'
 
 const PLANS = [
   {
-    name: 'Free',
-    price: '$0',
-    period: 'forever',
-    description: 'Get started with basic AI coaching',
+    name: 'Ücretsiz',
+    price: '₺0',
+    period: 'sonsuza kadar',
+    description: 'Temel AI koçluğu ile başla',
     features: [
-      '3 AI workouts/month',
-      'Basic form detection',
-      'Progress tracking',
-      'Community access',
+      '3 seans/ay',
+      'Temel form tespiti',
+      'İlerleme takibi',
+      'Topluluk erişimi',
     ],
-    cta: 'Get Started',
+    cta: 'Başla',
     href: '/sign-up',
     highlighted: false,
   },
   {
-    name: 'Pro',
-    price: '$19',
-    period: '/month',
-    description: 'Full AI coaching experience',
-    badge: 'Most Popular',
+    name: 'Basic',
+    price: '₺149',
+    period: '/ay',
+    description: 'Geliştirilmiş AI koçluğu deneyimi',
     features: [
-      'Unlimited AI workouts',
-      'Real-time form analysis',
-      'Personalized programs',
-      'AI meal analysis',
-      'Smartwatch sync',
-      'Priority support',
+      '10 seans/ay',
+      'Gerçek zamanlı form analizi',
+      '1 kişiselleştirilmiş program/ay',
+      '5 AI koç mesajı',
+      'Akıllı saat senkronizasyonu',
     ],
-    cta: 'Start Free Trial',
-    href: '/sign-up?plan=pro',
+    cta: 'Ücretsiz Deneyin',
+    href: '/sign-up?plan=basic',
+    highlighted: false,
+  },
+  {
+    name: 'Standart',
+    price: '₺299',
+    period: '/ay',
+    description: 'Kapsamlı AI koçluğu ve analitikler',
+    badge: 'En Popüler',
+    features: [
+      '30 seans/ay',
+      'Sınırsız AI koç mesajları',
+      '5 kişiselleştirilmiş program/ay',
+      '10 AI yemek analizi',
+      'Gelişmiş ilerleme analizi',
+      'Akıllı saat senkronizasyonu',
+      'Öncelikli destek',
+    ],
+    cta: 'Ücretsiz Deneyin',
+    href: '/sign-up?plan=standard',
     highlighted: true,
   },
   {
-    name: 'Elite',
-    price: '$49',
-    period: '/month',
-    description: 'Advanced features for serious athletes',
+    name: 'Pro',
+    price: '₺599',
+    period: '/ay',
+    description: 'Ciddi sporcular için sınırsız özellikler',
     features: [
-      'Everything in Pro',
-      'Advanced biomechanics',
-      'Multi-camera support',
-      'Body composition tracking',
-      'VR sessions (coming)',
-      'Dedicated coach',
-      'Early feature access',
+      'Sınırsız seans',
+      'Sınırsız AI özellikleri',
+      'Sınırsız kişiselleştirilmiş programlar',
+      'Sınırsız AI yemek analizi',
+      'Gelişmiş ilerleme analizi',
+      'Akıllı saat senkronizasyonu',
+      'Öncelikli destek',
+      'Öncü özellik erişimi',
     ],
-    cta: 'Start Free Trial',
-    href: '/sign-up?plan=elite',
+    cta: 'Ücretsiz Deneyin',
+    href: '/sign-up?plan=pro',
     highlighted: false,
   },
 ]
@@ -154,15 +172,15 @@ export function PricingSection() {
           className="text-center mb-16"
         >
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Simple, Transparent Pricing
+            Basit ve Şeffaf Fiyatlandırma
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Choose the perfect plan for your fitness journey
+            Fitness yolculuğun için mükemmel planı seç
           </p>
         </motion.div>
 
         {/* Pricing cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
           {PLANS.map((plan, i) => (
             <PricingCard key={plan.name} plan={plan} index={i} />
           ))}
@@ -188,10 +206,10 @@ export function PricingSection() {
           className="text-center mt-8"
         >
           <p className="text-sm text-muted-foreground">
-            All plans include 7-day free trial. No credit card required.
+            Tüm planlar 7 gün ücretsiz deneme içerir. Kredi kartı gerekli değildir.
           </p>
           <p className="text-sm text-muted-foreground mt-4">
-            Need a custom enterprise plan? <a href="/contact" className="text-primary hover:underline">Contact our sales team</a>
+            Özel kurumsal plan mı gerekli? <a href="/contact" className="text-primary hover:underline">Satış ekibimize ulaş</a>
           </p>
         </motion.div>
       </div>

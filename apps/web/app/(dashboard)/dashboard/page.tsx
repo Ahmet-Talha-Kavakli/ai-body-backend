@@ -12,6 +12,7 @@ import { useUser } from '@clerk/nextjs'
 import Image from 'next/image'
 import { THIINGS } from '@/lib/thiings'
 import { NeonIcon } from '@/components/ui/neon-icon'
+import { MacbookLoader } from '@/components/ui/macbook-loader'
 
 interface DashboardStats {
   stats: {
@@ -158,17 +159,42 @@ export default function DashboardPage() {
 
       {/* İstatistikler */}
       {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-card/30 border border-border/20 rounded-2xl p-5 h-24 animate-pulse" />
-          ))}
-        </div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center min-h-screen">
+          <div className="scale-[2]"><MacbookLoader /></div>
+        </motion.div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {STATS.map((s, i) => (
-            <StatCard key={s.label} {...s} delay={i * 0.08} />
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08 }}
+              whileHover={{ y: -8 }}
+              className="group relative"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+              <div className="relative bg-gradient-to-br from-card/80 to-card/40 border border-border/30 rounded-3xl p-6 backdrop-blur-sm hover:border-border/60 transition-all h-full">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2 font-semibold uppercase tracking-wider">{s.label}</p>
+                    <div className="flex items-end gap-2">
+                      <p className="text-4xl font-black bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">{s.value}</p>
+                      <p className="text-sm text-muted-foreground font-semibold mb-1">{s.unit}</p>
+                    </div>
+                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    className={`${s.bg} border ${s.border} rounded-2xl p-3`}
+                  >
+                    <NeonIcon type={s.neonType} color={s.color.replace('text-', '') as any} size={24} />
+                  </motion.div>
+                </div>
+                <p className="text-xs text-green-400/90 mt-3 font-semibold">{s.sub}</p>
+              </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* Ana içerik */}
@@ -224,12 +250,23 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="bg-card/50 border border-border/30 rounded-2xl p-5"
+          className="group relative"
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold">Haftalık Aktivite</h3>
-            <TrendingUp size={16} className="text-green-400" />
-          </div>
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+          <div className="relative bg-gradient-to-br from-card/80 to-card/40 border border-green-500/20 rounded-3xl p-6 backdrop-blur-sm hover:border-green-500/40 transition-all">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="font-bold text-lg">Haftalık Aktivite</h3>
+                <p className="text-xs text-muted-foreground mt-1">Bu haftanın özeti</p>
+              </div>
+              <motion.div
+                animate={{ rotate: doneDays === 7 ? 360 : 0 }}
+                transition={{ duration: 0.5 }}
+                className={`p-2.5 rounded-lg transition-all ${doneDays === 7 ? 'bg-green-500/20 ring-1 ring-green-500/30' : 'bg-muted/20'}`}
+              >
+                <TrendingUp size={18} className={doneDays === 7 ? 'text-green-400' : 'text-muted-foreground'} />
+              </motion.div>
+            </div>
 
           <div className="space-y-2 mb-4">
             {loading ? (
@@ -267,6 +304,7 @@ export default function DashboardPage() {
             <p className="text-2xl font-black text-green-400">{doneDays}/7</p>
             <p className="text-xs text-muted-foreground">gün tamamlandı</p>
           </div>
+          </div>
         </motion.div>
       </div>
 
@@ -277,17 +315,27 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-card/50 border border-border/30 rounded-2xl p-5"
+          className="group relative"
         >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Image src={THIINGS.apple} alt="apple" width={28} height={28} unoptimized />
-              <h3 className="font-bold">Bugünkü Beslenme</h3>
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+          <div className="relative bg-gradient-to-br from-card/80 to-card/40 border border-orange-500/20 rounded-3xl p-6 backdrop-blur-sm hover:border-orange-500/40 transition-all h-full">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <motion.div
+                  whileHover={{ scale: 1.15, rotate: -8 }}
+                  className="w-12 h-12 bg-gradient-to-br from-orange-500/20 to-orange-600/10 rounded-2xl flex items-center justify-center ring-1 ring-orange-500/20"
+                >
+                  <Image src={THIINGS.apple} alt="apple" width={24} height={24} unoptimized />
+                </motion.div>
+                <div>
+                  <h3 className="font-bold text-lg">Bugünkü Beslenme</h3>
+                  <p className="text-xs text-muted-foreground">Kalori hedefini takip et</p>
+                </div>
+              </div>
+              <Link href="/dashboard/nutrition" className="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-blue-500/15 transition-all">
+                Detay <ChevronRight size={14} />
+              </Link>
             </div>
-            <Link href="/dashboard/nutrition" className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
-              Detay <ChevronRight size={12} />
-            </Link>
-          </div>
 
           <div className="flex items-center gap-6 mb-4">
             <div className="relative w-20 h-20 shrink-0">
@@ -346,6 +394,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             ))}
+            </div>
           </div>
         </motion.div>
 
@@ -354,48 +403,78 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="bg-card/50 border border-border/30 rounded-2xl p-5"
+          className="group relative"
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold">Hızlı Erişim</h3>
-          </div>
-
-          <div className="space-y-3">
-            {[
-              { href: '/dashboard/workouts', img: THIINGS.dumbbell, label: 'Egzersiz Planım', sub: 'Haftalık programını gör', bg: 'bg-blue-500/10' },
-              { href: '/dashboard/progress', img: THIINGS.trendingUp, label: 'İlerleyiş', sub: 'Güç ve vücut gelişimini takip et', bg: 'bg-green-500/10' },
-              { href: '/dashboard/health', img: THIINGS.heart, label: 'Sağlık Metrikleri', sub: 'Nabız, uyku ve su takibi', bg: 'bg-red-500/10' },
-            ].map(item => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-4 p-3 bg-muted/20 hover:bg-muted/30 border border-border/20 rounded-xl transition-colors group"
-              >
-                <div className={`w-10 h-10 ${item.bg} rounded-xl flex items-center justify-center shrink-0`}>
-                  <Image src={item.img} alt={item.label} width={24} height={24} unoptimized className="drop-shadow-sm" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">{item.label}</p>
-                  <p className="text-xs text-muted-foreground truncate">{item.sub}</p>
-                </div>
-                <ChevronRight size={15} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-              </Link>
-            ))}
-          </div>
-
-          {/* Su takibi */}
-          <div className="mt-4 p-3 bg-blue-500/5 border border-blue-500/20 rounded-xl flex items-center gap-4">
-            <Droplets size={20} className="text-blue-400 shrink-0" />
-            <div className="flex-1">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="font-medium">Su Tüketimi</span>
-                <span className="text-blue-400">— / 2.5 L</span>
-              </div>
-              <div className="h-1.5 bg-muted rounded-full" />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity blur-xl" />
+          <div className="relative bg-gradient-to-br from-card/80 to-card/40 border border-border/30 rounded-3xl p-6 backdrop-blur-sm hover:border-border/60 transition-all">
+            <div className="mb-5">
+              <h3 className="font-bold text-lg">Hızlı Erişim</h3>
+              <p className="text-xs text-muted-foreground mt-1">Sık kullandığın bölümlere ulaş</p>
             </div>
-            <Link href="/dashboard/health" className="text-xs text-blue-400 hover:text-blue-300 shrink-0">
-              Ekle
-            </Link>
+
+            <div className="space-y-3 mb-5">
+              {[
+                { href: '/dashboard/workouts', img: THIINGS.dumbbell, label: 'Egzersiz Planım', sub: 'Haftalık programını gör', bg: 'from-blue-500/20 to-blue-600/10', border: 'border-blue-500/20' },
+                { href: '/dashboard/progress', img: THIINGS.trendingUp, label: 'İlerleyiş', sub: 'Güç ve vücut gelişimini takip et', bg: 'from-green-500/20 to-green-600/10', border: 'border-green-500/20' },
+                { href: '/dashboard/health', img: THIINGS.heart, label: 'Sağlık Metrikleri', sub: 'Nabız, uyku ve su takibi', bg: 'from-red-500/20 to-red-600/10', border: 'border-red-500/20' },
+              ].map((item, idx) => (
+                <motion.div
+                  key={item.href}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.35 + idx * 0.05 }}
+                  whileHover={{ x: 4 }}
+                >
+                  <Link
+                    href={item.href}
+                    className={`flex items-center gap-4 p-4 bg-gradient-to-r ${item.bg} border ${item.border} rounded-2xl hover:shadow-lg hover:shadow-blue-500/10 transition-all group`}
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.15, rotate: 5 }}
+                      className={`w-12 h-12 bg-gradient-to-br ${item.bg} rounded-xl flex items-center justify-center shrink-0 ring-1 ring-white/10`}
+                    >
+                      <Image src={item.img} alt={item.label} width={24} height={24} unoptimized className="drop-shadow-sm" />
+                    </motion.div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm group-hover:text-foreground transition-colors">{item.label}</p>
+                      <p className="text-xs text-muted-foreground truncate">{item.sub}</p>
+                    </div>
+                    <motion.div animate={{ x: 0 }} whileHover={{ x: 4 }}>
+                      <ChevronRight size={16} className="text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+                    </motion.div>
+                  </Link>
+                </motion.div>
+                ))}
+            </div>
+
+              {/* Su takibi */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="p-4 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-2xl hover:border-blue-500/40 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <motion.div
+                  animate={{ y: [0, -3, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <Droplets size={20} className="text-blue-400 shrink-0" />
+                </motion.div>
+                <div className="flex-1">
+                  <div className="flex justify-between text-xs mb-2">
+                    <span className="font-semibold">Su Tüketimi</span>
+                    <span className="text-blue-400 font-bold">— / 2.5 L</span>
+                  </div>
+                  <div className="h-2 bg-muted/40 rounded-full overflow-hidden ring-1 ring-white/5">
+                    <div className="w-0 h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full" />
+                  </div>
+                </div>
+                <Link href="/dashboard/health" className="text-xs text-blue-400 hover:text-blue-300 font-semibold shrink-0 px-2 py-1 rounded hover:bg-blue-500/10 transition-all">
+                  Ekle
+                </Link>
+              </div>
+            </motion.div>
           </div>
         </motion.div>
       </div>
