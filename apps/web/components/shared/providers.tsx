@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ThemeProvider } from './theme-provider'
 import { Toaster } from '@/components/ui/toaster'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { initGSAP } from '@/lib/animations/gsap-setup'
 
 interface ProvidersProps {
   children: React.ReactNode
@@ -22,6 +23,19 @@ export function Providers({ children }: ProvidersProps) {
         },
       })
   )
+
+  useEffect(() => {
+    // Initialize GSAP on client mount
+    initGSAP()
+
+    // Refresh ScrollTrigger on window resize
+    const handleResize = () => {
+      window.dispatchEvent(new Event('gsap-refresh'))
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   return (
     <QueryClientProvider client={queryClient}>
