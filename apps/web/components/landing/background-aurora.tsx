@@ -23,7 +23,10 @@ export const BackgroundAurora: React.FC<BackgroundAuroraProps> = ({
     // Animate each blob at different speeds
     blobsRef.current.forEach((blob, index) => {
       const duration = 15 + index * 5 // 15s, 20s, 25s, etc.
-      const speed = 0.3 - index * 0.1 // 0.3, 0.2, 0.1
+
+      // Reduce parallax on mobile devices
+      const isMobile = window.innerWidth < 768
+      const speed = isMobile ? 0.1 : 0.3 - index * 0.1 // 0.1 on mobile, else varies
 
       gsap.to(blob, {
         x: `${Math.sin(index) * 100}px`,
@@ -34,7 +37,7 @@ export const BackgroundAurora: React.FC<BackgroundAuroraProps> = ({
         ease: 'sine.inOut',
       })
 
-      // Parallax effect
+      // Parallax effect (reduced on mobile)
       gsap.to(
         blob,
         {
