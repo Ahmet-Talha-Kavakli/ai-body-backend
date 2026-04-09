@@ -1,8 +1,10 @@
 'use client'
 
-import { Menu, Search, Bell, User } from 'lucide-react'
+import { Search } from 'lucide-react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { THIINGS } from '@/lib/thiings'
 
 interface DashboardHeaderProps {
   onMenuClick: () => void
@@ -19,7 +21,11 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
           className="lg:hidden"
           onClick={onMenuClick}
         >
-          <Menu className="w-5 h-5" />
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="2" y1="4" x2="18" y2="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <line x1="2" y1="16" x2="18" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
         </Button>
 
         {/* Logo (mobile only) */}
@@ -39,10 +45,10 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
         {/* Right actions */}
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon">
-            <Bell className="w-5 h-5" />
+            <Image src={THIINGS.bell} alt="notifications" width={20} height={20} unoptimized className="w-5 h-5" />
           </Button>
           <Button variant="ghost" size="icon">
-            <User className="w-5 h-5" />
+            <Image src={THIINGS.profileIcon} alt="user" width={20} height={20} unoptimized className="w-5 h-5" />
           </Button>
         </div>
       </div>
