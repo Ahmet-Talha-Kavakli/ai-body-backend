@@ -2,10 +2,11 @@
 
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
+import Image from 'next/image'
 import Link from 'next/link'
 import { JoinButton } from '@/components/ui/join-button'
 import { SendMessageButton } from '@/components/ui/send-message-button'
-import { Check } from 'lucide-react'
+import { THIINGS } from '@/lib/thiings'
 
 export function CtaSection() {
   return (
@@ -65,15 +66,15 @@ export function CtaSection() {
             className="flex justify-center gap-8 mb-8 flex-wrap"
           >
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Check className="w-4 h-4 text-green-500" />
+              <Image src={THIINGS.checkMark} alt="check" width={16} height={16} unoptimized className="w-4 h-4" />
               <span>7-day free trial</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Check className="w-4 h-4 text-green-500" />
+              <Image src={THIINGS.checkMark} alt="check" width={16} height={16} unoptimized className="w-4 h-4" />
               <span>No credit card needed</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Check className="w-4 h-4 text-green-500" />
+              <Image src={THIINGS.checkMark} alt="check" width={16} height={16} unoptimized className="w-4 h-4" />
               <span>Cancel anytime</span>
             </div>
           </motion.div>

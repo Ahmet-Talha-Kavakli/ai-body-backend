@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import { GlowCard } from '@/components/ui/spotlight-card'
 
@@ -123,7 +122,9 @@ export function HeroSection() {
           transition={{ duration: 2, repeat: Infinity }}
           className="absolute bottom-8 left-1/2 -translate-x-1/2"
         >
-          <ChevronDown className="w-6 h-6 text-primary/50" />
+          <div className="w-6 h-6 text-primary/50 border-2 border-current rounded-full flex items-center justify-center">
+            <div className="w-1 h-2 bg-current rounded-sm" />
+          </div>
         </motion.div>
       </div>
     </section>

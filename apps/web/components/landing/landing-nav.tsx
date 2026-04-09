@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react'
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils/cn'
-import { Dumbbell, Menu, X } from 'lucide-react'
+import Image from 'next/image'
+import { THIINGS } from '@/lib/thiings'
 
 // ─── Scroll Detection ────────────────────────────────────────────────────────
 
@@ -126,7 +127,7 @@ export function LandingNav() {
             whileHover={{ scale: 1.08, rotate: -6 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
           >
-            <Dumbbell className="h-4 w-4 text-primary-foreground" />
+            <Image src={THIINGS.dumbbell} alt="FitAI" width={16} height={16} unoptimized className="w-4 h-4" />
           </motion.div>
           <span className="text-foreground tracking-tight">FitAI</span>
         </Link>
@@ -188,7 +189,9 @@ export function LandingNav() {
                 exit={{ rotate: 90, opacity: 0 }}
                 transition={{ duration: 0.15 }}
               >
-                <X className="h-4 w-4" />
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1 1L15 15M15 1L1 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
               </motion.span>
             ) : (
               <motion.span
@@ -198,7 +201,11 @@ export function LandingNav() {
                 exit={{ rotate: -90, opacity: 0 }}
                 transition={{ duration: 0.15 }}
               >
-                <Menu className="h-4 w-4" />
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="2" y1="3" x2="14" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="2" y1="13" x2="14" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
               </motion.span>
             )}
           </AnimatePresence>

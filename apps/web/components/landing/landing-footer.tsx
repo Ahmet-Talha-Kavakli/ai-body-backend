@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Dumbbell } from 'lucide-react'
+import Image from 'next/image'
+import { THIINGS } from '@/lib/thiings'
 import { SocialButtons } from '@/components/ui/social-buttons'
 import { InfiniteSlider } from '@/components/ui/infinite-slider'
 
@@ -119,7 +120,7 @@ export function LandingFooter() {
             >
               <Link href="/" className="mb-4 inline-flex items-center gap-2 font-bold text-xl">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                  <Dumbbell className="h-4 w-4 text-primary-foreground" />
+                  <Image src={THIINGS.dumbbell} alt="FitAI" width={16} height={16} unoptimized className="w-4 h-4" />
                 </div>
                 FitAI
               </Link>

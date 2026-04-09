@@ -1,27 +1,28 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { GlowCard } from '@/components/ui/spotlight-card'
 import { ProgressiveBlur } from '@/components/ui/progressive-blur'
-import { Sparkles, Zap, Target } from 'lucide-react'
+import { THIINGS } from '@/lib/thiings'
 
 const features = [
   {
-    icon: <Zap className="w-8 h-8" />,
+    icon: THIINGS.lightning,
     number: '98%',
     label: 'Form Accuracy',
     description: 'AI-powered real-time form analysis',
     color: 'from-blue-400 to-cyan-400',
   },
   {
-    icon: <Sparkles className="w-8 h-8" />,
+    icon: THIINGS.star,
     number: '24/7',
     label: 'AI Coaching',
     description: 'Always-on personalized guidance',
     color: 'from-purple-400 to-pink-400',
   },
   {
-    icon: <Target className="w-8 h-8" />,
+    icon: THIINGS.trophy,
     number: '100%',
     label: 'Customizable',
     description: 'Tailored to your specific goals',
@@ -98,7 +99,7 @@ export function FeaturesSection() {
             >
               <GlowCard className="h-full hover:shadow-xl transition-shadow" glowColor={['blue', 'purple', 'orange'][idx % 3] as any}>
                 <div className={`inline-block p-3 rounded-lg bg-gradient-to-br ${item.color} mb-4`}>
-                  <div className="text-white">{item.icon}</div>
+                  <Image src={item.icon} alt={item.label} width={32} height={32} unoptimized className="w-8 h-8" />
                 </div>
                 <div className="text-4xl sm:text-5xl font-black text-primary mb-2">
                   {item.number}

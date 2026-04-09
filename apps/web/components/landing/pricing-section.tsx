@@ -1,7 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Check, Star } from 'lucide-react'
+import Image from 'next/image'
+import { THIINGS } from '@/lib/thiings'
 
 const PLANS = [
   {
@@ -84,7 +85,7 @@ function PricingCard({ plan, index }: any) {
         {plan.badge && (
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
             <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-primary/10 border border-primary/30">
-              <Star className="w-4 h-4 text-primary fill-primary" />
+              <Image src={THIINGS.star} alt="badge" width={16} height={16} unoptimized className="w-4 h-4" />
               <span className="text-sm font-semibold text-primary">
                 {plan.badge}
               </span>
@@ -129,7 +130,7 @@ function PricingCard({ plan, index }: any) {
           <div className="space-y-3">
             {plan.features.map((feature: string) => (
               <div key={feature} className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <Image src={THIINGS.checkMark} alt="check" width={20} height={20} unoptimized className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <span className="text-sm text-foreground">{feature}</span>
               </div>
             ))}
