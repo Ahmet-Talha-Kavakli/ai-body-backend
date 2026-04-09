@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     ],
     formats: ['image/avif', 'image/webp'],
   },
-  // Optimize Three.js / WASM loading
+  turbopack: {},
   webpack: (config) => {
     config.experiments = { ...config.experiments, asyncWebAssembly: true }
     return config
