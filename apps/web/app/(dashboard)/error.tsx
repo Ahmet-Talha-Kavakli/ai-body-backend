@@ -1,15 +1,13 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Button } from '@/components/ui/button'
 
-export default function Error({
-  error,
-  reset,
-}: {
+interface ErrorProps {
   error: Error & { digest?: string }
   reset: () => void
-}) {
+}
+
+export default function DashboardError({ error, reset }: ErrorProps) {
   useEffect(() => {
     console.error(error)
   }, [error])
@@ -20,7 +18,12 @@ export default function Error({
         <h1 className="text-4xl font-black">Oops!</h1>
         <p className="text-muted-foreground">Dashboard yüklenmesinde hata</p>
         <p className="text-sm text-muted-foreground">{error.message}</p>
-        <Button onClick={() => reset()}>Tekrar Dene</Button>
+        <button
+          onClick={() => reset()}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90"
+        >
+          Tekrar Dene
+        </button>
       </div>
     </div>
   )
