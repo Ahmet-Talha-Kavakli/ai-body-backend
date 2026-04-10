@@ -1,2 +1,4 @@
-// Exports will be added as modules are implemented
-export {};
+export {
+  calculateReadinessScore,
+  type ReadinessInputs,
+} from './readiness-score';
