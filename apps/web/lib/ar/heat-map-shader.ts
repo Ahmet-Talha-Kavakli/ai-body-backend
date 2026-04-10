@@ -45,15 +45,15 @@ const FRAGMENT_SHADER = `
   }
 `;
 
-export interface HeatMapUniforms {
-  severity: { value: number };
-  time: { value: number };
-  pulseIntensity: { value: number };
-  pulseSpeed: { value: number };
+export interface HeatMapUniforms extends THREE.IUniform {
+  severity: THREE.IUniform<number>;
+  time: THREE.IUniform<number>;
+  pulseIntensity: THREE.IUniform<number>;
+  pulseSpeed: THREE.IUniform<number>;
 }
 
 export function createHeatMapShader(): THREE.ShaderMaterial {
-  const uniforms: HeatMapUniforms = {
+  const uniforms: Record<string, THREE.IUniform> = {
     severity: { value: 0.0 },
     time: { value: 0.0 },
     pulseIntensity: { value: 0.5 },
@@ -61,7 +61,7 @@ export function createHeatMapShader(): THREE.ShaderMaterial {
   };
 
   return new THREE.ShaderMaterial({
-    uniforms: uniforms as any,
+    uniforms,
     vertexShader: VERTEX_SHADER,
     fragmentShader: FRAGMENT_SHADER,
     side: THREE.DoubleSide,

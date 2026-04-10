@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { PoseDetectionResult } from '@/lib/ai/pose-detection';
 import { loadSkeletonModel } from '@/lib/ar/skeleton-loader';
-import { updateSkeletonPose, calculateBoneLength } from '@/lib/ar/keypoint-mapper';
+import { updateSkeletonPose, calculateBoneLength, BONE_MAPPINGS } from '@/lib/ar/keypoint-mapper';
 import { createHeatMapShader, updateShaderTime, getColorForSeverity } from '@/lib/ar/heat-map-shader';
 
 export interface SkeletonViewer3DProps {
@@ -63,7 +63,7 @@ export function SkeletonViewer3D({
           createBoneMeshes();
           setIsLoading(false);
         } else {
-          setError('Skelét modeli yüklenemedi');
+          setError('Skeleton model failed to load');
         }
       })();
 
@@ -100,13 +100,13 @@ export function SkeletonViewer3D({
     if (!skeletonRef.current) return;
 
     const geometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8);
-    const material = new THREE.MeshPhongMaterial({ color: 0x4a90e2 });
+    const material = createHeatMapShader();
 
-    for (let i = 0; i < 24; i++) {
+    Object.keys(BONE_MAPPINGS).forEach((boneName) => {
       const mesh = new THREE.Mesh(geometry, material);
-      skeletonRef.current.add(mesh);
-      bonesRef.current.set(`bone_${i}`, mesh);
-    }
+      skeletonRef.current?.add(mesh);
+      bonesRef.current.set(boneName, mesh);
+    });
   };
 
   useEffect(() => {
@@ -114,8 +114,8 @@ export function SkeletonViewer3D({
 
     const boneTransforms = updateSkeletonPose(skeletonRef.current, poseResult);
 
-    boneTransforms.forEach((transform, index) => {
-      const boneMesh = bonesRef.current.get(`bone_${index}`);
+    boneTransforms.forEach((transform) => {
+      const boneMesh = bonesRef.current.get(transform.boneName);
       if (!boneMesh || transform.visibility < 0.3) return;
 
       boneMesh.visible = true;
@@ -132,7 +132,10 @@ export function SkeletonViewer3D({
         const severityMap: Record<string, number> = { mild: 0.3, moderate: 0.6, severe: 0.9 };
         const severity = severityMap[injuryForBone.severity] || 0.5;
         const color = getColorForSeverity(severity);
-        (boneMesh.material as THREE.MeshPhongMaterial).color.copy(color);
+        const material = boneMesh.material as THREE.ShaderMaterial;
+        if (material.uniforms?.severity) {
+          material.uniforms.severity.value = severity;
+        }
       }
     });
   }, [poseResult, injuries]);
@@ -151,10 +154,10 @@ export function SkeletonViewer3D({
     >
       {isLoading && (
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#fff' }}>
-          Yükleniyor...
+          Loading...
         </div>
       )}
-      {error && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#ff6b6b' }}>Hata: {error}</div>}
+      {error && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#ff6b6b' }}>Error: {error}</div>}
     </div>
   );
 }
