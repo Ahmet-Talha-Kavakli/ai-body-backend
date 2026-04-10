@@ -2,6 +2,7 @@
 
 import { OpenAI } from 'openai';
 import { FormAnalysisResult } from './form-analyzer';
+import { CoachContext } from '@/lib/coach/profile-context-builder';
 
 export interface CoachFeedback {
   formScore: number;
@@ -29,6 +30,8 @@ Instructions:
 3. Focus on ONE primary correction if there are multiple errors
 4. Be encouraging but honest
 5. Prioritize safety over ego
+6. Consider user's health restrictions and injuries
+7. Adapt recommendations based on recovery state (sleep, stress, nutrition)
 
 Response format: JSON with fields: voiceFeedback, corrections, encouragement, nextRepTip, injuryWarning`;
 
@@ -40,6 +43,7 @@ export async function generateCoachFeedback(
     historicalAvgScore?: number;
     activeInjuries?: string[];
     weaknessAreas?: string[];
+    profile?: CoachContext;
   }
 ): Promise<CoachFeedback> {
   try {
@@ -118,7 +122,42 @@ Depth Assessment: ${formAnalysis.depthAssessment}
 Stability: ${Math.round(formAnalysis.stabilityScore * 100)}%
 `;
 
-  if (userContext) {
+  if (userContext?.profile) {
+    const profile = userContext.profile;
+    prompt += `\n=== USER PROFILE CONTEXT ===\n`;
+
+    if (profile.basicProfile) {
+      prompt += `Age: ${profile.basicProfile.age}\n`;
+      prompt += `Goal: ${profile.basicProfile.primaryGoal}\n`;
+      prompt += `Experience: ${profile.basicProfile.experienceYears} years\n`;
+    }
+
+    if (profile.healthMetrics?.activeInjuries) {
+      try {
+        const injuries = JSON.parse(profile.healthMetrics.activeInjuries);
+        if (injuries.length > 0) {
+          prompt += `ACTIVE INJURIES: ${injuries.map((i: any) => `${i.bodyPart} (${i.severity}/10)`).join(', ')}\n`;
+        }
+      } catch (e) {
+        // Handle if already parsed
+        if (Array.isArray(profile.healthMetrics.activeInjuries)) {
+          prompt += `ACTIVE INJURIES: ${profile.healthMetrics.activeInjuries.map((i: any) => `${i.bodyPart} (${i.severity}/10)`).join(', ')}\n`;
+        }
+      }
+    }
+
+    prompt += `\nLast 7 Days:\n`;
+    prompt += `- Avg Sleep: ${profile.averageMetrics.sleepHours}h\n`;
+    prompt += `- Avg Stress: ${profile.averageMetrics.stressLevel}/10\n`;
+    prompt += `- Protein Compliance: ${profile.averageMetrics.proteinCompliance}%\n`;
+
+    if (profile.weaknesses.length > 0) {
+      prompt += `\nIdentified Weaknesses:\n`;
+      profile.weaknesses.forEach((w: any) => {
+        prompt += `- ${w.muscleGroup} (${w.exerciseName}): Severity ${w.severity}/10\n`;
+      });
+    }
+  } else if (userContext) {
     if (userContext.historicalAvgScore) {
       prompt += `\nUser's Historical Avg Score: ${userContext.historicalAvgScore}/100`;
     }
