@@ -23,6 +23,7 @@
     "@react-native-camera-roll/camera-roll": "^7.10.2",
     "@tensorflow/tfjs": "^4.22.0",
     "@types/react": "~19.1.0",
+    "expo-barcode-scanner": "^13.0.1",
     "expo-camera": "^55.0.15",
     "expo-constants": "~18.0.13",
     "expo-linking": "~8.0.11",
