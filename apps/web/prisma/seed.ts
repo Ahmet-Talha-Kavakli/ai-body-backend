@@ -151,9 +151,10 @@ async function main() {
       await prisma.userHealthMetrics.create({
         data: {
           userId: user.id,
-          activeInjuries: [],
+          activeInjuries: [] as any,
+          pastInjuries: [] as any,
           medicalRestrictions: [],
-          currentPainPoints: {},
+          currentPainPoints: [] as any,
           doctorNotes: 'No known conditions',
         },
       })
@@ -168,7 +169,7 @@ async function main() {
             squat: Math.floor(Math.random() * 100) + 100,
             bench: Math.floor(Math.random() * 80) + 60,
             deadlift: Math.floor(Math.random() * 120) + 140,
-          },
+          } as any,
           trainingStyle: 'Push/Pull/Legs',
           preferredDuration: 60,
         },
@@ -236,23 +237,12 @@ async function main() {
               exerciseName: exercise,
               repNumber: Math.floor(Math.random() * 8) + 3,
               setNumber: set,
-              keypoints: JSON.stringify({
-                hip: { x: 0.5, y: 0.5, z: 0 },
-                knee: { x: 0.5, y: 0.6, z: 0 },
-                ankle: { x: 0.5, y: 0.7, z: 0 },
-              }),
-              angles: JSON.stringify({
-                kneeAngle: Math.floor(Math.random() * 30) + 70,
-                hipAngle: Math.floor(Math.random() * 30) + 70,
-              }),
+              keypoints: { hip: { x: 0.5, y: 0.5, z: 0 }, knee: { x: 0.5, y: 0.6, z: 0 }, ankle: { x: 0.5, y: 0.7, z: 0 } } as any,
+              angles: { kneeAngle: Math.floor(Math.random() * 30) + 70, hipAngle: Math.floor(Math.random() * 30) + 70 } as any,
               formScore: Math.floor(Math.random() * 30) + 70,
               technicalCorrectness: Math.floor(Math.random() * 30) + 70,
-              errors: JSON.stringify(['Minor form deviation']),
-              muscleEngagement: JSON.stringify({
-                quadriceps: 0.85,
-                glutes: 0.9,
-                hamstrings: 0.8,
-              }),
+              errors: ['Minor form deviation'] as any,
+              muscleEngagement: { quadriceps: 0.85, glutes: 0.9, hamstrings: 0.8 } as any,
               injuryRisk: Math.floor(Math.random() * 20) + 10,
               voiceFeedback: 'Great form! Keep it up!',
               corrections: ['Keep chest up', 'Wider stance'],
@@ -327,7 +317,7 @@ async function main() {
           userId: user.id,
           activityType: 'workout_completed',
           description: 'Completed intense upper body session',
-          metadata: { duration: 60, exercises: 8 },
+          metadata: { duration: 60, exercises: 8 } as any,
           visibility: 'friends_only',
         },
       })
@@ -337,7 +327,7 @@ async function main() {
           userId: user.id,
           activityType: 'pr_achieved',
           description: `New PR: Bench ${Math.floor(Math.random() * 50) + 100}kg x 5`,
-          metadata: { exercise: 'bench', weight: 120, reps: 5 },
+          metadata: { exercise: 'bench', weight: 120, reps: 5 } as any,
           visibility: 'public',
         },
       })
@@ -347,7 +337,7 @@ async function main() {
           userId: user.id,
           activityType: 'streak_milestone',
           description: '7 day workout streak achieved!',
-          metadata: { streakDays: 7 },
+          metadata: { streakDays: 7 } as any,
           visibility: 'friends_only',
         },
       })
