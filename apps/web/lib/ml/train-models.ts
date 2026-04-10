@@ -1,12 +1,12 @@
 import * as tf from '@tensorflow/tfjs'
-import { db } from '@/lib/db/client'
+import { prisma } from '@/lib/db/client'
 
 export async function trainFormScorePredictor() {
   console.log('[ML] Training form score predictor...')
 
   try {
     // Get historical data - join DailyMetrics with FormRepData via WorkoutSession
-    const users = await db.user.findMany({
+    const users = await prisma.user.findMany({
       include: { dailyMetrics: { orderBy: { date: 'desc' }, take: 30 } },
     })
 
@@ -16,7 +16,7 @@ export async function trainFormScorePredictor() {
 
       // Get avg form score per day from FormRepData
       const formScoreMap: Record<string, number> = {}
-      const formReps = await db.formRepData.findMany({
+      const formReps = await prisma.formRepData.findMany({
         where: { session: { userId: user.id } },
         select: { formScore: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
@@ -72,7 +72,7 @@ export async function trainRecoveryClassifier() {
   console.log('[ML] Training recovery classifier...')
 
   try {
-    const dailyMetrics = await db.dailyMetrics.findMany({ take: 1000 })
+    const dailyMetrics = await prisma.dailyMetrics.findMany({ take: 1000 })
 
     if (dailyMetrics.length === 0) {
       console.log('[ML] Insufficient data for recovery classifier training')
