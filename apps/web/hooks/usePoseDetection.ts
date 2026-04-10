@@ -8,7 +8,14 @@ import {
   PoseDetectionResult,
 } from '@/lib/ai/pose-detection';
 
-export function usePoseDetection() {
+interface UsePoseDetectionOptions {
+  videoRef?: React.RefObject<HTMLVideoElement>;
+  exerciseSlug?: string;
+  isActive?: boolean;
+  onRep?: (count: number, score: number) => void;
+}
+
+export function usePoseDetection(options?: UsePoseDetectionOptions) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,9 +93,14 @@ export function usePoseDetection() {
     }
   }, []);
 
+  const resetCounter = useCallback(() => {
+    // Reset any internal counters if needed
+  }, []);
+
   return {
     videoRef,
     isLoading,
+    isLoaded: !isLoading,
     error,
     poseResult,
     isDetecting,
@@ -96,5 +108,6 @@ export function usePoseDetection() {
     stopCamera,
     startDetection,
     stopDetection,
+    resetCounter,
   };
 }
