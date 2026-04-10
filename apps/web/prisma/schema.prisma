@@ -35,6 +35,7 @@ model User {
   wearableReadings WearableReading[]
   conversations    AIConversation[]
   subscription     Subscription?
+  weaknesses       UserWeakness[]
 
   @@index([clerkId])
   @@index([email])
@@ -178,6 +179,8 @@ model WorkoutSession {
   poseAnalyses     Json?          // PoseAnalysisSummary[]
 
   completedSets    CompletedSet[]
+  formRepData      FormRepData[]  // NEW: Per-rep form analysis
+  workoutAnalytics WorkoutAnalytics[]  // NEW: Analytics
 
   @@index([userId])
   @@index([startedAt])
@@ -298,6 +301,82 @@ model AIMessage {
   createdAt      DateTime       @default(now())
 
   @@index([conversationId])
+}
+
+// ──────────────────────────────────────────
+// FORM ANALYSIS & ANALYTICS
+// ──────────────────────────────────────────
+
+// NEW TABLE: Store per-rep form analysis
+model FormRepData {
+  id               String         @id @default(cuid())
+  sessionId        String
+  session          WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  exerciseName     String
+  repNumber        Int
+  setNumber        Int
+
+  // Pose data
+  keypoints        Json           // Array of KeyPoint
+  angles           Json           // AngleData
+
+  // Analysis results
+  formScore        Float
+  technicalCorrectness Float
+  errors           Json           // Array of FormError
+  muscleEngagement Json           // MuscleEngagement map
+  injuryRisk       Int            // 1-100
+
+  // Coach feedback
+  voiceFeedback    String
+  corrections      String[]
+  encouragement    String
+
+  createdAt        DateTime       @default(now())
+
+  @@index([sessionId])
+  @@index([exerciseName])
+  @@index([repNumber])
+}
+
+// NEW TABLE: Workout analytics aggregation
+model WorkoutAnalytics {
+  id               String         @id @default(cuid())
+  sessionId        String         @unique
+  session          WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  avgFormScore     Float
+  bestRepScore     Float
+  worstRepScore    Float
+  formTrend        String         // "improving", "declining", "stable"
+  muscleEngagement Json           // Aggregate muscle engagement
+  weakPointsFound  String[]
+  injuryRiskLevel  Int            // 1-100
+  riskFactors      String[]
+
+  createdAt        DateTime       @default(now())
+
+  @@index([sessionId])
+}
+
+// NEW TABLE: User weaknesses tracking
+model UserWeakness {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  muscleGroup      String         // "posterior_chain", "rear_delts", etc.
+  exerciseName     String
+  severity         Int            // 1-10
+  discoveredDate   DateTime       @default(now())
+  targetDate       DateTime?      // When to improve by
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([muscleGroup])
 }
 
 // ──────────────────────────────────────────
