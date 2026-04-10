@@ -54,9 +54,18 @@ importers:
       '@clerk/nextjs':
         specifier: ^6.12.12
         version: 6.39.1(next@16.2.3(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@fitai/shared-ai':
+        specifier: workspace:*
+        version: link:../../packages/shared-ai
+      '@fitai/shared-hooks':
+        specifier: workspace:*
+        version: link:../../packages/shared-hooks
       '@fitai/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@fitai/shared-utils':
+        specifier: workspace:*
+        version: link:../../packages/shared-utils
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.72.1(react@19.2.4))
@@ -281,7 +290,35 @@ importers:
         specifier: ^3.1.1
         version: 3.2.4(@types/node@22.19.17)(jiti@1.21.7)(tsx@4.21.0)
 
+  packages/shared-ai:
+    dependencies:
+      '@fitai/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@fitai/shared-utils':
+        specifier: workspace:*
+        version: link:../shared-utils
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/shared-hooks:
+    dependencies:
+      '@fitai/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@fitai/shared-utils':
+        specifier: workspace:*
+        version: link:../shared-utils
+
   packages/shared-types:
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/shared-utils:
     devDependencies:
       typescript:
         specifier: ^5.8.3

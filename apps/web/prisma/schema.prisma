@@ -145,22 +145,30 @@ model ProgramDay {
 }
 
 model Exercise {
-  id             String            @id @default(cuid())
-  name           String
-  slug           String            @unique
-  description    String
-  muscleGroups   String[]
-  equipment      String[]
-  difficultyLevel String
-  videoUrl       String?
-  thumbnailUrl   String?
-  animationKey   String
-  cues           String[]
-  commonMistakes String[]
-  poseConfig     Json?             // PoseKeypointConfig
+  id               String            @id @default(cuid())
+  name             String
+  slug             String            @unique
+  description      String
+  muscleGroups     String[]
+  equipment        String[]
+  difficultyLevel  String
+  videoUrl         String?
+  thumbnailUrl     String?
+  animationKey     String
+  cues             String[]
+  commonMistakes   String[]
+  poseConfig       Json?             // PoseKeypointConfig
 
-  plannedIn      PlannedExercise[]
-  completedSets  CompletedSet[]
+  // ExerciseDB integration
+  externalId       String?           @unique
+  bodyPart         String?
+  target           String?
+  secondaryMuscles String[]
+  instructions     String[]
+  gifUrl           String?
+
+  plannedIn        PlannedExercise[]
+  completedSets    CompletedSet[]
 
   @@index([slug])
 }
