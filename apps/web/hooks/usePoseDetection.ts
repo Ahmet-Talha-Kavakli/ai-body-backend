@@ -23,7 +23,7 @@ export function usePoseDetection(options?: UsePoseDetectionOptions) {
     null
   );
   const [isDetecting, setIsDetecting] = useState(false);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
 
   // Initialize pose detection
   useEffect(() => {
