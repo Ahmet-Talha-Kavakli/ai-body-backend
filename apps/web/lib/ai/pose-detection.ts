@@ -119,7 +119,7 @@ function getLandmarkName(index: number): string {
   return names[index] || `landmark_${index}`;
 }
 
-function calculateConfidence(landmarks: any[]): number {
+function calculateConfidence(landmarks: Array<{ visibility?: number }>): number {
   if (landmarks.length === 0) return 0;
   const visibilities = landmarks.map((l) => l.visibility || 0);
   return visibilities.reduce((a, b) => a + b, 0) / visibilities.length;

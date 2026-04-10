@@ -40,6 +40,11 @@ function calculateAngle(
   const magnitudeBA = Math.sqrt(BA.x * BA.x + BA.y * BA.y);
   const magnitudeBC = Math.sqrt(BC.x * BC.x + BC.y * BC.y);
 
+  // GUARD: Prevent division by zero
+  if (magnitudeBA === 0 || magnitudeBC === 0) {
+    return 0;
+  }
+
   const cosineAngle = dotProduct / (magnitudeBA * magnitudeBC);
   const angleRadians = Math.acos(Math.max(-1, Math.min(1, cosineAngle)));
   const angleDegrees = (angleRadians * 180) / Math.PI;
