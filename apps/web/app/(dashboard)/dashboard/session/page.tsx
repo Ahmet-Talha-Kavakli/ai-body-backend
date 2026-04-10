@@ -6,7 +6,7 @@ import {
   Mic, MicOff, Video, VideoOff, Phone, Play, Pause,
   Activity, Heart, Zap, Timer, Volume2, VolumeX, CheckCircle
 } from 'lucide-react'
-import { useSpeech } from '@/hooks/useSpeech'
+import { useVoiceChat } from '@/hooks/useVoiceChat'
 import { useSessionTracker } from '@/hooks/useSessionTracker'
 import { usePoseDetection } from '@/hooks/usePoseDetection'
 
@@ -124,7 +124,10 @@ function UserCamera({ isOn, videoRef }: { isOn: boolean; videoRef: React.RefObje
 }
 
 export default function SessionPage() {
-  const { speak, stop: stopSpeech } = useSpeech()
+  const { speak, stop: stopSpeech, startRecording, stopRecording, isRecording, state: voiceState } = useVoiceChat({
+    onTranscript: (text) => setAiMessage(`Sen: ${text}`),
+    onAIResponse: (text) => setAiMessage(text),
+  })
   const { startSession, recordSet, endSession } = useSessionTracker()
 
   const [isActive, setIsActive] = useState(false)
@@ -502,9 +505,21 @@ export default function SessionPage() {
         {/* Butonlar */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsMicOn(m => !m)}
-            className={`p-2.5 rounded-xl border transition-colors ${isMicOn ? 'bg-card/50 border-border/30 hover:bg-card' : 'bg-red-500/15 border-red-500/30 text-red-400'}`}
-          >{isMicOn ? <Mic size={16} /> : <MicOff size={16} />}</button>
+            onMouseDown={startRecording}
+            onMouseUp={stopRecording}
+            onTouchStart={startRecording}
+            onTouchEnd={stopRecording}
+            title="Basılı tut ve konuş"
+            className={`p-2.5 rounded-xl border transition-colors ${
+              isRecording
+                ? 'bg-red-500/30 border-red-500 text-red-300 animate-pulse'
+                : voiceState === 'transcribing' || voiceState === 'thinking'
+                ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400'
+                : voiceState === 'speaking'
+                ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
+                : 'bg-card/50 border-border/30 hover:bg-card'
+            }`}
+          >{isRecording ? <MicOff size={16} /> : <Mic size={16} />}</button>
 
           <button
             onClick={() => setIsVideoOn(v => !v)}
