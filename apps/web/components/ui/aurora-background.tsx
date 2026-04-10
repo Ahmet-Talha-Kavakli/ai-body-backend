@@ -1,53 +1,72 @@
-"use client";
-import { cn } from "@/lib/utils";
-import React, { ReactNode } from "react";
+'use client';
 
-interface AuroraBackgroundProps extends React.HTMLProps<HTMLDivElement> {
-  children: ReactNode;
-  showRadialGradient?: boolean;
-}
+import { useEffect, useRef } from 'react';
 
-export const AuroraBackground = ({
-  className,
-  children,
-  showRadialGradient = true,
-  ...props
-}: AuroraBackgroundProps) => {
+export function AuroraBackground({ className }: { className?: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId: number;
+    let t = 0;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    const draw = () => {
+      t += 0.003;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Indigo blob
+      const g1 = ctx.createRadialGradient(
+        canvas.width * (0.3 + Math.sin(t) * 0.1),
+        canvas.height * (0.3 + Math.cos(t * 0.7) * 0.1),
+        0,
+        canvas.width * 0.3, canvas.height * 0.3,
+        canvas.width * 0.5
+      );
+      g1.addColorStop(0, 'rgba(99,102,241,0.15)');
+      g1.addColorStop(1, 'transparent');
+      ctx.fillStyle = g1;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Purple blob
+      const g2 = ctx.createRadialGradient(
+        canvas.width * (0.7 + Math.cos(t * 0.9) * 0.1),
+        canvas.height * (0.7 + Math.sin(t * 0.6) * 0.1),
+        0,
+        canvas.width * 0.7, canvas.height * 0.7,
+        canvas.width * 0.4
+      );
+      g2.addColorStop(0, 'rgba(139,92,246,0.1)');
+      g2.addColorStop(1, 'transparent');
+      ctx.fillStyle = g2;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    window.addEventListener('resize', resize);
+    resize();
+    draw();
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
   return (
-    <main>
-      <div
-        className={cn(
-          "relative flex flex-col h-[100vh] items-center justify-center bg-zinc-50 dark:bg-zinc-900 text-slate-950 transition-bg",
-          className
-        )}
-        {...props}
-      >
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div
-            //   I'm sorry but this is what it takes to make Aurora
-            className={cn(
-              `
-            [--white-gradient:repeating-linear-gradient(100deg,var(--white)_0%,var(--white)_7%,var(--transparent)_10%,var(--transparent)_12%,var(--white)_16%)]
-            [--dark-gradient:repeating-linear-gradient(100deg,var(--black)_0%,var(--black)_7%,var(--transparent)_10%,var(--transparent)_12%,var(--black)_16%)]
-            [--aurora:repeating-linear-gradient(100deg,var(--blue-500)_10%,var(--indigo-300)_15%,var(--blue-300)_20%,var(--violet-200)_25%,var(--blue-400)_30%)]
-            [background-image:var(--white-gradient),var(--aurora)]
-            dark:[background-image:var(--dark-gradient),var(--aurora)]
-            [background-size:300%,_200%]
-            [background-position:50%_50%,50%_50%]
-            filter blur-[10px] invert dark:invert-0
-            after:content-[""] after:absolute after:inset-0 after:[background-image:var(--white-gradient),var(--aurora)] 
-            after:dark:[background-image:var(--dark-gradient),var(--aurora)]
-            after:[background-size:200%,_100%] 
-            after:animate-aurora after:[background-attachment:fixed] after:mix-blend-difference
-            pointer-events-none
-            absolute -inset-[10px] opacity-50 will-change-transform`,
-              showRadialGradient &&
-                `[mask-image:radial-gradient(ellipse_at_100%_0%,black_10%,var(--transparent)_70%)]`
-            )}
-          ></div>
-        </div>
-        {children}
-      </div>
-    </main>
+    <canvas
+      ref={canvasRef}
+      className={`fixed top-0 left-0 w-full h-full -z-10 ${className || ''}`}
+    />
   );
-};
+}

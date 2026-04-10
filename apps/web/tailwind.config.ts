@@ -71,11 +71,34 @@ const config: Config = {
           blue: '#0FF0FC',
           purple: '#BF5FFF',
         },
+        bg: {
+          primary: 'var(--bg-primary)',
+          surface: 'var(--bg-surface)',
+          elevated: 'var(--bg-elevated)',
+        },
+        accent: {
+          primary: 'var(--accent-primary)',
+          'primary-hover': 'var(--accent-primary-hover)',
+          energy: 'var(--accent-energy)',
+          success: 'var(--accent-success)',
+          danger: 'var(--accent-danger)',
+          recovery: 'var(--accent-recovery)',
+        },
+        text: {
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          muted: 'var(--text-muted)',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      boxShadow: {
+        'glow-primary': 'var(--glow-primary)',
+        'glow-energy': 'var(--glow-energy)',
+        'glow-success': 'var(--glow-success)',
       },
       keyframes: {
         'accordion-down': {
@@ -107,6 +130,14 @@ const config: Config = {
           '50%': { backgroundColor: 'var(--highlight)' },
           '100%': { backgroundColor: 'hsl(var(--card))' },
         },
+        aurora: {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '100% 50%' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -116,6 +147,9 @@ const config: Config = {
         'js-ripple-effect': 'js-ripple-animation var(--ripple-duration) ease-out forwards',
         highlight: 'highlight 0.6s ease forwards',
         flash: 'flash 0.6s ease forwards',
+        'aurora': 'aurora 8s ease-in-out infinite alternate',
+        'pulse-slow': 'pulse 3s ease-in-out infinite',
+        'float': 'float 6s ease-in-out infinite',
       },
       fontFamily: {
         sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
