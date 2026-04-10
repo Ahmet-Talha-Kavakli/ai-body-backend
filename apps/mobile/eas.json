@@ -1,0 +1,25 @@
+{
+  "build": {
+    "preview": {
+      "ios": { "simulator": true },
+      "android": { "buildType": "apk" }
+    },
+    "production": {
+      "ios": { "autoIncrement": true },
+      "android": { "buildType": "aab" }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "your-apple-id@gmail.com",
+        "ascAppId": "your-asc-app-id",
+        "appleTeamId": "your-team-id"
+      },
+      "android": {
+        "serviceAccount": "./google-play-key.json",
+        "track": "internal"
+      }
+    }
+  }
+}
