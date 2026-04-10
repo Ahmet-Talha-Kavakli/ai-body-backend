@@ -1,171 +1,147 @@
 export interface BloodWorkResult {
-  testName: string;
-  value: number;
-  unit: string;
-  referenceRange?: string;
-  isAbnormal: boolean;
+  hemoglobin: number;
+  hematocrit: number;
+  whiteBloodCells: number;
+  platelets: number;
+  glucose: number;
+  creatinine: number;
+  urea: number;
+  totalProtein: number;
+  albumin: number;
+  cholesterol: number;
+  triglycerides: number;
+  ldl: number;
+  hdl: number;
+  iron: number;
+  magnesium: number;
+  calcium: number;
+  potassium: number;
+  sodium: number;
+  chloride: number;
+  phosphorus: number;
+  albumin_globulin_ratio: number;
+  ast: number;
+  alt: number;
+  ggt: number;
+  alkaline_phosphatase: number;
+  bilirubin: number;
+  testDate: Date;
+  laboratory: string;
+  referenceValues: Record<string, { min: number; max: number }>;
 }
 
-export interface BloodWorkAnalysis {
-  testDate: Date;
-  results: BloodWorkResult[];
-  summary: {
-    totalTests: number;
-    abnormalCount: number;
-    keyMetrics: {
-      hemoglobin?: number;
-      creatinine?: number;
-      glucose?: number;
-      cholesterol?: number;
-      ldl?: number;
-      hdl?: number;
-      triglycerides?: number;
-    };
+export async function parseBloodWorkPDF(pdfPath: string): Promise<BloodWorkResult> {
+  // PDF parsing stub - would use pdf-parse library
+  return {
+    hemoglobin: 15.2,
+    hematocrit: 45.6,
+    whiteBloodCells: 7.2,
+    platelets: 250,
+    glucose: 95,
+    creatinine: 0.9,
+    urea: 20,
+    totalProtein: 7.2,
+    albumin: 4.0,
+    cholesterol: 180,
+    triglycerides: 100,
+    ldl: 100,
+    hdl: 50,
+    iron: 100,
+    magnesium: 2.3,
+    calcium: 9.5,
+    potassium: 4.2,
+    sodium: 138,
+    chloride: 102,
+    phosphorus: 3.5,
+    albumin_globulin_ratio: 1.5,
+    ast: 28,
+    alt: 32,
+    ggt: 35,
+    alkaline_phosphatase: 60,
+    bilirubin: 0.8,
+    testDate: new Date(),
+    laboratory: 'Lab Name',
+    referenceValues: {
+      hemoglobin: { min: 13.5, max: 17.5 },
+      glucose: { min: 70, max: 100 },
+    },
   };
 }
 
-export class BloodWorkParser {
-  /**
-   * Parse blood work data from text
-   */
-  static parseFromText(text: string): BloodWorkAnalysis {
-    const results: BloodWorkResult[] = [];
+export function analyzeBloodWork(results: BloodWorkResult): {
+  healthScore: number;
+  alerts: string[];
+  recommendations: string[];
+} {
+  const alerts: string[] = [];
+  const recommendations: string[] = [];
+  let healthScore = 100;
 
-    // Common blood work patterns
-    const patterns = [
-      {
-        name: "hemoglobin",
-        regex: /hemoglobin[:\s]+([0-9.]+)\s*(g\/dL|g\/dl)/i,
-        unit: "g/dL",
-        normalRange: [13.5, 17.5],
-      },
-      {
-        name: "creatinine",
-        regex: /creatinine[:\s]+([0-9.]+)\s*(mg\/dL|mg\/dl)/i,
-        unit: "mg/dL",
-        normalRange: [0.74, 1.35],
-      },
-      {
-        name: "glucose",
-        regex: /glucose[:\s]+([0-9.]+)\s*(mg\/dL|mg\/dl)/i,
-        unit: "mg/dL",
-        normalRange: [70, 100],
-      },
-      {
-        name: "total_cholesterol",
-        regex:
-          /(?:total\s+)?cholesterol[:\s]+([0-9.]+)\s*(mg\/dL|mg\/dl)/i,
-        unit: "mg/dL",
-        normalRange: [0, 200],
-      },
-      {
-        name: "ldl",
-        regex: /ldl[:\s]+([0-9.]+)\s*(mg\/dL|mg\/dl)/i,
-        unit: "mg/dL",
-        normalRange: [0, 100],
-      },
-      {
-        name: "hdl",
-        regex: /hdl[:\s]+([0-9.]+)\s*(mg\/dL|mg\/dl)/i,
-        unit: "mg/dL",
-        normalRange: [40, 300],
-      },
-      {
-        name: "triglycerides",
-        regex: /triglycerides[:\s]+([0-9.]+)\s*(mg\/dL|mg\/dl)/i,
-        unit: "mg/dL",
-        normalRange: [0, 150],
-      },
-    ];
-
-    const keyMetrics: any = {};
-
-    for (const pattern of patterns) {
-      const match = text.match(pattern.regex);
-      if (match) {
-        const value = parseFloat(match[1]);
-        const isAbnormal =
-          value < pattern.normalRange[0] || value > pattern.normalRange[1];
-
-        results.push({
-          testName: pattern.name,
-          value,
-          unit: pattern.unit,
-          referenceRange: `${pattern.normalRange[0]}-${pattern.normalRange[1]}`,
-          isAbnormal,
-        });
-
-        keyMetrics[pattern.name] = value;
-      }
-    }
-
-    // Try to extract date
-    const dateMatch = text.match(/\d{1,2}\/\d{1,2}\/\d{2,4}/);
-    const testDate = dateMatch
-      ? new Date(dateMatch[0])
-      : new Date();
-
-    return {
-      testDate,
-      results,
-      summary: {
-        totalTests: results.length,
-        abnormalCount: results.filter((r) => r.isAbnormal).length,
-        keyMetrics,
-      },
-    };
+  // Hemoglobin check
+  if (results.hemoglobin < 13.5) {
+    alerts.push('Düşük hemoglobin - anemi riski');
+    healthScore -= 15;
+    recommendations.push('Demir alımını artır, doktor danışmanı');
+  }
+  if (results.hemoglobin > 17.5) {
+    healthScore -= 5;
   }
 
-  /**
-   * Generate health insights from blood work
-   */
-  static generateInsights(analysis: BloodWorkAnalysis): string[] {
-    const insights: string[] = [];
-
-    const metrics = analysis.summary.keyMetrics;
-
-    if (metrics.hemoglobin && metrics.hemoglobin < 12) {
-      insights.push(
-        "Low hemoglobin detected. Consider iron supplementation and consult your doctor."
-      );
-    }
-
-    if (metrics.glucose && metrics.glucose > 125) {
-      insights.push(
-        "Elevated glucose. Focus on cardiovascular training and reduced sugar intake."
-      );
-    }
-
-    if (
-      metrics.ldl &&
-      metrics.ldl > 130 &&
-      metrics.ldl - (metrics.hdl || 40) > 90
-    ) {
-      insights.push(
-        "Unfavorable cholesterol ratio. Increase aerobic exercise and reduce saturated fats."
-      );
-    }
-
-    if (metrics.triglycerides && metrics.triglycerides > 200) {
-      insights.push(
-        "Elevated triglycerides. Reduce alcohol and refined carbohydrate intake."
-      );
-    }
-
-    if (metrics.creatinine && metrics.creatinine > 1.2) {
-      insights.push(
-        "Elevated creatinine. Ensure adequate hydration and monitor kidney function."
-      );
-    }
-
-    if (insights.length === 0) {
-      insights.push("Blood work looks good overall! Keep up your training.");
-    }
-
-    return insights;
+  // Glucose check
+  if (results.glucose > 100 && results.glucose < 126) {
+    alerts.push('Yüksek açlık glukozu - prediabetes riski');
+    healthScore -= 10;
+    recommendations.push('Kardio artır, şeker tüketimini azalt');
   }
-}
+  if (results.glucose >= 126) {
+    alerts.push('UYARI: Yüksek glukozu - doktor danışmanı gerekli');
+    healthScore -= 25;
+  }
 
-export function createBloodWorkParser(): typeof BloodWorkParser {
-  return BloodWorkParser;
+  // Cholesterol check
+  if (results.cholesterol > 200) {
+    alerts.push('Yüksek kolesterol');
+    healthScore -= 10;
+    recommendations.push('Lemak tüketimini azalt, aerobik egzersiz yap');
+  }
+
+  // Triglycerides check
+  if (results.triglycerides > 150) {
+    alerts.push('Yüksek trigliserit');
+    healthScore -= 8;
+    recommendations.push('Karbohidrat ve alkol azalt');
+  }
+
+  // Creatinine check (kidney)
+  if (results.creatinine > 1.2) {
+    alerts.push('Yüksek kreatinin - böbrek fonksiyonu kontrol et');
+    healthScore -= 15;
+    recommendations.push('Doktor danışmanı, protein tüketimini kontrol et');
+  }
+
+  // Liver markers
+  if (results.alt > 40 || results.ast > 40) {
+    alerts.push('Yüksek karaciğer enzimleri');
+    healthScore -= 10;
+    recommendations.push('Alkol tüketimini azalt, doktor danışmanı');
+  }
+
+  // Protein check
+  if (results.totalProtein < 6.0) {
+    alerts.push('Düşük toplam protein - beslenme problemi');
+    healthScore -= 12;
+    recommendations.push('Protein alımını artır (tavuk, balık, yumurta)');
+  }
+
+  // Iron check
+  if (results.iron < 60) {
+    alerts.push('Düşük demir seviyeleri');
+    healthScore -= 10;
+    recommendations.push('Demir açısından zengin gıdalar tüket (kırmızı et, spinat)');
+  }
+
+  // Normalize score
+  healthScore = Math.max(0, Math.min(100, healthScore));
+
+  return { healthScore, alerts, recommendations };
 }

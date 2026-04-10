@@ -63,6 +63,7 @@ model User {
   sleepRecords    SleepRecord[]   @relation("UserSleepRecords")
   readinessScores ReadinessScore[] @relation("UserReadinessScores")
   weeklySummaries WeeklySummary[] @relation("UserWeeklySummaries")
+  bloodWorkRecords BloodWorkRecord[]
 
   @@index([clerkId])
   @@index([email])
@@ -732,4 +733,15 @@ model WeeklySummary {
 
   @@index([userId])
   @@index([weekStartDate])
+}
+
+model BloodWorkRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  results   Json
+  analysis  Json
+  uploadedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
