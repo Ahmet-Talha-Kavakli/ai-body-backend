@@ -28,7 +28,7 @@ export function PoseDetectionCamera({
   } = usePoseDetection();
 
   const { coachFeedback, analyze } = useFormAnalysis();
-  const analysisTimeoutRef = useRef<NodeJS.Timeout>();
+  const analysisTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Start on mount
   useEffect(() => {
