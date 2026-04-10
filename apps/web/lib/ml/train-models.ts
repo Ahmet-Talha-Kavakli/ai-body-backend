@@ -5,29 +5,42 @@ export async function trainFormScorePredictor() {
   console.log('[ML] Training form score predictor...')
 
   try {
-    // Get historical data
+    // Get historical data - join DailyMetrics with FormRepData via WorkoutSession
     const users = await db.user.findMany({
       include: { dailyMetrics: { orderBy: { date: 'desc' }, take: 30 } },
     })
 
-    const trainingData = users.flatMap((user) => {
+    const trainingData = await Promise.all(users.map(async (user) => {
       const metrics = user.dailyMetrics.reverse()
       if (metrics.length < 30) return []
 
-      return [
-        {
-          input: metrics.map((m) => [
-            m.formScore || 70,
-            m.sleepHours || 7,
-            Math.max(0, 10 - (m.stressLevel || 5)),
-            m.proteinIntake || 150,
-          ]),
-          output: metrics.slice(1).map((m) => (m.formScore || 70) / 100),
-        },
-      ]
-    })
+      // Get avg form score per day from FormRepData
+      const formScoreMap: Record<string, number> = {}
+      const formReps = await db.formRepData.findMany({
+        where: { session: { userId: user.id } },
+        select: { formScore: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+        take: 90,
+      })
+      formReps.forEach((r) => {
+        const day = r.createdAt.toISOString().split('T')[0]
+        formScoreMap[day] = (formScoreMap[day] || 0) + r.formScore
+      })
 
-    if (trainingData.length === 0) {
+      return [{
+        input: metrics.map((m) => [
+          formScoreMap[m.date.toISOString().split('T')[0]] || 70,
+          m.sleepHours || 7,
+          Math.max(0, 10 - (m.stressLevel || 5)),
+          m.proteinIntake || 150,
+        ]),
+        output: metrics.slice(1).map((m) => (formScoreMap[m.date.toISOString().split('T')[0]] || 70) / 100),
+      }]
+    }))
+
+    const flatData = trainingData.flat()
+
+    if (flatData.length === 0) {
       console.log('[ML] Insufficient data for training')
       return null
     }
