@@ -10,7 +10,7 @@ type VisibilityType = typeof VISIBILITY_TYPES[number]
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const { userId: clerkId } = auth()
+    const { userId: clerkId } = await auth()
     if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const user = await db.user.findUnique({ where: { clerkId } })
