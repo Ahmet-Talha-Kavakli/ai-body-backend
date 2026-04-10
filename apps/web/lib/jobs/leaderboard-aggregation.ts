@@ -7,17 +7,16 @@ export async function aggregateLeaderboards() {
     const eightWeeksAgo = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
-    // Form Score Leaderboard (8-week average from FormRepData)
-    const formScores = await db.formRepData.groupBy({
-      by: ['userId'],
-      _avg: { formScore: true },
-      where: {
-        createdAt: { gte: eightWeeksAgo },
-      },
-    })
+    // Form Score Leaderboard (8-week average from FormRepData) - raw query to avoid Prisma groupBy type bug
+    const formScoreRaw = await db.$queryRaw<{ userId: string; avgScore: number }[]>`
+      SELECT "userId", AVG("formScore") as "avgScore"
+      FROM "FormRepData"
+      WHERE "createdAt" >= ${eightWeeksAgo}
+      GROUP BY "userId"
+    `
 
     const formScoreEntries = await Promise.all(
-      formScores.map(async (fs) => {
+      formScoreRaw.map(async (fs) => {
         const user = await db.user.findUnique({
           where: { id: fs.userId },
           select: { name: true },
@@ -25,7 +24,7 @@ export async function aggregateLeaderboards() {
         return {
           userId: fs.userId,
           username: user?.name || 'Unknown',
-          score: Math.round(fs._avg.formScore || 0),
+          score: Math.round(Number(fs.avgScore) || 0),
           trend: 'stable',
         }
       })
@@ -49,17 +48,16 @@ export async function aggregateLeaderboards() {
       },
     })
 
-    // Consistency Leaderboard (DailyMetrics count in last 30 days)
-    const workoutCounts = await db.dailyMetrics.groupBy({
-      by: ['userId'],
-      _count: { id: true },
-      where: {
-        date: { gte: thirtyDaysAgo },
-      },
-    })
+    // Consistency Leaderboard (DailyMetrics count in last 30 days) - raw query
+    const consistencyRaw = await db.$queryRaw<{ userId: string; cnt: number }[]>`
+      SELECT "userId", COUNT(*) as "cnt"
+      FROM "DailyMetrics"
+      WHERE "date" >= ${thirtyDaysAgo}
+      GROUP BY "userId"
+    `
 
     const consistencyEntries = await Promise.all(
-      workoutCounts.map(async (wc) => {
+      consistencyRaw.map(async (wc) => {
         const user = await db.user.findUnique({
           where: { id: wc.userId },
           select: { name: true },
@@ -67,7 +65,7 @@ export async function aggregateLeaderboards() {
         return {
           userId: wc.userId,
           username: user?.name || 'Unknown',
-          score: wc._count.id,
+          score: Number(wc.cnt),
           trend: 'up',
         }
       })
