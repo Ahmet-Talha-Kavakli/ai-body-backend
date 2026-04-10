@@ -303,6 +303,9 @@ function assessDepth(exercise: string, angles: AngleData): string {
 }
 
 function calculateStability(poseResult: PoseDetectionResult): number {
+  // Guard: no keypoints detected
+  if (poseResult.keypoints.length === 0) return 0;
+
   // Calculate based on keypoint confidence
   const avgConfidence =
     poseResult.keypoints.reduce((sum, kp) => sum + kp.visibility, 0) /
