@@ -9,8 +9,8 @@ export async function GET() {
   const user = await prisma.user.findUnique({ where: { clerkId: userId } });
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-  const body = await prisma.userBodyModel.findUnique({ where: { userId: user.id } });
-  return NextResponse.json({ body: body ?? { userId: user.id, fitnessLevel: 'beginner' } });
+  const healthProfile = await prisma.healthProfile.findUnique({ where: { userId: user.id } });
+  return NextResponse.json({ body: healthProfile ?? null });
 }
 
 export async function POST(req: Request) {
@@ -21,11 +21,11 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
   const data = await req.json();
-  const body = await prisma.userBodyModel.upsert({
+  const healthProfile = await prisma.healthProfile.upsert({
     where: { userId: user.id },
     update: data,
     create: { userId: user.id, ...data },
   });
 
-  return NextResponse.json({ body });
+  return NextResponse.json({ body: healthProfile });
 }

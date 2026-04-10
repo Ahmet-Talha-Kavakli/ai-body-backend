@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
   const formData = await req.formData();
-  const file = formData.get('file') as File;
+  const file = (formData as any).get('file') as File;
 
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
 

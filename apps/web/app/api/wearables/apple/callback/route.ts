@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { createAppleHealthClient } from "@/lib/wearables/apple-health";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db/client";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -35,12 +35,12 @@ export async function POST(req: NextRequest) {
     const wearable = await prisma.wearable.upsert({
       where: {
         userId_type: {
-          userId: session.user.id,
+          userId,
           type: "APPLE_HEALTH",
         },
       },
       create: {
-        userId: session.user.id,
+        userId,
         type: "APPLE_HEALTH",
         accessToken,
         refreshToken,

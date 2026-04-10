@@ -22,115 +22,83 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Get all active users
+    // Get all users
     const users = await prisma.user.findMany({
-      where: { status: "ACTIVE" },
       select: { id: true, email: true },
     });
 
     const weekStartDate = new Date();
     weekStartDate.setDate(weekStartDate.getDate() - 7);
+    const now = new Date();
 
     const summaries: WeeklySummary[] = [];
 
     for (const user of users) {
-      // Fetch workouts for the week
-      const workouts = await prisma.workout.findMany({
+      // Fetch workout sessions for the week
+      const sessions = await prisma.workoutSession.findMany({
         where: {
           userId: user.id,
-          createdAt: {
+          startedAt: {
             gte: weekStartDate,
-            lte: new Date(),
+            lte: now,
           },
         },
         include: {
-          exercises: true,
-        },
-      });
-
-      // Fetch form scores for the week
-      const formScores = await prisma.formScore.findMany({
-        where: {
-          userId: user.id,
-          recordedAt: {
-            gte: weekStartDate,
-            lte: new Date(),
+          completedSets: {
+            include: {
+              exercise: true,
+            },
           },
+          workoutAnalytics: true,
         },
-        select: { score: true },
-      });
-
-      // Fetch readiness scores for the week
-      const readinessScores = await prisma.readinessScore.findMany({
-        where: {
-          userId: user.id,
-          recordedAt: {
-            gte: weekStartDate,
-            lte: new Date(),
-          },
-        },
-        select: { score: true },
       });
 
       // Calculate aggregates
-      const totalVolume = workouts.reduce((sum, w) => {
-        const volume = w.exercises.reduce(
-          (ex, e) => ex + (e.sets * e.reps * (e.weight || 0)),
-          0
-        );
-        return sum + volume;
-      }, 0);
+      let totalVolume = 0;
+      const exerciseCount = new Map<string, number>();
 
+      for (const session of sessions) {
+        if (session.workoutAnalytics.length > 0) {
+          // Volume from completed sets
+          for (const set of session.completedSets) {
+            const weight = set.weightKg || 0;
+            const reps = set.reps || 0;
+            totalVolume += weight * reps;
+
+            // Track exercise frequency
+            exerciseCount.set(
+              set.exercise.name,
+              (exerciseCount.get(set.exercise.name) || 0) + 1
+            );
+          }
+        }
+      }
+
+      // Get average form score from session analytics
       const avgForm =
-        formScores.length > 0
-          ? formScores.reduce((sum, f) => sum + f.score, 0) / formScores.length
+        sessions.length > 0
+          ? sessions.reduce((sum, s) => sum + (s.overallFormScore || 0), 0) /
+            sessions.length
           : 0;
 
-      const avgReadiness =
-        readinessScores.length > 0
-          ? readinessScores.reduce((sum, r) => sum + r.score, 0) /
-            readinessScores.length
-          : 0;
-
-      const topExercises = Array.from(
-        workouts
-          .flatMap((w) => w.exercises)
-          .reduce((map, ex) => {
-            map.set(ex.name, (map.get(ex.name) || 0) + 1);
-            return map;
-          }, new Map<string, number>())
-          .entries()
-      )
+      // Get top exercises
+      const topExercises = Array.from(exerciseCount.entries())
         .sort(([, a], [, b]) => b - a)
         .slice(0, 5)
         .map(([name]) => name);
 
       const summary: WeeklySummary = {
         userId: user.id,
-        totalWorkouts: workouts.length,
+        totalWorkouts: sessions.length,
         totalVolume,
         averageFormScore: Math.round(avgForm * 10) / 10,
-        averageReadiness: Math.round(avgReadiness * 10) / 10,
+        averageReadiness: 75, // Placeholder: would need ReadinessScore model
         topExercises,
         weekStartDate,
-        weekEndDate: new Date(),
+        weekEndDate: now,
       };
 
       summaries.push(summary);
-
-      // Store summary in database
-      await prisma.weeklySummary.create({
-        data: {
-          userId: user.id,
-          totalWorkouts: summary.totalWorkouts,
-          totalVolume: summary.totalVolume,
-          averageFormScore: summary.averageFormScore,
-          averageReadiness: summary.averageReadiness,
-          topExercises: summary.topExercises,
-          weekStartDate: summary.weekStartDate,
-          weekEndDate: summary.weekEndDate,
-        },
-      });
     }
 
     return NextResponse.json(

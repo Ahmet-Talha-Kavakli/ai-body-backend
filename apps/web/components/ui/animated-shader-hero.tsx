@@ -353,7 +353,7 @@ export function AnimatedShaderHero({
 
   return (
     <div className={`relative w-full h-screen overflow-hidden bg-black ${className}`}>
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in-down {
           from {
             opacity: 0;
