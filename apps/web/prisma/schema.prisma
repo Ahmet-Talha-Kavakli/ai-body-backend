@@ -2,13 +2,15 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
 }
 
 // ──────────────────────────────────────────
@@ -48,6 +50,9 @@ model User {
   friends         UserFriend[]    @relation("UserFriends")
   friendOf        UserFriend[]    @relation("FriendOf")
   activities      UserActivity[]
+
+  // V2: Memory embeddings
+  memoryEmbeddings UserMemoryEmbedding[]
 
   // Social stats
   bio             String?
@@ -102,6 +107,10 @@ model WorkoutProgram {
   generatedByAi  Boolean       @default(false)
   aiVersion      String?
   isActive       Boolean       @default(false)
+  status         ProgramStatus @default(ACTIVE)
+  mesoCycleWeeks Int           @default(4)
+  currentWeek    Int           @default(1)
+  deloadWeek     Int?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -166,9 +175,11 @@ model PlannedExercise {
   reps            Int?
   durationSeconds Int?
   restSeconds     Int        @default(60)
-  rpe             Int?
-  notes           String?
-  order           Int
+  rpe         Float?
+  repsMin     Int     @default(8)
+  repsMax     Int     @default(12)
+  order       Int     @default(0)
+  notes       String?
 
   @@index([dayId])
 }
@@ -586,4 +597,59 @@ model Subscription {
   updatedAt            DateTime  @updatedAt
 
   @@index([userId])
+}
+
+// ──────────────────────────────────────────
+// V2: MEMORY EMBEDDINGS & CHALLENGE GROUPS
+// ──────────────────────────────────────────
+
+model UserMemoryEmbedding {
+  id        String                       @id @default(cuid())
+  userId    String
+  content   String
+  embedding Unsupported("vector(1536)")?
+  type      MemoryType
+  createdAt DateTime                     @default(now())
+  user      User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ChallengeGroup {
+  id           String       @id @default(cuid())
+  weekStart    DateTime
+  ageRange     String
+  fitnessLevel FitnessLevel
+  goal         FitnessGoal
+  avgSessions  Float        @default(0)
+  memberCount  Int          @default(0)
+  updatedAt    DateTime     @updatedAt
+}
+
+enum ProgramStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+}
+
+enum MemoryType {
+  SESSION_SUMMARY
+  WEEKLY_SUMMARY
+  MILESTONE
+  PATTERN
+}
+
+enum FitnessLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum FitnessGoal {
+  WEIGHT_LOSS
+  MUSCLE_GAIN
+  STRENGTH
+  ENDURANCE
+  FLEXIBILITY
+  GENERAL_FITNESS
 }
