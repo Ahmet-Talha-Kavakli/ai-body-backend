@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "FitAI",
+    "slug": "fitai",
+    "scheme": "fitai",
+    "version": "1.0.0",
+    "platforms": ["ios", "android"],
+    "plugins": [
+      "expo-router",
+      "expo-camera",
+      ["expo-build-properties", { "ios": { "deploymentTarget": "16.0" }, "android": { "compileSdkVersion": 35 } }]
+    ],
+    "ios": {
+      "bundleIdentifier": "com.fitai.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Egzersiz form analizi için kamera gerekli.",
+        "NSMicrophoneUsageDescription": "Sesli koç için mikrofon gerekli.",
+        "NSHealthShareUsageDescription": "Sağlık verilerinizi analiz etmek için."
+      }
+    },
+    "android": {
+      "package": "com.fitai.app",
+      "permissions": ["CAMERA", "RECORD_AUDIO"]
+    }
+  }
+}
