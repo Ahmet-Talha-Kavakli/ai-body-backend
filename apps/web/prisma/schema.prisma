@@ -37,6 +37,13 @@ model User {
   subscription     Subscription?
   weaknesses       UserWeakness[]
 
+  // Phase 2: User profiling and analytics
+  basicProfile     UserBasicProfile?
+  healthMetrics    UserHealthMetrics?
+  trainingHistory  UserTrainingHistory?
+  nutritionMetrics UserNutritionMetrics?
+  dailyMetrics     DailyMetrics[]
+
   @@index([clerkId])
   @@index([email])
 }
@@ -181,6 +188,7 @@ model WorkoutSession {
   completedSets    CompletedSet[]
   formRepData      FormRepData[]  // NEW: Per-rep form analysis
   workoutAnalytics WorkoutAnalytics[]  // NEW: Analytics
+  dailyMetrics     DailyMetrics[]
 
   @@index([userId])
   @@index([startedAt])
@@ -377,6 +385,120 @@ model UserWeakness {
 
   @@index([userId])
   @@index([muscleGroup])
+}
+
+// ──────────────────────────────────────────
+// PHASE 2: USER PROFILING & ANALYTICS
+// ──────────────────────────────────────────
+
+// User Profile - Basic Info
+model UserBasicProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  age               Int
+  gender            String    // Male, Female, Other, Prefer not to say
+  height            Float     // cm
+  weight            Float     // kg
+  fitnessLevel      String    // Beginner, Intermediate, Advanced, Elite
+  primaryGoal       String    // Weight Loss, Muscle Gain, Strength, etc
+  experienceYears   Int
+  targetWeight      Float?
+  targetFitnessLevel String?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+// Health & Injury Tracking
+model UserHealthMetrics {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  activeInjuries    Json      // Array<{bodyPart, injuryType, severity, onsetDate, recoveryDeadline, restrictions}>
+  pastInjuries      Json      // Array<{bodyPart, injuryType, onsetDate, recoveryDate, notes}>
+  medicalRestrictions String[]
+  currentPainPoints Json      // Array<{bodyPart, painLevel, occurrence}>
+  doctorNotes       String?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+// Training History
+model UserTrainingHistory {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  trainingDaysPerWeek Int
+  preferredExercises  String[]
+  dislikedExercises   String[]
+  personalRecords     Json     // Array<{exercise, weight_kg, reps, date}>
+  startingStats       Json     // {fitnessLevel, weight_kg, strengthBaseline}
+  trainingStyle       String   // Push/Pull/Legs, Upper/Lower, Full Body, PPL, Bro Split
+  preferredDuration   Int      // minutes
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Nutrition & Recovery Targets
+model UserNutritionMetrics {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  proteinTarget     Float     // grams/day
+  calorieTarget     Int?
+  dietType          String    // Omnivore, Vegetarian, Vegan, Keto, Paleo, Other
+  avgSleepHours     Float
+  stressLevel       Int       // 1-10
+  alcoholConsumption String   // None, Occasional, Regular, Daily
+  smoking           Boolean
+  waterIntakeTarget Float     // liters/day
+  supplementStack   String[]
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+// Daily Metrics - Post-workout check-in
+model DailyMetrics {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId         String?
+  session           WorkoutSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  date              DateTime  @default(now())
+  sleepHours        Float
+  sleepQuality      Int       // 1-10
+  stressLevel       Int       // 1-10
+  proteinIntake     Float     // grams
+  calorieIntake     Int?
+  waterIntake       Float     // liters
+  mood              String    // Excellent, Good, Neutral, Poor
+  energyLevel       Int       // 1-10
+  soreness          Int       // 1-10
+  injuryPain        Int       // 1-10
+  notes             String?
+
+  createdAt         DateTime  @default(now())
+
+  @@index([userId])
+  @@index([date])
+  @@index([sessionId])
 }
 
 // ──────────────────────────────────────────
