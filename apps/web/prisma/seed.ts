@@ -77,11 +77,11 @@ async function main() {
       where: { user: { clerkId: { startsWith: 'user_seed_' } } },
     })
 
-    await prisma.aiMessage.deleteMany({
+    await prisma.aIMessage.deleteMany({
       where: { conversation: { user: { clerkId: { startsWith: 'user_seed_' } } } },
     })
 
-    await prisma.aiConversation.deleteMany({
+    await prisma.aIConversation.deleteMany({
       where: { user: { clerkId: { startsWith: 'user_seed_' } } },
     })
 
