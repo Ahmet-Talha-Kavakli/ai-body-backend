@@ -19,6 +19,9 @@
   "dependencies": {
     "@clerk/nextjs": "^6.12.12",
     "@fitai/shared-types": "workspace:*",
+    "@fitai/shared-utils": "workspace:*",
+    "@fitai/shared-ai": "workspace:*",
+    "@fitai/shared-hooks": "workspace:*",
     "@hookform/resolvers": "^3.10.0",
     "@mediapipe/camera_utils": "^0.3.1675466862",
     "@mediapipe/pose": "^0.5.1675469404",

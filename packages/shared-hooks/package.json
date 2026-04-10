@@ -1,0 +1,10 @@
+{
+  "name": "@fitai/shared-hooks",
+  "version": "0.0.1",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@fitai/shared-utils": "workspace:*",
+    "@fitai/shared-types": "workspace:*"
+  }
+}
