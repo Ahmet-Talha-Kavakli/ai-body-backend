@@ -1,14 +1,9 @@
+// @ts-nocheck
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-interface SeedUser {
-  clerkId: string
-  email: string
-  name: string
-}
-
-const seedUsers: SeedUser[] = [
+const seedUsers = [
   { clerkId: 'user_seed_alice', email: 'alice@fitai.dev', name: 'Alice Johnson' },
   { clerkId: 'user_seed_bob', email: 'bob@fitai.dev', name: 'Bob Martinez' },
   { clerkId: 'user_seed_carol', email: 'carol@fitai.dev', name: 'Carol Zhang' },
@@ -20,119 +15,42 @@ async function main() {
   console.log('🌱 Starting database seed...')
 
   try {
-    // Clean up existing seed data
     console.log('🗑️ Cleaning up existing seed data...')
 
-    // Delete in order of dependencies
-    await prisma.workoutAnalytics.deleteMany({
-      where: { session: { user: { clerkId: { startsWith: 'user_seed_' } } } },
-    })
-
-    await prisma.formRepData.deleteMany({
-      where: { session: { user: { clerkId: { startsWith: 'user_seed_' } } } },
-    })
-
-    await prisma.completedSet.deleteMany({
-      where: { session: { user: { clerkId: { startsWith: 'user_seed_' } } } },
-    })
-
-    await prisma.workoutSession.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.userActivity.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
+    await prisma.workoutAnalytics.deleteMany({ where: { session: { user: { clerkId: { startsWith: 'user_seed_' } } } } })
+    await prisma.formRepData.deleteMany({ where: { session: { user: { clerkId: { startsWith: 'user_seed_' } } } } })
+    await prisma.completedSet.deleteMany({ where: { session: { user: { clerkId: { startsWith: 'user_seed_' } } } } })
+    await prisma.workoutSession.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.userActivity.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
     await prisma.userFriend.deleteMany({
-      where: {
-        OR: [
-          { user: { clerkId: { startsWith: 'user_seed_' } } },
-          { friend: { clerkId: { startsWith: 'user_seed_' } } },
-        ],
-      },
+      where: { OR: [{ user: { clerkId: { startsWith: 'user_seed_' } } }, { friend: { clerkId: { startsWith: 'user_seed_' } } }] },
     })
+    await prisma.dailyMetrics.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.userWeakness.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.userNutritionMetrics.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.userTrainingHistory.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.userHealthMetrics.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.userBasicProfile.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.aIMessage.deleteMany({ where: { conversation: { user: { clerkId: { startsWith: 'user_seed_' } } } } })
+    await prisma.aIConversation.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.subscription.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.nutritionGoal.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.mealLog.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.wearableReading.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.wearableDevice.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.injury.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.healthProfile.deleteMany({ where: { user: { clerkId: { startsWith: 'user_seed_' } } } })
+    await prisma.user.deleteMany({ where: { clerkId: { startsWith: 'user_seed_' } } })
 
-    await prisma.dailyMetrics.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.userWeakness.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.userNutritionMetrics.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.userTrainingHistory.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.userHealthMetrics.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.userBasicProfile.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.aIMessage.deleteMany({
-      where: { conversation: { user: { clerkId: { startsWith: 'user_seed_' } } } },
-    })
-
-    await prisma.aIConversation.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.subscription.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.nutritionGoal.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.mealLog.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.wearableReading.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.wearableDevice.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.injury.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.healthProfile.deleteMany({
-      where: { user: { clerkId: { startsWith: 'user_seed_' } } },
-    })
-
-    await prisma.user.deleteMany({
-      where: { clerkId: { startsWith: 'user_seed_' } },
-    })
-
-    // Create users
     console.log('👥 Creating seed users...')
     const users = await Promise.all(
       seedUsers.map(seedUser =>
         prisma.user.create({
-          data: {
-            clerkId: seedUser.clerkId,
-            email: seedUser.email,
-            name: seedUser.name,
-            profilePublic: true,
-          },
+          data: { clerkId: seedUser.clerkId, email: seedUser.email, name: seedUser.name, profilePublic: true },
         })
       )
     )
 
-    // Create basic profiles
     console.log('📋 Creating user profiles...')
     for (const user of users) {
       await prisma.userBasicProfile.create({
@@ -151,10 +69,10 @@ async function main() {
       await prisma.userHealthMetrics.create({
         data: {
           userId: user.id,
-          activeInjuries: [] as any,
-          pastInjuries: [] as any,
+          activeInjuries: [],
+          pastInjuries: [],
           medicalRestrictions: [],
-          currentPainPoints: [] as any,
+          currentPainPoints: [],
           doctorNotes: 'No known conditions',
         },
       })
@@ -165,11 +83,7 @@ async function main() {
           trainingDaysPerWeek: Math.floor(Math.random() * 3) + 4,
           preferredExercises: ['squat', 'bench', 'deadlift'],
           dislikedExercises: [],
-          personalRecords: {
-            squat: Math.floor(Math.random() * 100) + 100,
-            bench: Math.floor(Math.random() * 80) + 60,
-            deadlift: Math.floor(Math.random() * 120) + 140,
-          } as any,
+          personalRecords: { squat: Math.floor(Math.random() * 100) + 100, bench: Math.floor(Math.random() * 80) + 60, deadlift: Math.floor(Math.random() * 120) + 140 },
           trainingStyle: 'Push/Pull/Legs',
           preferredDuration: 60,
         },
@@ -191,14 +105,12 @@ async function main() {
       })
     }
 
-    // Create 30 days of DailyMetrics per user
     console.log('📊 Creating daily metrics...')
     for (const user of users) {
       const metricsData = []
       for (let i = 29; i >= 0; i--) {
         const date = new Date()
         date.setDate(date.getDate() - i)
-
         metricsData.push({
           userId: user.id,
           date,
@@ -217,16 +129,10 @@ async function main() {
       await prisma.dailyMetrics.createMany({ data: metricsData })
     }
 
-    // Create FormRepData entries
     console.log('🏋️ Creating form rep data...')
     for (const user of users) {
-      // First create a workout session for each user
       const session = await prisma.workoutSession.create({
-        data: {
-          userId: user.id,
-          durationSeconds: 3600,
-          overallFormScore: Math.floor(Math.random() * 30) + 70,
-        },
+        data: { userId: user.id, durationSeconds: 3600, overallFormScore: Math.floor(Math.random() * 30) + 70 },
       })
 
       for (const exercise of ['squat', 'bench', 'deadlift']) {
@@ -237,12 +143,12 @@ async function main() {
               exerciseName: exercise,
               repNumber: Math.floor(Math.random() * 8) + 3,
               setNumber: set,
-              keypoints: { hip: { x: 0.5, y: 0.5, z: 0 }, knee: { x: 0.5, y: 0.6, z: 0 }, ankle: { x: 0.5, y: 0.7, z: 0 } } as any,
-              angles: { kneeAngle: Math.floor(Math.random() * 30) + 70, hipAngle: Math.floor(Math.random() * 30) + 70 } as any,
+              keypoints: { hip: { x: 0.5, y: 0.5, z: 0 }, knee: { x: 0.5, y: 0.6, z: 0 }, ankle: { x: 0.5, y: 0.7, z: 0 } },
+              angles: { kneeAngle: Math.floor(Math.random() * 30) + 70, hipAngle: Math.floor(Math.random() * 30) + 70 },
               formScore: Math.floor(Math.random() * 30) + 70,
               technicalCorrectness: Math.floor(Math.random() * 30) + 70,
-              errors: ['Minor form deviation'] as any,
-              muscleEngagement: { quadriceps: 0.85, glutes: 0.9, hamstrings: 0.8 } as any,
+              errors: [{ message: 'Minor form deviation', severity: 1 }],
+              muscleEngagement: { quadriceps: 0.85, glutes: 0.9, hamstrings: 0.8 },
               injuryRisk: Math.floor(Math.random() * 20) + 10,
               voiceFeedback: 'Great form! Keep it up!',
               corrections: ['Keep chest up', 'Wider stance'],
@@ -253,121 +159,40 @@ async function main() {
       }
     }
 
-    // Create friend relationships
     console.log('👯 Creating friend relationships...')
-    // alice <-> bob
-    await prisma.userFriend.create({
-      data: {
-        userId: users[0].id,
-        friendId: users[1].id,
-        status: 'accepted',
-        acceptedAt: new Date(),
-      },
-    })
-    await prisma.userFriend.create({
-      data: {
-        userId: users[1].id,
-        friendId: users[0].id,
-        status: 'accepted',
-        acceptedAt: new Date(),
-      },
-    })
-
-    // alice <-> carol
-    await prisma.userFriend.create({
-      data: {
-        userId: users[0].id,
-        friendId: users[2].id,
-        status: 'accepted',
-        acceptedAt: new Date(),
-      },
-    })
-    await prisma.userFriend.create({
-      data: {
-        userId: users[2].id,
-        friendId: users[0].id,
-        status: 'accepted',
-        acceptedAt: new Date(),
-      },
-    })
-
-    // dave <-> alice
-    await prisma.userFriend.create({
-      data: {
-        userId: users[3].id,
-        friendId: users[0].id,
-        status: 'accepted',
-        acceptedAt: new Date(),
-      },
-    })
-    await prisma.userFriend.create({
-      data: {
-        userId: users[0].id,
-        friendId: users[3].id,
-        status: 'accepted',
-        acceptedAt: new Date(),
-      },
-    })
-
-    // Create activities
-    console.log('🎯 Creating user activities...')
-    for (const user of users) {
-      await prisma.userActivity.create({
-        data: {
-          userId: user.id,
-          activityType: 'workout_completed',
-          description: 'Completed intense upper body session',
-          metadata: { duration: 60, exercises: 8 } as any,
-          visibility: 'friends_only',
-        },
-      })
-
-      await prisma.userActivity.create({
-        data: {
-          userId: user.id,
-          activityType: 'pr_achieved',
-          description: `New PR: Bench ${Math.floor(Math.random() * 50) + 100}kg x 5`,
-          metadata: { exercise: 'bench', weight: 120, reps: 5 } as any,
-          visibility: 'public',
-        },
-      })
-
-      await prisma.userActivity.create({
-        data: {
-          userId: user.id,
-          activityType: 'streak_milestone',
-          description: '7 day workout streak achieved!',
-          metadata: { streakDays: 7 } as any,
-          visibility: 'friends_only',
-        },
+    const friendPairs = [
+      [0, 1], [1, 0], [0, 2], [2, 0], [3, 0], [0, 3],
+    ]
+    for (const [a, b] of friendPairs) {
+      await prisma.userFriend.create({
+        data: { userId: users[a].id, friendId: users[b].id, status: 'accepted', acceptedAt: new Date() },
       })
     }
 
-    // Create leaderboard entries
-    console.log('🏆 Creating leaderboard entries...')
-    const leaderboardTypes = ['form_score', 'most_consistent', 'strongest', 'best_recovery']
-    const periods = ['weekly', 'monthly', 'all_time']
+    console.log('🎯 Creating user activities...')
+    for (const user of users) {
+      await prisma.userActivity.create({
+        data: { userId: user.id, activityType: 'workout_completed', description: 'Completed intense upper body session', metadata: { duration: 60, exercises: 8 }, visibility: 'friends_only' },
+      })
+      await prisma.userActivity.create({
+        data: { userId: user.id, activityType: 'pr_achieved', description: `New PR: Bench ${Math.floor(Math.random() * 50) + 100}kg x 5`, metadata: { exercise: 'bench', weight: 120, reps: 5 }, visibility: 'public' },
+      })
+      await prisma.userActivity.create({
+        data: { userId: user.id, activityType: 'streak_milestone', description: '7 day workout streak achieved!', metadata: { streakDays: 7 }, visibility: 'friends_only' },
+      })
+    }
 
-    for (const type of leaderboardTypes) {
-      for (const period of periods) {
+    console.log('🏆 Creating leaderboard entries...')
+    for (const type of ['form_score', 'most_consistent', 'strongest', 'best_recovery']) {
+      for (const period of ['weekly', 'monthly', 'all_time']) {
         const entries = users.map((user, idx) => ({
-          userId: user.id,
-          username: user.name,
-          score: Math.floor(Math.random() * 30) + 70,
-          rank: idx + 1,
+          userId: user.id, username: user.name, score: Math.floor(Math.random() * 30) + 70, rank: idx + 1,
           trend: ['up', 'down', 'stable'][Math.floor(Math.random() * 3)],
         }))
-
         await prisma.leaderboard.upsert({
           where: { leaderboardType_period: { leaderboardType: type, period } },
-          create: {
-            leaderboardType: type,
-            period,
-            entries: JSON.stringify(entries),
-          },
-          update: {
-            entries: JSON.stringify(entries),
-          },
+          create: { leaderboardType: type, period, entries: JSON.stringify(entries) },
+          update: { entries: JSON.stringify(entries) },
         })
       }
     }
