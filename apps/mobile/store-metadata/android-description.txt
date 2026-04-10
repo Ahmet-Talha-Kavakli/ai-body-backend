@@ -1,0 +1,8 @@
+FitAI - Yapay Zeka Kişisel Antrenörü
+
+* Sesli koçluk (4 kişilik stil)
+* Form analizi (kameradan)
+* Aylık progress videoları
+* Offline antrenman
+* Beslenme takibi (barcode)
+* Sağlık entegrasyonu
