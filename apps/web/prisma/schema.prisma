@@ -58,6 +58,12 @@ model User {
   bio             String?
   profilePublic   Boolean         @default(false)
 
+  // Phase 2: New relations for wearables, sleep, readiness
+  wearables       Wearable[]      @relation("UserWearables")
+  sleepRecords    SleepRecord[]   @relation("UserSleepRecords")
+  readinessScores ReadinessScore[] @relation("UserReadinessScores")
+  weeklySummaries WeeklySummary[] @relation("UserWeeklySummaries")
+
   @@index([clerkId])
   @@index([email])
 }
@@ -660,4 +666,70 @@ enum FitnessGoal {
   ENDURANCE
   FLEXIBILITY
   GENERAL_FITNESS
+}
+
+// ──────────────────────────────────────────
+// PHASE 2: WEARABLES, SLEEP, READINESS, SUMMARIES
+// ──────────────────────────────────────────
+
+model Wearable {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation("UserWearables", fields: [userId], references: [id], onDelete: Cascade)
+  type          String   // "APPLE_HEALTH", "GARMIN", "FITBIT"
+  accessToken   String?
+  refreshToken  String?
+  tokenExpiry   DateTime?
+  isActive      Boolean  @default(false)
+  connectedAt   DateTime @default(now())
+  lastSyncAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@index([type])
+}
+
+model SleepRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserSleepRecords", fields: [userId], references: [id], onDelete: Cascade)
+  duration  Float    // minutes
+  quality   Float    // 0-100
+  recordedAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([recordedAt])
+}
+
+model ReadinessScore {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserReadinessScores", fields: [userId], references: [id], onDelete: Cascade)
+  score     Int      // 0-100
+  source    String   // "SLEEP_SYNC", "MANUAL", etc.
+  recordedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([recordedAt])
+}
+
+model WeeklySummary {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation("UserWeeklySummaries", fields: [userId], references: [id], onDelete: Cascade)
+  totalWorkouts     Int
+  totalVolume       Float
+  averageFormScore  Float
+  averageReadiness  Float
+  topExercises      String[]
+  weekStartDate     DateTime
+  weekEndDate       DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+  @@index([weekStartDate])
 }
