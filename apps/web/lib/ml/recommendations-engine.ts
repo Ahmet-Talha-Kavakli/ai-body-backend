@@ -49,11 +49,17 @@ export async function generateRecommendations(userId: string): Promise<Recommend
       ],
     });
 
-    // Form score trend recommendation
-    const formScores = dailyMetrics.map(m => m.formScore || 70).reverse();
-    const recentAvg = formScores.slice(-7).reduce((a, b) => a + b) / 7;
-    const olderAvg = formScores.slice(-14, -7).reduce((a, b) => a + b) / 7;
-    const trend = ((recentAvg - olderAvg) / olderAvg) * 100;
+    // Form score trend recommendation (from FormRepData)
+    const formRepData = await prisma.formRepData.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 14,
+      select: { formScore: true },
+    });
+    const formScores = formRepData.map(m => m.formScore || 70).reverse();
+    const recentAvg = formScores.length >= 7 ? formScores.slice(-7).reduce((a, b) => a + b) / 7 : 70;
+    const olderAvg = formScores.length >= 14 ? formScores.slice(-14, -7).reduce((a, b) => a + b) / 7 : recentAvg;
+    const trend = olderAvg > 0 ? ((recentAvg - olderAvg) / olderAvg) * 100 : 0;
 
     if (trend < -10) {
       recommendations.push({
