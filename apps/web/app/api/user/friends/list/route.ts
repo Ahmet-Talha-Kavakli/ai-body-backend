@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
 
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
-    const { userId: clerkId } = await auth()
+    const { userId: clerkId } = auth()
     if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const user = await db.user.findUnique({ where: { clerkId } })

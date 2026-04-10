@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
 
+const LEADERBOARD_TYPES = ['form_score', 'most_consistent', 'strongest', 'best_recovery'] as const
+type LeaderboardType = typeof LEADERBOARD_TYPES[number]
+
+const PERIODS = ['weekly', 'monthly', 'all_time'] as const
+type Period = typeof PERIODS[number]
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ type: string }> }
-) {
+): Promise<NextResponse> {
   try {
-    const { userId: clerkId } = await auth()
+    const { userId: clerkId } = auth()
     if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const user = await db.user.findUnique({ where: { clerkId } })
@@ -16,22 +22,20 @@ export async function GET(
     const { type } = await params
 
     // Get period from query params (default to 'weekly')
-    const period = req.nextUrl.searchParams.get('period') || 'weekly'
+    const period = (req.nextUrl.searchParams.get('period') || 'weekly') as Period
 
     // Validate leaderboard type
-    const validTypes = ['form_score', 'most_consistent', 'strongest', 'best_recovery']
-    if (!validTypes.includes(type)) {
+    if (!LEADERBOARD_TYPES.includes(type as LeaderboardType)) {
       return NextResponse.json(
-        { error: `Invalid leaderboard type. Must be one of: ${validTypes.join(', ')}` },
+        { error: `Invalid leaderboard type. Must be one of: ${LEADERBOARD_TYPES.join(', ')}` },
         { status: 400 }
       )
     }
 
     // Validate period
-    const validPeriods = ['weekly', 'monthly', 'all_time']
-    if (!validPeriods.includes(period)) {
+    if (!PERIODS.includes(period)) {
       return NextResponse.json(
-        { error: `Invalid period. Must be one of: ${validPeriods.join(', ')}` },
+        { error: `Invalid period. Must be one of: ${PERIODS.join(', ')}` },
         { status: 400 }
       )
     }
