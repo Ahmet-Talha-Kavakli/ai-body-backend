@@ -505,11 +505,8 @@ export default function SessionPage() {
         {/* Butonlar */}
         <div className="flex items-center gap-2">
           <button
-            onMouseDown={startRecording}
-            onMouseUp={stopRecording}
-            onTouchStart={startRecording}
-            onTouchEnd={stopRecording}
-            title="Basılı tut ve konuş"
+            onClick={() => isRecording ? stopRecording() : startRecording()}
+            title={isRecording ? 'Durdurmak için tıkla' : 'Konuşmak için tıkla'}
             className={`p-2.5 rounded-xl border transition-colors ${
               isRecording
                 ? 'bg-red-500/30 border-red-500 text-red-300 animate-pulse'
