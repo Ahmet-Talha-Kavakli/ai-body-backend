@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import type { UserHealthMetrics } from '@prisma/client'
 
 interface InjuryHeatMapProps {
   injuries?: Array<{ bodyPart: string; severity: number }>
