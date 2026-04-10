@@ -44,6 +44,15 @@ model User {
   nutritionMetrics UserNutritionMetrics?
   dailyMetrics     DailyMetrics[]
 
+  // Social relations
+  friends         UserFriend[]    @relation("UserFriends")
+  friendOf        UserFriend[]    @relation("FriendOf")
+  activities      UserActivity[]
+
+  // Social stats
+  bio             String?
+  profilePublic   Boolean         @default(false)
+
   @@index([clerkId])
   @@index([email])
 }
@@ -499,6 +508,60 @@ model DailyMetrics {
   @@index([userId])
   @@index([date])
   @@index([sessionId])
+}
+
+// ──────────────────────────────────────────
+// SOCIAL FEATURES
+// ──────────────────────────────────────────
+
+model UserFriend {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friendId        String
+  friend          User      @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+
+  status          String    @default("pending")  // pending, accepted, blocked
+  requestedAt     DateTime  @default(now())
+  acceptedAt      DateTime?
+
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
+  @@index([status])
+}
+
+model UserActivity {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  activityType    String    // "workout_completed", "pr_achieved", "streak_milestone"
+  description     String    // "Benched 120kg x5", "10 day streak"
+  metadata        Json?     // {exercise, weight, reps, streak_days, formScore}
+
+  createdAt       DateTime  @default(now())
+  visibility      String    @default("friends_only")  // private, friends_only, public
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([activityType])
+  @@index([visibility])
+}
+
+model Leaderboard {
+  id              String    @id @default(cuid())
+
+  leaderboardType String    // "form_score", "most_consistent", "strongest", "best_recovery"
+  period          String    // "weekly", "monthly", "all_time"
+
+  entries         Json      // Array<{userId, username, score, rank, trend}>
+
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([leaderboardType, period])
+  @@index([leaderboardType])
+  @@index([updatedAt])
 }
 
 // ──────────────────────────────────────────
