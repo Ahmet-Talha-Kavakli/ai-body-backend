@@ -54,20 +54,16 @@ export async function generateCoachFeedback(
       userContext
     );
 
-    const message = await openai.messages.create({
+    const message = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       max_tokens: 300,
-      system: SYSTEM_PROMPT,
       messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: prompt },
       ],
     });
 
-    const responseText =
-      message.content[0].type === 'text' ? message.content[0].text : '';
+    const responseText = message.choices[0]?.message?.content || '';
 
     // Parse JSON from response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
