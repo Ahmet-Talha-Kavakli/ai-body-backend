@@ -84,6 +84,7 @@ async function main() {
           preferredExercises: ['squat', 'bench', 'deadlift'],
           dislikedExercises: [],
           personalRecords: { squat: Math.floor(Math.random() * 100) + 100, bench: Math.floor(Math.random() * 80) + 60, deadlift: Math.floor(Math.random() * 120) + 140 },
+          startingStats: { weight: Math.floor(Math.random() * 40) + 70, bodyFat: Math.floor(Math.random() * 15) + 10 },
           trainingStyle: 'Push/Pull/Legs',
           preferredDuration: 60,
         },
