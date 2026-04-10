@@ -7,12 +7,13 @@ export async function aggregateLeaderboards() {
     const eightWeeksAgo = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
-    // Form Score Leaderboard (8-week average from FormRepData) - raw query to avoid Prisma groupBy type bug
+    // Form Score Leaderboard (8-week average from FormRepData via WorkoutSession)
     const formScoreRaw = await db.$queryRaw<{ userId: string; avgScore: number }[]>`
-      SELECT "userId", AVG("formScore") as "avgScore"
-      FROM "FormRepData"
-      WHERE "createdAt" >= ${eightWeeksAgo}
-      GROUP BY "userId"
+      SELECT ws."userId", AVG(fr."formScore") as "avgScore"
+      FROM "FormRepData" fr
+      JOIN "WorkoutSession" ws ON ws.id = fr."sessionId"
+      WHERE fr."createdAt" >= ${eightWeeksAgo}
+      GROUP BY ws."userId"
     `
 
     const formScoreEntries = await Promise.all(

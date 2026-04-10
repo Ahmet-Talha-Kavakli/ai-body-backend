@@ -49,9 +49,9 @@ export async function generateRecommendations(userId: string): Promise<Recommend
       ],
     });
 
-    // Form score trend recommendation (from FormRepData)
+    // Form score trend recommendation (from FormRepData via WorkoutSession)
     const formRepData = await prisma.formRepData.findMany({
-      where: { userId },
+      where: { session: { userId } },
       orderBy: { createdAt: 'desc' },
       take: 14,
       select: { formScore: true },
