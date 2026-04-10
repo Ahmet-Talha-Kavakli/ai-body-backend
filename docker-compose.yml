@@ -1,0 +1,45 @@
+version: '3.9'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://fitai:fitai_dev@postgres:5432/fitai
+      DIRECT_URL: postgresql://fitai:fitai_dev@postgres:5432/fitai
+    env_file:
+      - .env.local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./apps/web/.next:/app/.next
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fitai
+      POSTGRES_PASSWORD: fitai_dev
+      POSTGRES_DB: fitai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fitai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    profiles:
+      - redis
+
+volumes:
+  postgres_data:
