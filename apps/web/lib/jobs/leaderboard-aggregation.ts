@@ -4,12 +4,15 @@ export async function aggregateLeaderboards() {
   console.log('[Leaderboard] Starting aggregation...')
 
   try {
-    // Form Score Leaderboard (8-week average)
-    const formScores = await db.dailyMetrics.groupBy({
+    const eightWeeksAgo = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
+    // Form Score Leaderboard (8-week average from FormRepData)
+    const formScores = await db.formRepData.groupBy({
       by: ['userId'],
       _avg: { formScore: true },
       where: {
-        date: { gte: new Date(Date.now() - 56 * 24 * 60 * 60 * 1000) },
+        createdAt: { gte: eightWeeksAgo },
       },
     })
 
@@ -46,12 +49,12 @@ export async function aggregateLeaderboards() {
       },
     })
 
-    // Consistency Leaderboard (streak days)
+    // Consistency Leaderboard (DailyMetrics count in last 30 days)
     const workoutCounts = await db.dailyMetrics.groupBy({
       by: ['userId'],
-      _count: true,
+      _count: { id: true },
       where: {
-        date: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+        date: { gte: thirtyDaysAgo },
       },
     })
 
@@ -64,7 +67,7 @@ export async function aggregateLeaderboards() {
         return {
           userId: wc.userId,
           username: user?.name || 'Unknown',
-          score: wc._count,
+          score: wc._count.id,
           trend: 'up',
         }
       })
