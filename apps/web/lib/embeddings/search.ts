@@ -1,4 +1,4 @@
-import { prisma } from '../db';
+import { prisma } from '@/lib/db/client';
 import { createEmbedding } from './client';
 
 export async function searchRelevantMemories(

@@ -76,14 +76,6 @@ const config: Config = {
           surface: 'var(--bg-surface)',
           elevated: 'var(--bg-elevated)',
         },
-        accent: {
-          primary: 'var(--accent-primary)',
-          'primary-hover': 'var(--accent-primary-hover)',
-          energy: 'var(--accent-energy)',
-          success: 'var(--accent-success)',
-          danger: 'var(--accent-danger)',
-          recovery: 'var(--accent-recovery)',
-        },
         text: {
           primary: 'var(--text-primary)',
           secondary: 'var(--text-secondary)',

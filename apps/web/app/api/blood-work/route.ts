@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/db/client';
 import { analyzeBloodWork, parseBloodWorkPDF } from '@/lib/health/blood-work-parser';
 
 export async function POST(req: NextRequest) {

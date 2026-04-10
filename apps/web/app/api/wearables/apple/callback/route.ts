@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAppleHealthClient } from "@/lib/wearables/apple-health";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db/client";
 
 export async function POST(req: NextRequest) {
   try {

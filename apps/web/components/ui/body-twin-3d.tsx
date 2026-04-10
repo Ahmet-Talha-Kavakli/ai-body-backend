@@ -12,7 +12,7 @@ export function BodyTwin3D({ formScore, theme = "light" }: BodyTwin3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const bodyMeshRef = useRef<THREE.Mesh | null>(null);
+  const bodyMeshRef = useRef<THREE.Group | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
