@@ -12,7 +12,7 @@ describe('GET /api/user/activity/feed', () => {
 
   it('should return 401 if not authenticated', async () => {
     mockAuth.mockReturnValueOnce({ userId: null })
-    const req = new Request('http://localhost/api/user/activity/feed')
+    const req = new Request('http://localhost/api/user/activity/feed') as any
     const res = await GET(req)
     expect(res.status).toBe(401)
   })
@@ -21,7 +21,7 @@ describe('GET /api/user/activity/feed', () => {
     mockAuth.mockReturnValueOnce({ userId: 'clerk_test_user_1' })
     mockDb.user.findUnique.mockResolvedValueOnce(null)
 
-    const req = new Request('http://localhost/api/user/activity/feed')
+    const req = new Request('http://localhost/api/user/activity/feed') as any
     const res = await GET(req)
     expect(res.status).toBe(404)
   })
@@ -32,7 +32,7 @@ describe('GET /api/user/activity/feed', () => {
     mockDb.userFriend.findMany.mockResolvedValueOnce([])
     mockDb.userActivity.findMany.mockResolvedValueOnce([])
 
-    const req = new Request('http://localhost/api/user/activity/feed')
+    const req = new Request('http://localhost/api/user/activity/feed') as any
     const res = await GET(req)
     expect(res.status).toBe(200)
     const data = await res.json()
@@ -58,7 +58,7 @@ describe('GET /api/user/activity/feed', () => {
     mockDb.userFriend.findMany.mockResolvedValueOnce([friendship])
     mockDb.userActivity.findMany.mockResolvedValueOnce([activity])
 
-    const req = new Request('http://localhost/api/user/activity/feed')
+    const req = new Request('http://localhost/api/user/activity/feed') as any
     const res = await GET(req)
     expect(res.status).toBe(200)
     const data = await res.json()

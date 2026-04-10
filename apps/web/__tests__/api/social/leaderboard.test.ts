@@ -12,7 +12,7 @@ describe('GET /api/user/leaderboard/[type]', () => {
 
   it('should return 401 if not authenticated', async () => {
     mockAuth.mockReturnValueOnce({ userId: null })
-    const req = new Request('http://localhost/api/user/leaderboard/form_score')
+    const req = new Request('http://localhost/api/user/leaderboard/form_score') as any
     const res = await GET(req, { params: Promise.resolve({ type: 'form_score' }) })
     expect(res.status).toBe(401)
   })
@@ -21,7 +21,7 @@ describe('GET /api/user/leaderboard/[type]', () => {
     mockAuth.mockReturnValueOnce({ userId: 'clerk_test_user_1' })
     mockDb.user.findUnique.mockResolvedValueOnce(null)
 
-    const req = new Request('http://localhost/api/user/leaderboard/form_score')
+    const req = new Request('http://localhost/api/user/leaderboard/form_score') as any
     const res = await GET(req, { params: Promise.resolve({ type: 'form_score' }) })
     expect(res.status).toBe(404)
   })
@@ -31,7 +31,7 @@ describe('GET /api/user/leaderboard/[type]', () => {
     mockDb.user.findUnique.mockResolvedValueOnce(makeUser())
 
     const req = new Request('http://localhost/api/user/leaderboard/invalid') as any
-    req.nextUrl = new URL('http://localhost/api/user/leaderboard/invalid')
+    ;(req as any).nextUrl = new URL('http://localhost/api/user/leaderboard/invalid')
     const res = await GET(req, { params: Promise.resolve({ type: 'invalid' }) })
     expect(res.status).toBe(400)
   })
@@ -42,7 +42,7 @@ describe('GET /api/user/leaderboard/[type]', () => {
     mockDb.leaderboard.findUnique.mockResolvedValueOnce(makeLeaderboard())
 
     const req = new Request('http://localhost/api/user/leaderboard/form_score?period=weekly') as any
-    req.nextUrl = new URL('http://localhost/api/user/leaderboard/form_score?period=weekly')
+    ;(req as any).nextUrl = new URL('http://localhost/api/user/leaderboard/form_score?period=weekly')
     const res = await GET(req, { params: Promise.resolve({ type: 'form_score' }) })
     expect(res.status).toBe(200)
     const data = await res.json()

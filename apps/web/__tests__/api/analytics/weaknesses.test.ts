@@ -11,7 +11,7 @@ describe('GET /api/user/weaknesses', () => {
 
   it('should return 401 if not authenticated', async () => {
     mockAuth.mockReturnValueOnce({ userId: null })
-    const req = new Request('http://localhost/api/user/weaknesses')
+    const req = new Request('http://localhost/api/user/weaknesses') as any
     const res = await GET(req)
     expect(res.status).toBe(401)
   })
@@ -20,7 +20,7 @@ describe('GET /api/user/weaknesses', () => {
     mockAuth.mockReturnValueOnce({ userId: 'user_1' })
     mockDb.userWeakness.findMany.mockResolvedValueOnce([])
 
-    const req = new Request('http://localhost/api/user/weaknesses')
+    const req = new Request('http://localhost/api/user/weaknesses') as any
     const res = await GET(req)
     expect(res.status).toBe(200)
     const data = await res.json()
@@ -34,7 +34,7 @@ describe('GET /api/user/weaknesses', () => {
       { id: 'w2', userId: 'user_1', muscleGroup: 'shoulders', severity: 'medium' },
     ])
 
-    const req = new Request('http://localhost/api/user/weaknesses')
+    const req = new Request('http://localhost/api/user/weaknesses') as any
     const res = await GET(req)
     expect(res.status).toBe(200)
     const data = await res.json()

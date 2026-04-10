@@ -15,7 +15,7 @@ describe('POST /api/user/friends/accept', () => {
     const req = new Request('http://localhost/api/user/friends/accept', {
       method: 'POST',
       body: JSON.stringify({ friendRequestId: 'friend_1' }),
-    })
+    }) as any
     const res = await POST(req)
     expect(res.status).toBe(401)
   })
@@ -27,7 +27,7 @@ describe('POST /api/user/friends/accept', () => {
     const req = new Request('http://localhost/api/user/friends/accept', {
       method: 'POST',
       body: JSON.stringify({ friendRequestId: 'friend_1' }),
-    })
+    }) as any
     const res = await POST(req)
     expect(res.status).toBe(404)
   })
@@ -40,7 +40,7 @@ describe('POST /api/user/friends/accept', () => {
     const req = new Request('http://localhost/api/user/friends/accept', {
       method: 'POST',
       body: JSON.stringify({ friendRequestId: 'friend_1' }),
-    })
+    }) as any
     const res = await POST(req)
     expect(res.status).toBe(404)
   })
@@ -65,7 +65,7 @@ describe('POST /api/user/friends/accept', () => {
     const req = new Request('http://localhost/api/user/friends/accept', {
       method: 'POST',
       body: JSON.stringify({ friendRequestId: 'friend_1' }),
-    })
+    }) as any
     const res = await POST(req)
     expect(res.status).toBe(200)
     const data = await res.json()

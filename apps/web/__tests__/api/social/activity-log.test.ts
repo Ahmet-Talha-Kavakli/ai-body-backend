@@ -15,7 +15,7 @@ describe('POST /api/user/activity/log', () => {
     const req = new Request('http://localhost/api/user/activity/log', {
       method: 'POST',
       body: JSON.stringify({ activityType: 'workout_completed', description: 'test' }),
-    })
+    }) as any
     const res = await POST(req)
     expect(res.status).toBe(401)
   })
@@ -27,7 +27,7 @@ describe('POST /api/user/activity/log', () => {
     const req = new Request('http://localhost/api/user/activity/log', {
       method: 'POST',
       body: JSON.stringify({ activityType: 'workout_completed', description: 'test' }),
-    })
+    }) as any
     const res = await POST(req)
     expect(res.status).toBe(404)
   })

@@ -12,7 +12,7 @@ describe('GET /api/user/friends/list', () => {
 
   it('should return 401 if not authenticated', async () => {
     mockAuth.mockReturnValueOnce({ userId: null })
-    const req = new Request('http://localhost/api/user/friends/list')
+    const req = new Request('http://localhost/api/user/friends/list') as any
     const res = await GET(req)
     expect(res.status).toBe(401)
   })
@@ -21,7 +21,7 @@ describe('GET /api/user/friends/list', () => {
     mockAuth.mockReturnValueOnce({ userId: 'clerk_test_user_1' })
     mockDb.user.findUnique.mockResolvedValueOnce(null)
 
-    const req = new Request('http://localhost/api/user/friends/list')
+    const req = new Request('http://localhost/api/user/friends/list') as any
     const res = await GET(req)
     expect(res.status).toBe(404)
   })
@@ -31,7 +31,7 @@ describe('GET /api/user/friends/list', () => {
     mockDb.user.findUnique.mockResolvedValueOnce(makeUser())
     mockDb.userFriend.findMany.mockResolvedValueOnce([])
 
-    const req = new Request('http://localhost/api/user/friends/list')
+    const req = new Request('http://localhost/api/user/friends/list') as any
     const res = await GET(req)
     expect(res.status).toBe(200)
     const data = await res.json()
@@ -58,7 +58,7 @@ describe('GET /api/user/friends/list', () => {
       },
     ])
 
-    const req = new Request('http://localhost/api/user/friends/list')
+    const req = new Request('http://localhost/api/user/friends/list') as any
     const res = await GET(req)
     expect(res.status).toBe(200)
     const data = await res.json()

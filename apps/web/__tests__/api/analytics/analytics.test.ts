@@ -12,7 +12,7 @@ describe('GET /api/user/analytics', () => {
 
   it('should return 401 if not authenticated', async () => {
     mockAuth.mockReturnValueOnce({ userId: null })
-    const req = new Request('http://localhost/api/user/analytics')
+    const req = new Request('http://localhost/api/user/analytics') as any
     const res = await GET(req)
     expect(res.status).toBe(401)
   })
@@ -22,7 +22,7 @@ describe('GET /api/user/analytics', () => {
     mockDb.workoutAnalytics.findMany.mockResolvedValueOnce([])
     mockDb.dailyMetrics.findMany.mockResolvedValueOnce([])
 
-    const req = new Request('http://localhost/api/user/analytics')
+    const req = new Request('http://localhost/api/user/analytics') as any
     const res = await GET(req)
     expect(res.status).toBe(200)
   })
@@ -35,7 +35,7 @@ describe('GET /api/user/analytics', () => {
       makeDailyMetrics({ sleepHours: 6, stressLevel: 5 }),
     ])
 
-    const req = new Request('http://localhost/api/user/analytics')
+    const req = new Request('http://localhost/api/user/analytics') as any
     const res = await GET(req)
     expect(res.status).toBe(200)
   })
