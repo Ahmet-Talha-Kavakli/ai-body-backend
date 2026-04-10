@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const exercises = await db.exercise.findMany({
       where: {
         ...(bodyPart && { bodyPart }),
-        ...(equipment && { equipment: { hasSome: [equipment] } }),
+        ...(equipment && { equipment: { has: equipment } }),
         ...(search && { name: { contains: search, mode: 'insensitive' } }),
       },
       take: limit,
