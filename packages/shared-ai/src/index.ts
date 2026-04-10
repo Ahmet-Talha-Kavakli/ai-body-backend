@@ -1,2 +1,1 @@
-// Exports will be added as modules are implemented
-export {};
+export * from './context-assembler';
