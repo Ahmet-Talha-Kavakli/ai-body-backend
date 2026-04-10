@@ -15,8 +15,8 @@ export async function GET(
 
     const { type } = await params
 
-    // Get period from query params (default to 'all_time')
-    const period = req.nextUrl.searchParams.get('period') || 'all_time'
+    // Get period from query params (default to 'weekly')
+    const period = req.nextUrl.searchParams.get('period') || 'weekly'
 
     // Validate leaderboard type
     const validTypes = ['form_score', 'most_consistent', 'strongest', 'best_recovery']
