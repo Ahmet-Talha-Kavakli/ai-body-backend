@@ -1,22 +1,25 @@
 import { useAuth } from '@clerk/expo';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 
-export default function Home() {
-  const { isSignedIn } = useAuth();
+export default function SplashScreen() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoaded) {
+      if (isSignedIn) {
+        router.replace('/(app)/home');
+      } else {
+        router.replace('/(auth)/sign-in');
+      }
+    }
+  }, [isLoaded, isSignedIn]);
 
   return (
     <View className="flex-1 bg-bg-primary items-center justify-center">
-      <Text className="text-text-primary text-2xl font-bold mb-4">FitAI Mobile</Text>
-      {isSignedIn ? (
-        <Link href="/dashboard" asChild>
-          <Text className="text-accent-primary">Dashboard'a Git</Text>
-        </Link>
-      ) : (
-        <Link href="/sign-in" asChild>
-          <Text className="text-accent-primary">Giriş Yap</Text>
-        </Link>
-      )}
+      <Text className="text-white text-4xl font-bold">FitAI</Text>
     </View>
   );
 }

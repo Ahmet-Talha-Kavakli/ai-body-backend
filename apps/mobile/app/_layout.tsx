@@ -1,6 +1,6 @@
 import { ClerkProvider } from '@clerk/expo';
 import * as SecureStore from 'expo-secure-store';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 import '../global.css';
 
 const tokenCache = {
@@ -12,7 +12,16 @@ const tokenCache = {
 export default function RootLayout() {
   return (
     <ClerkProvider publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!} tokenCache={tokenCache}>
-      <Slot />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          cardStyle: { backgroundColor: '#0A0A0F' },
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(app)" />
+      </Stack>
     </ClerkProvider>
   );
 }
