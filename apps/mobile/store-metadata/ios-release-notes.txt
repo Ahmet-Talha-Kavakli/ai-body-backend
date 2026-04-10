@@ -1,0 +1,11 @@
+v1.0.0 - FitAI İlk Sürüm
+
+Yeni Özellikler:
+• Sesli AI Koç (4 kişilik stil)
+• Kameradan Form Analizi
+• Aylık Progress Videoları
+• Çevrimdışı Antrenman
+• Beslenme Takibi (Barcode Scanner)
+• Apple Health Entegrasyonu
+• Sağlık Metriklerine Dayalı Hazırlık Skoru
+• Otomatik Yük Ayarlama
