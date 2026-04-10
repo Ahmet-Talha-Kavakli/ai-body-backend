@@ -7,7 +7,12 @@
     "@fitai/shared-utils": "workspace:*",
     "@fitai/shared-types": "workspace:*"
   },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
   }
 }
