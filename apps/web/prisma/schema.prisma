@@ -625,15 +625,24 @@ model Subscription {
 // ──────────────────────────────────────────
 
 model UserMemoryEmbedding {
-  id        String                       @id @default(cuid())
-  userId    String
-  content   String
-  embedding Unsupported("vector(1536)")?
-  type      MemoryType
-  createdAt DateTime                     @default(now())
-  user      User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String                       @id @default(cuid())
+  userId      String
+  content     String                       @db.Text
+  embedding   Unsupported("vector(1536)")?
+  type        String                       // MemoryType values stored as strings
+  importance  Int                          @default(5)    // 1-10 scale
+  decayScore  Float                        @default(1.0)  // exponential decay: 0-1
+  tags        String[]
+  sourceId    String?
+  sourceType  String?
+  createdAt   DateTime                     @default(now())
+  user        User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([type])
+  @@index([userId, type])
+  @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 model ChallengeGroup {
@@ -653,12 +662,6 @@ enum ProgramStatus {
   PAUSED
 }
 
-enum MemoryType {
-  SESSION_SUMMARY
-  WEEKLY_SUMMARY
-  MILESTONE
-  PATTERN
-}
 
 enum FitnessLevel {
   BEGINNER
