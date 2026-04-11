@@ -39,7 +39,10 @@ export async function POST(req: NextRequest) {
 
     if (limits.aiMeals === 0) {
       return NextResponse.json(
-        { error: 'Bu özelliğe erişim yok. Lütfen bir plan yükseltin.', errorCode: 'UPGRADE_REQUIRED' },
+        {
+          error: 'Bu özelliğe erişim yok. Lütfen bir plan yükseltin.',
+          errorCode: 'UPGRADE_REQUIRED',
+        },
         { status: 403 }
       )
     }
@@ -106,7 +109,13 @@ Türkçe yanıt ver. Sadece JSON döndür:
       response_format: { type: 'json_object' },
     })
 
-    const analysis = JSON.parse(response.choices[0]?.message?.content ?? '{}')
+    let analysis: Record<string, unknown>
+    try {
+      analysis = JSON.parse(response.choices[0]?.message?.content ?? '{}')
+    } catch {
+      console.error('OpenAI returned malformed JSON for meal analysis')
+      return NextResponse.json({ error: 'AI yanıtı işlenemedi, tekrar deneyin.' }, { status: 502 })
+    }
 
     // Otomatik kaydet
     await db.mealLog.create({

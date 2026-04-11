@@ -18,7 +18,10 @@ export async function POST(req: NextRequest) {
       include: { healthProfile: true, injuries: { where: { isActive: true } }, subscription: true },
     })
     if (!user || !user.healthProfile) {
-      return NextResponse.json({ error: 'Profil bulunamadı. Önce onboarding tamamla.' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Profil bulunamadı. Önce onboarding tamamla.' },
+        { status: 400 }
+      )
     }
 
     // Check feature limits
@@ -27,7 +30,10 @@ export async function POST(req: NextRequest) {
 
     if (limits.aiPrograms === 0) {
       return NextResponse.json(
-        { error: 'Bu özelliğe erişim yok. Lütfen bir plan yükseltin.', errorCode: 'UPGRADE_REQUIRED' },
+        {
+          error: 'Bu özelliğe erişim yok. Lütfen bir plan yükseltin.',
+          errorCode: 'UPGRADE_REQUIRED',
+        },
         { status: 403 }
       )
     }
@@ -74,7 +80,7 @@ KULLANICI PROFİLİ:
 - Yaş: ${healthProfile.age}
 - Kilo: ${healthProfile.weightKg}kg
 - Boy: ${healthProfile.heightCm}cm
-- Sakatlıklar: ${injuries.length > 0 ? injuries.map(i => i.bodyPart).join(', ') : 'Yok'}
+- Sakatlıklar: ${injuries.length > 0 ? injuries.map((i) => i.bodyPart).join(', ') : 'Yok'}
 
 ÇIKTI FORMATI (JSON):
 {
@@ -112,7 +118,13 @@ Türkçe yanıt ver. Sadece JSON döndür, açıklama ekleme.`
       response_format: { type: 'json_object' },
     })
 
-    const programData = JSON.parse(completion.choices[0]?.message?.content ?? '{}')
+    let programData: Record<string, unknown>
+    try {
+      programData = JSON.parse(completion.choices[0]?.message?.content ?? '{}')
+    } catch {
+      console.error('OpenAI returned malformed JSON for program generation')
+      return NextResponse.json({ error: 'AI yanıtı işlenemedi, tekrar deneyin.' }, { status: 502 })
+    }
 
     // Programı DB'ye kaydet — atomik işlem
     const { program } = await db.$transaction(async (tx) => {
