@@ -98,6 +98,29 @@ export async function POST(req: NextRequest) {
         weekEndDate: now,
       };
 
+      // DB'ye kaydet
+      await prisma.weeklySummary.upsert({
+        where: { userId_weekStartDate: { userId: user.id, weekStartDate } },
+        update: {
+          totalWorkouts: summary.totalWorkouts,
+          totalVolume: summary.totalVolume,
+          averageFormScore: summary.averageFormScore,
+          averageReadiness: summary.averageReadiness,
+          topExercises: summary.topExercises,
+          weekEndDate: summary.weekEndDate,
+        },
+        create: {
+          userId: user.id,
+          totalWorkouts: summary.totalWorkouts,
+          totalVolume: summary.totalVolume,
+          averageFormScore: summary.averageFormScore,
+          averageReadiness: summary.averageReadiness,
+          topExercises: summary.topExercises,
+          weekStartDate,
+          weekEndDate: summary.weekEndDate,
+        },
+      });
+
       summaries.push(summary);
     }
 
@@ -105,7 +128,7 @@ export async function POST(req: NextRequest) {
       {
         success: true,
         summariesGenerated: summaries.length,
-        message: `Generated ${summaries.length} weekly summaries`,
+        message: `Generated and saved ${summaries.length} weekly summaries`,
       },
       { status: 200 }
     );

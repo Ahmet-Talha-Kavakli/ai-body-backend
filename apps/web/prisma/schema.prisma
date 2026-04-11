@@ -730,6 +730,7 @@ model WeeklySummary {
   weekEndDate       DateTime
   createdAt         DateTime @default(now())
 
+  @@unique([userId, weekStartDate])
   @@index([userId])
   @@index([weekStartDate])
 }
