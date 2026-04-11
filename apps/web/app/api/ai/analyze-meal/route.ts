@@ -4,6 +4,7 @@ import { openai } from '@/lib/ai/client'
 import { db } from '@/lib/db/client'
 import { canUseFeatureWithLimit, getPlanLimits, isUsageResetNeeded } from '@/lib/stripe/plans'
 import { withAiRateLimit } from '@/lib/redis/ratelimit-middleware'
+import { mealAnalyzeSchema } from '@/lib/validation/schemas'
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,11 +15,14 @@ export async function POST(req: NextRequest) {
     if (rateLimitResponse) return rateLimitResponse
 
     const body = await req.json()
-    const { imageBase64, mealType } = body
-
-    if (!imageBase64) {
-      return NextResponse.json({ error: 'Fotoğraf gerekli' }, { status: 400 })
+    const parsed = mealAnalyzeSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten() },
+        { status: 400 }
+      )
     }
+    const { imageBase64, mealType } = parsed.data
 
     // Get user and subscription info
     const user = await db.user.findUnique({

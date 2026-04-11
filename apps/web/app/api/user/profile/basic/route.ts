@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db/client';
+import { profileUpdateSchema } from '@/lib/validation/schemas';
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,17 +29,25 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    const parsed = profileUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
     const profile = await prisma.userBasicProfile.upsert({
       where: { userId },
-      update: body,
-      create: { userId, ...body },
+      update: parsed.data,
+      create: { userId, ...parsed.data },
     });
 
     return NextResponse.json({ success: true, data: profile });
   } catch (error) {
     console.error('Error saving basic profile:', error);
     return NextResponse.json(
-      { success: false, error: String(error) },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }

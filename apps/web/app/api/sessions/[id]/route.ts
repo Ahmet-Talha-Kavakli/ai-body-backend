@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { sessionCompleteSchema } from '@/lib/validation/schemas'
 
 // Seansı bitir ve kaydet
 export async function PATCH(
@@ -16,7 +17,14 @@ export async function PATCH(
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
     const body = await req.json()
-    const { durationSeconds, caloriesBurned, overallFormScore, notes, heartRateData, completedSets } = body
+    const parsed = sessionCompleteSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten() },
+        { status: 400 }
+      )
+    }
+    const { durationSeconds, caloriesBurned, overallFormScore, notes, heartRateData, completedSets } = parsed.data
 
     const session = await db.$transaction(async (tx) => {
       const updatedSession = await tx.workoutSession.update({
