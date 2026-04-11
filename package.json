@@ -8,11 +8,14 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.24",
     "@types/matter-js": "^0.20.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.5.3",
     "prisma": "^6.19.3",
     "turbo": "^2.5.0",
@@ -32,6 +35,15 @@
       "prisma",
       "sharp",
       "unrs-resolver"
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix --max-warnings=0"
+    ],
+    "*.{js,jsx,json,md,css}": [
+      "prettier --write"
     ]
   },
   "dependencies": {
