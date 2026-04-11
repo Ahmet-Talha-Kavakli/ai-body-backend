@@ -244,6 +244,7 @@ model CompletedSet {
   repData         Json           // RepData[]
 
   @@index([sessionId])
+  @@index([sessionId, exerciseId])
 }
 
 // ──────────────────────────────────────────
@@ -535,6 +536,7 @@ model DailyMetrics {
 
   @@index([userId])
   @@index([date])
+  @@index([userId, date])
   @@index([sessionId])
 }
 

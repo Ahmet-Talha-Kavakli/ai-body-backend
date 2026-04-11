@@ -16,6 +16,25 @@ const isDashboardRoute = createRouteMatcher(['/dashboard(.*)'])
 const isDev = process.env.NODE_ENV === 'development'
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://fitai.app'
 
+// Allowed origins for CORS (mobile app + web app)
+const ALLOWED_ORIGINS = [
+  appUrl,
+  'http://localhost:3000',
+  'http://localhost:8081', // Expo dev server
+  'exp://localhost:8081',
+]
+
+function applyCorsHeaders(response: NextResponse, origin: string | null): NextResponse {
+  const isAllowed = origin && (ALLOWED_ORIGINS.includes(origin) || isDev)
+  if (isAllowed) {
+    response.headers.set('Access-Control-Allow-Origin', origin)
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    response.headers.set('Access-Control-Max-Age', '86400')
+  }
+  return response
+}
+
 function applySecurityHeaders(response: NextResponse): NextResponse {
   // Prevent clickjacking
   response.headers.set('X-Frame-Options', 'DENY')
@@ -57,6 +76,15 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
 }
 
 export default clerkMiddleware(async (auth, req) => {
+  const origin = req.headers.get('origin')
+
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    const preflightResponse = new NextResponse(null, { status: 204 })
+    applyCorsHeaders(preflightResponse, origin)
+    return preflightResponse
+  }
+
   const { userId } = await auth()
 
   // Giriş yapmamış kullanıcı dashboard'a girmeye çalışırsa sign-in'e yönlendir
@@ -72,6 +100,7 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   const response = NextResponse.next()
+  applyCorsHeaders(response, origin)
   return applySecurityHeaders(response)
 })
 
