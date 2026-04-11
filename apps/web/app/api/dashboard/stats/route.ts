@@ -1,25 +1,33 @@
-import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
+import { withAuth } from '@/lib/api/with-auth'
 
-export async function GET() {
+export const GET = withAuth(async (_req: NextRequest, { user }) => {
   try {
-    const { userId: clerkId } = await auth()
-    if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const user = await db.user.findUnique({ where: { clerkId } })
-    if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
     const now = new Date()
-    const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0)
-    const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7)
-    const monthStart = new Date(now); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0)
+    const todayStart = new Date(now)
+    todayStart.setHours(0, 0, 0, 0)
+    const weekStart = new Date(now)
+    weekStart.setDate(now.getDate() - 7)
+    const monthStart = new Date(now)
+    monthStart.setDate(1)
+    monthStart.setHours(0, 0, 0, 0)
 
     // Aylık seans dağılımı (son 6 ay)
-    const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(now.getMonth() - 5); sixMonthsAgo.setDate(1); sixMonthsAgo.setHours(0,0,0,0)
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(now.getMonth() - 5)
+    sixMonthsAgo.setDate(1)
+    sixMonthsAgo.setHours(0, 0, 0, 0)
 
     // Tüm sorgular paralel çalışır
-    const [weeklySessions, todayMeals, monthlySessions, totalSessions, nutritionGoal, allRecentSessions] = await Promise.all([
+    const [
+      weeklySessions,
+      todayMeals,
+      monthlySessions,
+      totalSessions,
+      nutritionGoal,
+      allRecentSessions,
+    ] = await Promise.all([
       db.workoutSession.findMany({
         where: { userId: user.id, startedAt: { gte: weekStart }, endedAt: { not: null } },
         orderBy: { startedAt: 'asc' },
@@ -45,7 +53,10 @@ export async function GET() {
     const weeklyCalories = weeklySessions.reduce((s, sess) => s + (sess.caloriesBurned ?? 0), 0)
 
     // Haftalık aktif süre (dakika)
-    const weeklyMinutes = weeklySessions.reduce((s, sess) => s + Math.round((sess.durationSeconds ?? 0) / 60), 0)
+    const weeklyMinutes = weeklySessions.reduce(
+      (s, sess) => s + Math.round((sess.durationSeconds ?? 0) / 60),
+      0
+    )
 
     // Bugünkü beslenme toplamı
     const todayCalories = todayMeals.reduce((s, m) => s + m.totalCalories, 0)
@@ -55,16 +66,19 @@ export async function GET() {
 
     // Aylara göre grupla
     const monthlyMap: Record<string, number> = {}
-    allRecentSessions.forEach(s => {
+    allRecentSessions.forEach((s) => {
       const key = s.startedAt.toLocaleDateString('tr-TR', { month: 'short' })
       monthlyMap[key] = (monthlyMap[key] ?? 0) + 1
     })
 
     // Son 7 günün aktivite durumu
     const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(); d.setDate(now.getDate() - (6 - i)); d.setHours(0,0,0,0)
-      const next = new Date(d); next.setDate(d.getDate() + 1)
-      const daySession = weeklySessions.find(s => s.startedAt >= d && s.startedAt < next)
+      const d = new Date()
+      d.setDate(now.getDate() - (6 - i))
+      d.setHours(0, 0, 0, 0)
+      const next = new Date(d)
+      next.setDate(d.getDate() + 1)
+      const daySession = weeklySessions.find((s) => s.startedAt >= d && s.startedAt < next)
       return {
         day: d.toLocaleDateString('tr-TR', { weekday: 'short' }),
         date: d.getDate().toString(),
@@ -95,4 +109,4 @@ export async function GET() {
     console.error('Stats error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
