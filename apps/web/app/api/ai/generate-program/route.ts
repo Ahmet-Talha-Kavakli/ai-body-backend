@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client'
 import { openai } from '@/lib/ai/client'
 import { canUseFeatureWithLimit, getPlanLimits, isUsageResetNeeded } from '@/lib/stripe/plans'
 import { withAiRateLimit } from '@/lib/redis/ratelimit-middleware'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -122,7 +123,7 @@ Türkçe yanıt ver. Sadece JSON döndür, açıklama ekleme.`
     try {
       programData = JSON.parse(completion.choices[0]?.message?.content ?? '{}')
     } catch {
-      console.error('OpenAI returned malformed JSON for program generation')
+      logger.error({ userId: clerkId }, 'OpenAI returned malformed JSON for program generation')
       return NextResponse.json({ error: 'AI yanıtı işlenemedi, tekrar deneyin.' }, { status: 502 })
     }
 
@@ -158,7 +159,7 @@ Türkçe yanıt ver. Sadece JSON döndür, açıklama ekleme.`
 
     return NextResponse.json({ success: true, program: programData, programId: program.id })
   } catch (error) {
-    console.error('AI program generation error:', error)
+    logger.error({ err: error }, 'AI program generation error')
     return NextResponse.json({ error: 'Program oluşturulamadı' }, { status: 500 })
   }
 }

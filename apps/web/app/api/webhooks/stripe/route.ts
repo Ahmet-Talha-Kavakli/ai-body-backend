@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe } from '@/lib/stripe/client'
 import { db } from '@/lib/db/client'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: Request) {
   try {
@@ -9,21 +10,14 @@ export async function POST(request: Request) {
     const signature = (await headers()).get('stripe-signature')
 
     if (!signature) {
-      return NextResponse.json(
-        { error: 'Missing signature' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
       throw new Error('STRIPE_WEBHOOK_SECRET is not configured')
     }
 
-    const event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET
-    )
+    const event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET)
 
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -123,10 +117,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true })
   } catch (error) {
-    console.error('Stripe webhook error:', error)
-    return NextResponse.json(
-      { error: 'Webhook error' },
-      { status: 400 }
-    )
+    logger.error({ err: error }, 'Stripe webhook error')
+    return NextResponse.json({ error: 'Webhook error' }, { status: 400 })
   }
 }

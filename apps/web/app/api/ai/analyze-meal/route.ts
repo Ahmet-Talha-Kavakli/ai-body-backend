@@ -5,6 +5,7 @@ import { db } from '@/lib/db/client'
 import { canUseFeatureWithLimit, getPlanLimits, isUsageResetNeeded } from '@/lib/stripe/plans'
 import { withAiRateLimit } from '@/lib/redis/ratelimit-middleware'
 import { mealAnalyzeSchema } from '@/lib/validation/schemas'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -113,7 +114,7 @@ Türkçe yanıt ver. Sadece JSON döndür:
     try {
       analysis = JSON.parse(response.choices[0]?.message?.content ?? '{}')
     } catch {
-      console.error('OpenAI returned malformed JSON for meal analysis')
+      logger.error({ userId: clerkId }, 'OpenAI returned malformed JSON for meal analysis')
       return NextResponse.json({ error: 'AI yanıtı işlenemedi, tekrar deneyin.' }, { status: 502 })
     }
 
@@ -142,7 +143,7 @@ Türkçe yanıt ver. Sadece JSON döndür:
 
     return NextResponse.json({ success: true, analysis })
   } catch (error) {
-    console.error('Meal analysis error:', error)
+    logger.error({ err: error }, 'Meal analysis error')
     return NextResponse.json({ error: 'Analiz yapılamadı' }, { status: 500 })
   }
 }
