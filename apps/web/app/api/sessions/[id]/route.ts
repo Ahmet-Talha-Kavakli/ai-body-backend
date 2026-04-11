@@ -18,54 +18,57 @@ export async function PATCH(
     const body = await req.json()
     const { durationSeconds, caloriesBurned, overallFormScore, notes, heartRateData, completedSets } = body
 
-    const session = await db.workoutSession.update({
-      where: { id, userId: user.id },
-      data: {
-        endedAt: new Date(),
-        durationSeconds,
-        caloriesBurned,
-        overallFormScore,
-        notes,
-        heartRateData,
-      },
-    })
+    const session = await db.$transaction(async (tx) => {
+      const updatedSession = await tx.workoutSession.update({
+        where: { id, userId: user.id },
+        data: {
+          endedAt: new Date(),
+          durationSeconds,
+          caloriesBurned,
+          overallFormScore,
+          notes,
+          heartRateData,
+        },
+      })
 
-    // Set'leri kaydet
-    if (completedSets && completedSets.length > 0) {
-      // Egzersizleri bul veya oluştur
-      for (const set of completedSets) {
-        let exercise = await db.exercise.findUnique({ where: { slug: set.exerciseSlug } })
+      // Set'leri kaydet
+      if (completedSets && completedSets.length > 0) {
+        for (const set of completedSets) {
+          let exercise = await tx.exercise.findUnique({ where: { slug: set.exerciseSlug } })
 
-        if (!exercise) {
-          exercise = await db.exercise.create({
+          if (!exercise) {
+            exercise = await tx.exercise.create({
+              data: {
+                name: set.exerciseName,
+                slug: set.exerciseSlug,
+                description: set.exerciseName,
+                muscleGroups: set.muscleGroups ?? [],
+                equipment: [],
+                difficultyLevel: 'intermediate',
+                animationKey: set.exerciseSlug,
+                cues: [],
+                commonMistakes: [],
+              },
+            })
+          }
+
+          await tx.completedSet.create({
             data: {
-              name: set.exerciseName,
-              slug: set.exerciseSlug,
-              description: set.exerciseName,
-              muscleGroups: set.muscleGroups ?? [],
-              equipment: [],
-              difficultyLevel: 'intermediate',
-              animationKey: set.exerciseSlug,
-              cues: [],
-              commonMistakes: [],
+              sessionId: updatedSession.id,
+              exerciseId: exercise.id,
+              setNumber: set.setNumber,
+              reps: set.reps,
+              weightKg: set.weightKg,
+              durationSeconds: set.durationSeconds,
+              formScore: set.formScore ?? 85,
+              repData: set.repData ?? [],
             },
           })
         }
-
-        await db.completedSet.create({
-          data: {
-            sessionId: session.id,
-            exerciseId: exercise.id,
-            setNumber: set.setNumber,
-            reps: set.reps,
-            weightKg: set.weightKg,
-            durationSeconds: set.durationSeconds,
-            formScore: set.formScore ?? 85,
-            repData: set.repData ?? [],
-          },
-        })
       }
-    }
+
+      return updatedSession
+    })
 
     return NextResponse.json({ success: true, session })
   } catch (error) {
