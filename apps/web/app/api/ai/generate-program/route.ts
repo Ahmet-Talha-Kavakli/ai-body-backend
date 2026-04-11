@@ -3,11 +3,15 @@ import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
 import { openai } from '@/lib/ai/client'
 import { canUseFeatureWithLimit, getPlanLimits, isUsageResetNeeded } from '@/lib/stripe/plans'
+import { withAiRateLimit } from '@/lib/redis/ratelimit-middleware'
 
 export async function POST(req: NextRequest) {
   try {
     const { userId: clerkId } = await auth()
     if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const rateLimitResponse = await withAiRateLimit(clerkId)
+    if (rateLimitResponse) return rateLimitResponse
 
     const user = await db.user.findUnique({
       where: { clerkId },
