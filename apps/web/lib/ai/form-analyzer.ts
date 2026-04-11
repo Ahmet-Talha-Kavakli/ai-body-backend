@@ -191,7 +191,7 @@ function findFormErrors(
 
   Object.entries(criteria.idealAngles).forEach(([angleName, idealValue]) => {
     const currentValue = angles[angleName];
-    if (currentValue === undefined) return;
+    if (currentValue === undefined || idealValue === undefined) return;
 
     const difference = Math.abs(currentValue - idealValue);
     if (difference > criteria.tolerance) {

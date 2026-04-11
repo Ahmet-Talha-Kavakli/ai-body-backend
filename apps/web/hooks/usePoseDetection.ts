@@ -9,7 +9,7 @@ import {
 } from '@/lib/ai/pose-detection';
 
 interface UsePoseDetectionOptions {
-  videoRef?: React.RefObject<HTMLVideoElement>;
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
   exerciseSlug?: string;
   isActive?: boolean;
   onRep?: (count: number, score: number) => void;

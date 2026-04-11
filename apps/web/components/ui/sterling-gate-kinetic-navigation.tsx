@@ -130,8 +130,8 @@ export function Navbar() {
             tl.set(navWrap, { display: "block" })
               .set(menu, { xPercent: 0 }, "<")
               // Animate Button Text Swapping if it exists
-              .fromTo(menuButtonTexts, { yPercent: 0 }, { yPercent: -100, stagger: 0.2 })
-              .fromTo(menuButtonIcon, { rotate: 0 }, { rotate: 315 }, "<")
+              .fromTo(menuButtonTexts ?? [], { yPercent: 0 }, { yPercent: -100, stagger: 0.2 })
+              .fromTo(menuButtonIcon ?? [], { rotate: 0 }, { rotate: 315 }, "<")
               
               .fromTo(overlay, { autoAlpha: 0 }, { autoAlpha: 1 }, "<")
               .fromTo(bgPanels, { xPercent: 101 }, { xPercent: 0, stagger: 0.12, duration: 0.575 }, "<")
@@ -149,8 +149,8 @@ export function Navbar() {
             tl.to(overlay, { autoAlpha: 0 })
               .to(menu, { xPercent: 120 }, "<")
               // Animate Button Text and Icon Back
-              .to(menuButtonTexts, { yPercent: 0 }, "<")
-              .to(menuButtonIcon, { rotate: 0 }, "<")
+              .to(menuButtonTexts ?? [], { yPercent: 0 }, "<")
+              .to(menuButtonIcon ?? [], { rotate: 0 }, "<")
 
               .set(navWrap, { display: "none" });
         }

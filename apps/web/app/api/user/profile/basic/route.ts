@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
 
     const profile = await prisma.userBasicProfile.upsert({
       where: { userId },
-      update: parsed.data,
-      create: { userId, ...parsed.data },
+      update: parsed.data as Parameters<typeof prisma.userBasicProfile.update>[0]['data'],
+      create: { userId, ...parsed.data } as Parameters<typeof prisma.userBasicProfile.create>[0]['data'],
     });
 
     return NextResponse.json({ success: true, data: profile });

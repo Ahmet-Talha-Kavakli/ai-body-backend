@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
 
       // DB'ye kaydet
       await prisma.weeklySummary.upsert({
-        where: { userId_weekStartDate: { userId: user.id, weekStartDate } },
+        where: { userId_weekStartDate: { userId: user.id, weekStartDate: weekStartDate } },
         update: {
           totalWorkouts: summary.totalWorkouts,
           totalVolume: summary.totalVolume,

@@ -35,7 +35,7 @@ export async function PATCH(
           caloriesBurned,
           overallFormScore,
           notes,
-          heartRateData,
+          heartRateData: heartRateData as never,
         },
       })
 
@@ -69,7 +69,7 @@ export async function PATCH(
               weightKg: set.weightKg,
               durationSeconds: set.durationSeconds,
               formScore: set.formScore ?? 85,
-              repData: set.repData ?? [],
+              repData: (set.repData ?? []) as never,
             },
           })
         }

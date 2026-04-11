@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   try {
     // Get all active users
     const users = await prisma.user.findMany({
-      where: { clerkId: { not: null } },
+      where: { clerkId: { not: undefined } },
       select: { id: true },
     });
 

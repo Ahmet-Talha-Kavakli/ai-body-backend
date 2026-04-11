@@ -55,7 +55,7 @@ export function ShareAchievement({ activityId, description, onShare }: ShareAchi
                 onClick={handleShare}
                 className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
               >
-                {navigator.share ? '📱 Share' : '🔗 Copy Link'}
+                {typeof navigator.share === 'function' ? '📱 Share' : '🔗 Copy Link'}
               </button>
 
               <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-3">

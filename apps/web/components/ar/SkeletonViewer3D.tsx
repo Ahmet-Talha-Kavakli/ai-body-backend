@@ -93,6 +93,7 @@ export function SkeletonViewer3D({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       console.error('Scene initialization error:', err);
+      return undefined;
     }
   }, [width, height]);
 
