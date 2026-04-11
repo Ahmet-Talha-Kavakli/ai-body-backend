@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
 import { sessionCompleteSchema } from '@/lib/validation/schemas'
+import { writeSessionMemory } from '@/lib/memory/memory-writer'
+import type { SessionMemoryInput } from '@/lib/memory/types'
 
 // Seansı bitir ve kaydet
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
     const { userId: clerkId } = await auth()
@@ -24,7 +23,14 @@ export async function PATCH(
         { status: 400 }
       )
     }
-    const { durationSeconds, caloriesBurned, overallFormScore, notes, heartRateData, completedSets } = parsed.data
+    const {
+      durationSeconds,
+      caloriesBurned,
+      overallFormScore,
+      notes,
+      heartRateData,
+      completedSets,
+    } = parsed.data
 
     const session = await db.$transaction(async (tx) => {
       const updatedSession = await tx.workoutSession.update({
@@ -77,6 +83,42 @@ export async function PATCH(
 
       return updatedSession
     })
+
+    // Hafıza katmanına yaz — fire-and-forget, response'u bloklamaz
+    if (completedSets && completedSets.length > 0) {
+      const exerciseMap: Record<
+        string,
+        { name: string; sets: SessionMemoryInput['exercises'][0]['sets']; scores: number[] }
+      > = {}
+
+      for (const set of completedSets) {
+        // exerciseName, sessionCompleteSchema Zod validation'dan garantili geliyor
+        const key = set.exerciseName
+        if (!exerciseMap[key]) exerciseMap[key] = { name: key, sets: [], scores: [] }
+        exerciseMap[key].sets.push({
+          setNumber: set.setNumber,
+          reps: set.reps ?? null,
+          weightKg: set.weightKg ?? null,
+          formScore: set.formScore ?? 0,
+        })
+        exerciseMap[key].scores.push(set.formScore ?? 0)
+      }
+
+      writeSessionMemory({
+        userId: user.id,
+        sessionId: id,
+        exercises: Object.values(exerciseMap).map((ex) => ({
+          name: ex.name,
+          sets: ex.sets,
+          avgFormScore:
+            ex.scores.length > 0 ? ex.scores.reduce((a, b) => a + b, 0) / ex.scores.length : 0,
+        })),
+        durationSeconds: durationSeconds ?? 0,
+        overallFormScore: overallFormScore ?? null,
+        caloriesBurned: caloriesBurned ?? null,
+        notes: notes ?? null,
+      }).catch(() => {}) // Hafıza hatası seans kaydını asla etkilemez
+    }
 
     return NextResponse.json({ success: true, session })
   } catch (error) {
