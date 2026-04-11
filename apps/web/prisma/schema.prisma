@@ -226,6 +226,8 @@ model WorkoutSession {
 
   @@index([userId])
   @@index([startedAt])
+  @@index([userId, startedAt])
+  @@index([userId, endedAt])
 }
 
 model CompletedSet {
@@ -265,6 +267,7 @@ model MealLog {
 
   @@index([userId])
   @@index([loggedAt])
+  @@index([userId, loggedAt])
 }
 
 model NutritionGoal {
@@ -554,6 +557,7 @@ model UserFriend {
   @@index([userId])
   @@index([friendId])
   @@index([status])
+  @@index([userId, status])
 }
 
 model UserActivity {
@@ -572,6 +576,7 @@ model UserActivity {
   @@index([createdAt])
   @@index([activityType])
   @@index([visibility])
+  @@index([userId, createdAt])
 }
 
 model Leaderboard {
