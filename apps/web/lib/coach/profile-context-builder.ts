@@ -1,16 +1,17 @@
-import { prisma } from '@/lib/db/client';
+import { prisma } from '@/lib/db/client'
 
 export interface CoachContext {
-  basicProfile: any;
-  healthMetrics: any;
-  recentDailyMetrics: any[];
-  weaknesses: any[];
+  basicProfile: any
+  healthMetrics: any
+  recentDailyMetrics: any[]
+  weaknesses: any[]
   averageMetrics: {
-    sleepHours: number;
-    stressLevel: number;
-    proteinCompliance: number;
-    consistencyPct: number;
-  };
+    sleepHours: number
+    stressLevel: number
+    proteinCompliance: number
+    consistencyPct: number
+  }
+  relevantMemories: string[]
 }
 
 export async function buildCoachContext(userId: string): Promise<CoachContext> {
@@ -27,21 +28,40 @@ export async function buildCoachContext(userId: string): Promise<CoachContext> {
       orderBy: { severity: 'desc' },
       take: 5,
     }),
-  ]);
+  ])
 
   // Calculate averages
-  const sleepAvg = dailyMetrics.length > 0
-    ? dailyMetrics.reduce((sum, m) => sum + m.sleepHours, 0) / dailyMetrics.length
-    : 0;
+  const sleepAvg =
+    dailyMetrics.length > 0
+      ? dailyMetrics.reduce((sum, m) => sum + m.sleepHours, 0) / dailyMetrics.length
+      : 0
 
-  const stressAvg = dailyMetrics.length > 0
-    ? dailyMetrics.reduce((sum, m) => sum + m.stressLevel, 0) / dailyMetrics.length
-    : 0;
+  const stressAvg =
+    dailyMetrics.length > 0
+      ? dailyMetrics.reduce((sum, m) => sum + m.stressLevel, 0) / dailyMetrics.length
+      : 0
 
-  const nutrition = await prisma.userNutritionMetrics.findUnique({ where: { userId } });
-  const proteinCompliance = dailyMetrics.length > 0
-    ? (dailyMetrics.filter(m => m.proteinIntake >= (nutrition?.proteinTarget || 0)).length / dailyMetrics.length) * 100
-    : 0;
+  const nutrition = await prisma.userNutritionMetrics.findUnique({ where: { userId } })
+  const proteinCompliance =
+    dailyMetrics.length > 0
+      ? (dailyMetrics.filter((m) => m.proteinIntake >= (nutrition?.proteinTarget || 0)).length /
+          dailyMetrics.length) *
+        100
+      : 0
+
+  // Geçmiş hafızayı çek (hata olsa bile devam et)
+  let relevantMemories: string[] = []
+  try {
+    const { retrieveMemoryContext } = await import('@/lib/memory/memory-retriever')
+    const memCtx = await retrieveMemoryContext(
+      userId,
+      'workout performance nutrition recovery form score',
+      { limit: 4 }
+    )
+    relevantMemories = memCtx.memories
+  } catch {
+    // Memory optional — sessizce geç
+  }
 
   return {
     basicProfile,
@@ -54,5 +74,6 @@ export async function buildCoachContext(userId: string): Promise<CoachContext> {
       proteinCompliance: Math.round(proteinCompliance),
       consistencyPct: 0, // Will calculate from workout history
     },
-  };
+    relevantMemories,
+  }
 }

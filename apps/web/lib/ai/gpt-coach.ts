@@ -1,21 +1,21 @@
 // apps/web/lib/ai/gpt-coach.ts
 
-import { OpenAI } from 'openai';
-import { FormAnalysisResult } from './form-analyzer';
-import { CoachContext } from '@/lib/coach/profile-context-builder';
+import { OpenAI } from 'openai'
+import { FormAnalysisResult } from './form-analyzer'
+import { CoachContext } from '@/lib/coach/profile-context-builder'
 
 export interface CoachFeedback {
-  formScore: number;
-  voiceFeedback: string;
-  corrections: string[];
-  encouragement: string;
-  nextRepTip: string;
-  injuryWarning: string | null;
+  formScore: number
+  voiceFeedback: string
+  corrections: string[]
+  encouragement: string
+  nextRepTip: string
+  injuryWarning: string | null
 }
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+})
 
 const SYSTEM_PROMPT = `You are an elite personal trainer AI with expertise from:
 - Louie Simmons (Westside Barbell - Conjugate Method)
@@ -33,26 +33,21 @@ Instructions:
 6. Consider user's health restrictions and injuries
 7. Adapt recommendations based on recovery state (sleep, stress, nutrition)
 
-Response format: JSON with fields: voiceFeedback, corrections, encouragement, nextRepTip, injuryWarning`;
+Response format: JSON with fields: voiceFeedback, corrections, encouragement, nextRepTip, injuryWarning`
 
 export async function generateCoachFeedback(
   exercise: string,
   formAnalysis: FormAnalysisResult,
   repNumber: number,
   userContext?: {
-    historicalAvgScore?: number;
-    activeInjuries?: string[];
-    weaknessAreas?: string[];
-    profile?: CoachContext;
+    historicalAvgScore?: number
+    activeInjuries?: string[]
+    weaknessAreas?: string[]
+    profile?: CoachContext
   }
 ): Promise<CoachFeedback> {
   try {
-    const prompt = buildCoachPrompt(
-      exercise,
-      formAnalysis,
-      repNumber,
-      userContext
-    );
+    const prompt = buildCoachPrompt(exercise, formAnalysis, repNumber, userContext)
 
     const message = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -61,17 +56,17 @@ export async function generateCoachFeedback(
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: prompt },
       ],
-    });
+    })
 
-    const responseText = message.choices[0]?.message?.content || '';
+    const responseText = message.choices[0]?.message?.content || ''
 
     // Parse JSON from response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
-      throw new Error('Could not parse JSON response');
+      throw new Error('Could not parse JSON response')
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = JSON.parse(jsonMatch[0])
 
     return {
       formScore: formAnalysis.formScore,
@@ -80,9 +75,9 @@ export async function generateCoachFeedback(
       encouragement: parsed.encouragement || 'Harika!',
       nextRepTip: parsed.nextRepTip || 'Devam et!',
       injuryWarning: parsed.injuryWarning || null,
-    };
+    }
   } catch (error) {
-    console.error('Error generating coach feedback:', error);
+    console.error('Error generating coach feedback:', error)
     // Fallback response
     return {
       formScore: formAnalysis.formScore,
@@ -91,7 +86,7 @@ export async function generateCoachFeedback(
       encouragement: 'Güzel çalışıyor!',
       nextRepTip: 'Tekrar et',
       injuryWarning: null,
-    };
+    }
   }
 }
 
@@ -116,52 +111,59 @@ ${Object.entries(formAnalysis.muscleEngagement)
 
 Depth Assessment: ${formAnalysis.depthAssessment}
 Stability: ${Math.round(formAnalysis.stabilityScore * 100)}%
-`;
+`
 
   if (userContext?.profile) {
-    const profile = userContext.profile;
-    prompt += `\n=== USER PROFILE CONTEXT ===\n`;
+    const profile = userContext.profile
+    prompt += `\n=== USER PROFILE CONTEXT ===\n`
 
     if (profile.basicProfile) {
-      prompt += `Age: ${profile.basicProfile.age}\n`;
-      prompt += `Goal: ${profile.basicProfile.primaryGoal}\n`;
-      prompt += `Experience: ${profile.basicProfile.experienceYears} years\n`;
+      prompt += `Age: ${profile.basicProfile.age}\n`
+      prompt += `Goal: ${profile.basicProfile.primaryGoal}\n`
+      prompt += `Experience: ${profile.basicProfile.experienceYears} years\n`
     }
 
     if (profile.healthMetrics?.activeInjuries) {
       try {
-        const injuries = JSON.parse(profile.healthMetrics.activeInjuries);
+        const injuries = JSON.parse(profile.healthMetrics.activeInjuries)
         if (injuries.length > 0) {
-          prompt += `ACTIVE INJURIES: ${injuries.map((i: any) => `${i.bodyPart} (${i.severity}/10)`).join(', ')}\n`;
+          prompt += `ACTIVE INJURIES: ${injuries.map((i: any) => `${i.bodyPart} (${i.severity}/10)`).join(', ')}\n`
         }
       } catch (e) {
         // Handle if already parsed
         if (Array.isArray(profile.healthMetrics.activeInjuries)) {
-          prompt += `ACTIVE INJURIES: ${profile.healthMetrics.activeInjuries.map((i: any) => `${i.bodyPart} (${i.severity}/10)`).join(', ')}\n`;
+          prompt += `ACTIVE INJURIES: ${profile.healthMetrics.activeInjuries.map((i: any) => `${i.bodyPart} (${i.severity}/10)`).join(', ')}\n`
         }
       }
     }
 
-    prompt += `\nLast 7 Days:\n`;
-    prompt += `- Avg Sleep: ${profile.averageMetrics.sleepHours}h\n`;
-    prompt += `- Avg Stress: ${profile.averageMetrics.stressLevel}/10\n`;
-    prompt += `- Protein Compliance: ${profile.averageMetrics.proteinCompliance}%\n`;
+    prompt += `\nLast 7 Days:\n`
+    prompt += `- Avg Sleep: ${profile.averageMetrics.sleepHours}h\n`
+    prompt += `- Avg Stress: ${profile.averageMetrics.stressLevel}/10\n`
+    prompt += `- Protein Compliance: ${profile.averageMetrics.proteinCompliance}%\n`
 
     if (profile.weaknesses.length > 0) {
-      prompt += `\nIdentified Weaknesses:\n`;
+      prompt += `\nIdentified Weaknesses:\n`
       profile.weaknesses.forEach((w: any) => {
-        prompt += `- ${w.muscleGroup} (${w.exerciseName}): Severity ${w.severity}/10\n`;
-      });
+        prompt += `- ${w.muscleGroup} (${w.exerciseName}): Severity ${w.severity}/10\n`
+      })
+    }
+
+    if (profile.relevantMemories && profile.relevantMemories.length > 0) {
+      prompt += `\n=== KULLANICI GEÇMİŞİ ===\n`
+      prompt += `(Kullanıcıya söyleme — sadece coaching kararlarında kullan)\n`
+      prompt += profile.relevantMemories.join('\n')
+      prompt += `\n=== GEÇMİŞ SONU ===\n`
     }
   } else if (userContext) {
     if (userContext.historicalAvgScore) {
-      prompt += `\nUser's Historical Avg Score: ${userContext.historicalAvgScore}/100`;
+      prompt += `\nUser's Historical Avg Score: ${userContext.historicalAvgScore}/100`
     }
     if (userContext.activeInjuries?.length) {
-      prompt += `\nActive Injuries: ${userContext.activeInjuries.join(', ')}`;
+      prompt += `\nActive Injuries: ${userContext.activeInjuries.join(', ')}`
     }
     if (userContext.weaknessAreas?.length) {
-      prompt += `\nWeak Areas: ${userContext.weaknessAreas.join(', ')}`;
+      prompt += `\nWeak Areas: ${userContext.weaknessAreas.join(', ')}`
     }
   }
 
@@ -174,7 +176,7 @@ Provide feedback in JSON format:
   "encouragement": "Motivational comment in Turkish",
   "nextRepTip": "Tip for next rep in Turkish",
   "injuryWarning": null or "Warning if injury risk detected"
-}`;
+}`
 
-  return prompt;
+  return prompt
 }
