@@ -54,8 +54,68 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests
-        run: pnpm test
+      - name: Run tests with coverage
+        run: cd apps/web && pnpm test:coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: apps/web/coverage/
+          retention-days: 7
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          if [ -f apps/web/coverage/coverage-summary.json ]; then
+            node -e "
+              const s = require('./apps/web/coverage/coverage-summary.json').total;
+              console.log('Coverage: lines=' + s.lines.pct + '% functions=' + s.functions.pct + '% branches=' + s.branches.pct + '%');
+            "
+          fi
+
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: cd apps/web && npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: cd apps/web && pnpm e2e
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_dummy
+          CLERK_SECRET_KEY: sk_test_dummy
+          DATABASE_URL: postgresql://user:pass@localhost:5432/db
+          DIRECT_URL: postgresql://user:pass@localhost:5432/db
+          UPSTASH_REDIS_REST_URL: https://dummy.upstash.io
+          UPSTASH_REDIS_REST_TOKEN: dummy
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
 
   build:
     name: Build
@@ -87,6 +147,11 @@ jobs:
           UPSTASH_REDIS_REST_URL: https://dummy.upstash.io
           UPSTASH_REDIS_REST_TOKEN: dummy
           ANTHROPIC_API_KEY: sk-ant-dummy
+          OPENAI_API_KEY: sk-dummy
+          STRIPE_SECRET_KEY: sk_test_dummy
+          STRIPE_WEBHOOK_SECRET: whsec_dummy
+          NEXT_PUBLIC_SENTRY_DSN: ""
+          SENTRY_AUTH_TOKEN: ""
 
   docker:
     name: Docker Build
