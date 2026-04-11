@@ -1,5 +1,5 @@
 // Re-export hooks from web to make them available for mobile
-export { useVapiCoach } from '@fitai/shared-hooks/useVapiCoach';
+export { useVapiCoach } from './useVapiCoach';
 
 // Common hooks (to be created)
 export function useFormAnalysis() {
