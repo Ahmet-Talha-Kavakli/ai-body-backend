@@ -5,6 +5,7 @@ import { openai } from '@/lib/ai/client'
 import { canUseFeatureWithLimit, getPlanLimits, isUsageResetNeeded } from '@/lib/stripe/plans'
 import { withAiRateLimit } from '@/lib/redis/ratelimit-middleware'
 import { logger } from '@/lib/logger'
+import { injectMemoryIntoPrompt } from '@/lib/memory/prompt-injector'
 
 export async function POST(req: NextRequest) {
   try {
@@ -111,9 +112,16 @@ KULLANICI PROFİLİ:
 
 Türkçe yanıt ver. Sadece JSON döndür, açıklama ekleme.`
 
+    // Kullanıcının geçmiş antrenman hafızasını sessizce enjekte et
+    const enrichedPrompt = await injectMemoryIntoPrompt(
+      user.id,
+      `program generation ${healthProfile.fitnessLevel} ${healthProfile.goals.join(' ')} ${healthProfile.availableEquipment.join(' ')}`,
+      prompt
+    )
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: enrichedPrompt }],
       temperature: 0.7,
       max_tokens: 3000,
       response_format: { type: 'json_object' },
