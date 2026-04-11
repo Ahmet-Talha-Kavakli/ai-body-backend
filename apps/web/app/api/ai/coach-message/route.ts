@@ -4,6 +4,7 @@ import { openai } from '@/lib/ai/client'
 import { db } from '@/lib/db/client'
 import { canUseFeatureWithLimit, getPlanLimits, isUsageResetNeeded } from '@/lib/stripe/plans'
 import { withAiRateLimit } from '@/lib/redis/ratelimit-middleware'
+import { injectMemoryIntoPrompt } from '@/lib/memory/prompt-injector'
 
 export async function POST(req: NextRequest) {
   try {
@@ -70,9 +71,16 @@ Durum:
 
 Kısa (1-2 cümle), motive edici, Türkçe bir koçluk mesajı yaz. Samimi ve enerjik ol.`
 
+    // Coaching hafızasını çek ve prompt'a ekle
+    const enrichedPrompt = await injectMemoryIntoPrompt(
+      user.id,
+      `${exercise} coaching form feedback`,
+      prompt
+    )
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: enrichedPrompt }],
       max_tokens: 100,
       temperature: 0.9,
     })
