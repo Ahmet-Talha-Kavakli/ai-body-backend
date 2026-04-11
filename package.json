@@ -38,11 +38,10 @@
     ]
   },
   "lint-staged": {
-    "*.{ts,tsx}": [
-      "prettier --write",
-      "eslint --fix --max-warnings=0"
+    "**/*.{ts,tsx,js,jsx}": [
+      "prettier --write"
     ],
-    "*.{js,jsx,json,md,css}": [
+    "**/*.{json,md,css}": [
       "prettier --write"
     ]
   },
