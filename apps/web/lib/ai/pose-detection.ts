@@ -1,6 +1,17 @@
 // apps/web/lib/ai/pose-detection.ts
 
-import * as PoseLandmarker from '@mediapipe/tasks-vision';
+// Lazy import - MediaPipe is heavy (~50MB WASM), only load when needed
+let PoseLandmarkerModule: typeof import('@mediapipe/tasks-vision') | null = null;
+
+async function getPoseLandmarkerModule() {
+  if (!PoseLandmarkerModule) {
+    PoseLandmarkerModule = await import('@mediapipe/tasks-vision');
+  }
+  return PoseLandmarkerModule;
+}
+
+// Keep type import for TypeScript only
+import type * as PoseLandmarker from '@mediapipe/tasks-vision';
 
 export interface KeyPoint {
   name: string;
@@ -22,6 +33,7 @@ let initialized = false;
 export async function initializePoseDetection(): Promise<void> {
   if (initialized) return;
 
+  const PoseLandmarker = await getPoseLandmarkerModule();
   const vision = await PoseLandmarker.FilesetResolver.forVisionTasks(
     'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
   );

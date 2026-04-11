@@ -1,7 +1,22 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { SkeletonViewer3D } from '@/components/ar/SkeletonViewer3D';
-import { InjuryHeatMap } from '@/components/ar/InjuryHeatMap';
+import dynamic from 'next/dynamic';
+
+const SkeletonViewer3D = dynamic(
+  () => import('@/components/ar/SkeletonViewer3D').then(m => ({ default: m.SkeletonViewer3D })),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-gray-800 rounded-lg h-96 w-full" />,
+  }
+);
+
+const InjuryHeatMap = dynamic(
+  () => import('@/components/ar/InjuryHeatMap').then(m => ({ default: m.InjuryHeatMap })),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-gray-800 rounded-lg h-64 w-full" />,
+  }
+);
 
 export default function ARDashboard() {
   const [poseResult, setPoseResult] = useState(null);
