@@ -114,31 +114,35 @@ Türkçe yanıt ver. Sadece JSON döndür, açıklama ekleme.`
 
     const programData = JSON.parse(completion.choices[0]?.message?.content ?? '{}')
 
-    // Programı DB'ye kaydet
-    const program = await db.workoutProgram.create({
-      data: {
-        userId: user.id,
-        name: programData.programName ?? 'AI Programı',
-        description: programData.description ?? '',
-        generatedByAi: true,
-        aiVersion: 'gpt-4o-mini',
-        isActive: true,
-      },
-    })
-
-    // Önceki programları pasifleştir
-    await db.workoutProgram.updateMany({
-      where: { userId: user.id, id: { not: program.id } },
-      data: { isActive: false },
-    })
-
-    // Increment usage counter
-    if (subscription) {
-      await db.subscription.update({
-        where: { id: subscription.id },
-        data: { aiProgramsUsed: { increment: 1 } },
+    // Programı DB'ye kaydet — atomik işlem
+    const { program } = await db.$transaction(async (tx) => {
+      const newProgram = await tx.workoutProgram.create({
+        data: {
+          userId: user.id,
+          name: programData.programName ?? 'AI Programı',
+          description: programData.description ?? '',
+          generatedByAi: true,
+          aiVersion: 'gpt-4o-mini',
+          isActive: true,
+        },
       })
-    }
+
+      // Önceki programları pasifleştir
+      await tx.workoutProgram.updateMany({
+        where: { userId: user.id, id: { not: newProgram.id } },
+        data: { isActive: false },
+      })
+
+      // Increment usage counter
+      if (subscription) {
+        await tx.subscription.update({
+          where: { id: subscription.id },
+          data: { aiProgramsUsed: { increment: 1 } },
+        })
+      }
+
+      return { program: newProgram }
+    })
 
     return NextResponse.json({ success: true, program: programData, programId: program.id })
   } catch (error) {
