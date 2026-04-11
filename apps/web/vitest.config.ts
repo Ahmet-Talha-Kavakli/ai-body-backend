@@ -8,6 +8,25 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./__tests__/helpers/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html', 'lcov'],
+      reportsDirectory: './coverage',
+      exclude: [
+        'node_modules/**',
+        '.next/**',
+        '**/*.config.*',
+        '**/__tests__/**',
+        '**/types/**',
+        'prisma/**',
+      ],
+      thresholds: {
+        lines: 50,
+        functions: 50,
+        branches: 50,
+        statements: 50,
+      },
+    },
   },
   resolve: {
     alias: {
