@@ -15,27 +15,31 @@ export async function GET() {
     const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7)
     const monthStart = new Date(now); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0)
 
-    // Bu haftaki seanslar
-    const weeklySessions = await db.workoutSession.findMany({
-      where: { userId: user.id, startedAt: { gte: weekStart }, endedAt: { not: null } },
-      orderBy: { startedAt: 'asc' },
-    })
+    // Aylık seans dağılımı (son 6 ay)
+    const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(now.getMonth() - 5); sixMonthsAgo.setDate(1); sixMonthsAgo.setHours(0,0,0,0)
 
-    // Bugünkü beslenme
-    const todayMeals = await db.mealLog.findMany({
-      where: { userId: user.id, loggedAt: { gte: todayStart } },
-    })
-
-    // Bu ayki seanslar (grafik için)
-    const monthlySessions = await db.workoutSession.findMany({
-      where: { userId: user.id, startedAt: { gte: monthStart }, endedAt: { not: null } },
-      orderBy: { startedAt: 'asc' },
-    })
-
-    // Toplam istatistikler
-    const totalSessions = await db.workoutSession.count({
-      where: { userId: user.id, endedAt: { not: null } },
-    })
+    // Tüm sorgular paralel çalışır
+    const [weeklySessions, todayMeals, monthlySessions, totalSessions, nutritionGoal, allRecentSessions] = await Promise.all([
+      db.workoutSession.findMany({
+        where: { userId: user.id, startedAt: { gte: weekStart }, endedAt: { not: null } },
+        orderBy: { startedAt: 'asc' },
+      }),
+      db.mealLog.findMany({
+        where: { userId: user.id, loggedAt: { gte: todayStart } },
+      }),
+      db.workoutSession.findMany({
+        where: { userId: user.id, startedAt: { gte: monthStart }, endedAt: { not: null } },
+        orderBy: { startedAt: 'asc' },
+      }),
+      db.workoutSession.count({
+        where: { userId: user.id, endedAt: { not: null } },
+      }),
+      db.nutritionGoal.findUnique({ where: { userId: user.id } }),
+      db.workoutSession.findMany({
+        where: { userId: user.id, startedAt: { gte: sixMonthsAgo }, endedAt: { not: null } },
+        select: { startedAt: true },
+      }),
+    ])
 
     // Haftalık kalori toplamı
     const weeklyCalories = weeklySessions.reduce((s, sess) => s + (sess.caloriesBurned ?? 0), 0)
@@ -48,16 +52,6 @@ export async function GET() {
     const todayProtein = todayMeals.reduce((s, m) => s + m.totalProteinG, 0)
     const todayCarbs = todayMeals.reduce((s, m) => s + m.totalCarbsG, 0)
     const todayFat = todayMeals.reduce((s, m) => s + m.totalFatG, 0)
-
-    // Beslenme hedefi
-    const nutritionGoal = await db.nutritionGoal.findUnique({ where: { userId: user.id } })
-
-    // Aylık seans dağılımı (son 6 ay)
-    const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(now.getMonth() - 5); sixMonthsAgo.setDate(1); sixMonthsAgo.setHours(0,0,0,0)
-    const allRecentSessions = await db.workoutSession.findMany({
-      where: { userId: user.id, startedAt: { gte: sixMonthsAgo }, endedAt: { not: null } },
-      select: { startedAt: true },
-    })
 
     // Aylara göre grupla
     const monthlyMap: Record<string, number> = {}
