@@ -6,6 +6,7 @@ import { canUseFeatureWithLimit, getPlanLimits, isUsageResetNeeded } from '@/lib
 import { withAiRateLimit } from '@/lib/redis/ratelimit-middleware'
 import { mealAnalyzeSchema } from '@/lib/validation/schemas'
 import { logger } from '@/lib/logger'
+import { injectMemoryIntoPrompt } from '@/lib/memory/prompt-injector'
 
 export async function POST(req: NextRequest) {
   try {
@@ -77,6 +78,28 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const userPrompt = `Bu yemek fotoğrafını analiz et ve besin değerlerini tahmin et.
+Türkçe yanıt ver. Sadece JSON döndür:
+{
+  "foodItems": [
+    { "name": "Yemek adı", "portion": "Porsiyon", "calories": 0, "proteinG": 0, "carbsG": 0, "fatG": 0 }
+  ],
+  "totalCalories": 0,
+  "totalProteinG": 0,
+  "totalCarbsG": 0,
+  "totalFatG": 0,
+  "confidence": "high|medium|low",
+  "notes": "Ek not"
+}`
+
+    // Beslenme hafızasını çek ve prompt'a ekle
+    const enrichedPrompt = await injectMemoryIntoPrompt(
+      user.id,
+      'nutrition meals protein calorie intake diet habits',
+      userPrompt,
+      { types: ['WEEKLY_SUMMARY', 'NUTRITION_PATTERN', 'SESSION_SUMMARY'], limit: 3 }
+    )
+
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
@@ -89,19 +112,7 @@ export async function POST(req: NextRequest) {
             },
             {
               type: 'text',
-              text: `Bu yemek fotoğrafını analiz et ve besin değerlerini tahmin et.
-Türkçe yanıt ver. Sadece JSON döndür:
-{
-  "foodItems": [
-    { "name": "Yemek adı", "portion": "Porsiyon", "calories": 0, "proteinG": 0, "carbsG": 0, "fatG": 0 }
-  ],
-  "totalCalories": 0,
-  "totalProteinG": 0,
-  "totalCarbsG": 0,
-  "totalFatG": 0,
-  "confidence": "high|medium|low",
-  "notes": "Ek not"
-}`,
+              text: enrichedPrompt,
             },
           ],
         },
