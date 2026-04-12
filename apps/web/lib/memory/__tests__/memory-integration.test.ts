@@ -7,17 +7,25 @@ vi.mock('@/lib/db/client', () => ({
     },
     $queryRaw: vi.fn().mockResolvedValue([
       {
+        id: 'mem_1',
         content: '[Antrenman - 01.04.2026] Squat: 3x5 @ 100kg, form: 88/100',
         importance: 8,
         decayScore: 0.92,
         type: 'SESSION_SUMMARY',
+        similarity: 0.89,
       },
     ]),
   },
 }))
 
-vi.mock('@/lib/embeddings/client', () => ({
-  createEmbedding: vi.fn().mockResolvedValue(new Array(1536).fill(0.05)),
+vi.mock('@/lib/ai/openai', () => ({
+  openai: {
+    embeddings: {
+      create: vi.fn().mockResolvedValue({
+        data: [{ embedding: Array(1536).fill(0.05) }],
+      }),
+    },
+  },
 }))
 
 vi.mock('@/lib/logger', () => ({
@@ -62,10 +70,15 @@ describe('Memory Layer — End-to-End', () => {
   it('retrieve → inject pipeline: memories appear in prompt', async () => {
     const { injectMemoryIntoPrompt } = await import('../prompt-injector')
 
-    const result = await injectMemoryIntoPrompt('user_e2e', 'squat coaching', 'Sen bir koçsun.')
+    const basePrompt = 'Sen bir koçsun. Kullanıcıya antrenman rehberliği yap.'
+    const result = injectMemoryIntoPrompt(basePrompt, {
+      memories: ['Squat: 3x5 @ 100kg, form: 88/100'],
+      totalRetrieved: 1,
+      types: ['SESSION_SUMMARY'],
+    })
 
     expect(result).toContain('Sen bir koçsun.')
-    expect(result).toContain('KULLANICI GEÇMİŞİ')
+    expect(result).toContain('User Profile & History')
     expect(result).toContain('Squat')
   })
 
