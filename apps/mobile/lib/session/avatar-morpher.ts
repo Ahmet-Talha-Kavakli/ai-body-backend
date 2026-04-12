@@ -1,6 +1,7 @@
 import * as BABYLON from '@babylonjs/core'
 import { AvatarState } from '@/lib/session/types'
 import { AVATAR } from '@/lib/session/constants'
+import type { CharacterMorphParams } from '@fitai/shared-types'
 
 /**
  * Handles body composition morphing and weight-based transformations
@@ -82,6 +83,27 @@ export class AvatarMorpher {
    */
   getScale(): number {
     return this.morphScale
+  }
+
+  /**
+   * Apply morph based on full CharacterMorphParams (BMI + height + fitness level)
+   * More expressive than weight-only applyMorph
+   */
+  applyCharacterMorphParams(mesh: BABYLON.AbstractMesh, params: CharacterMorphParams): void {
+    // BMI → body width scale
+    let bodyScaleX: number
+    if (params.bmi < 18.5) bodyScaleX = 0.85
+    else if (params.bmi < 25) bodyScaleX = 1.0
+    else if (params.bmi < 30) bodyScaleX = 1.15
+    else if (params.bmi < 35) bodyScaleX = 1.3
+    else bodyScaleX = 1.45
+
+    // Height → Y scale
+    const scaleY = params.heightNorm
+
+    if (mesh.scaling) {
+      mesh.scaling = new BABYLON.Vector3(bodyScaleX, scaleY, 1.0)
+    }
   }
 
   /**
