@@ -4,7 +4,15 @@ export const profileUpdateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   bio: z.string().max(500).optional(),
   avatarUrl: z.string().url().optional(),
-  fitnessLevel: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  fitnessLevel: z.enum(['beginner', 'intermediate', 'advanced', 'elite']).optional(),
+  age: z.number().int().min(13).max(120).optional(),
+  gender: z.string().optional(),
+  height: z.number().positive().optional(),
+  weight: z.number().positive().optional(),
+  experienceYears: z.number().int().nonnegative().optional(),
+  primaryGoal: z.string().optional(),
+  targetWeight: z.number().positive().optional(),
+  targetFitnessLevel: z.string().optional(),
 })
 
 export const sessionCompleteSchema = z.object({
@@ -44,7 +52,34 @@ export const coachMessageSchema = z.object({
   formFeedback: z.string().optional(),
 })
 
+export const healthProfileSchema = z.object({
+  injuries: z.array(z.string()).optional(),
+  restrictions: z.array(z.string()).optional(),
+  painPoints: z.array(z.string()).optional(),
+})
+
+export const trainingProfileSchema = z.object({
+  trainingDaysPerWeek: z.number().int().min(1).max(7).optional(),
+  preferredExercises: z.array(z.string()).optional(),
+  dislikedExercises: z.array(z.string()).optional(),
+  trainingStyle: z.string().optional(),
+  preferredDuration: z.number().int().min(10).optional(),
+})
+
+export const nutritionProfileSchema = z.object({
+  proteinTarget: z.number().nonnegative().optional(),
+  calorieTarget: z.number().nonnegative().optional(),
+  dietType: z.string().optional(),
+  avgSleepHours: z.number().min(0).max(24).optional(),
+  stressLevel: z.number().int().min(0).max(10).optional(),
+  waterIntakeTarget: z.number().nonnegative().optional(),
+  supplementStack: z.array(z.string()).optional(),
+})
+
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>
+export type HealthProfileInput = z.infer<typeof healthProfileSchema>
+export type TrainingProfileInput = z.infer<typeof trainingProfileSchema>
+export type NutritionProfileInput = z.infer<typeof nutritionProfileSchema>
 export type SessionCompleteInput = z.infer<typeof sessionCompleteSchema>
 export type MealAnalyzeInput = z.infer<typeof mealAnalyzeSchema>
 export type CoachMessageInput = z.infer<typeof coachMessageSchema>

@@ -435,13 +435,13 @@ model UserBasicProfile {
   userId            String    @unique
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  age               Int
-  gender            String    // Male, Female, Other, Prefer not to say
-  height            Float     // cm
-  weight            Float     // kg
-  fitnessLevel      String    // Beginner, Intermediate, Advanced, Elite
-  primaryGoal       String    // Weight Loss, Muscle Gain, Strength, etc
-  experienceYears   Int
+  age               Int?
+  gender            String?   // Male, Female, Other, Prefer not to say
+  height            Float?    // cm
+  weight            Float?    // kg
+  fitnessLevel      String?   // Beginner, Intermediate, Advanced, Elite
+  primaryGoal       String?   // Weight Loss, Muscle Gain, Strength, etc
+  experienceYears   Int?
   targetWeight      Float?
   targetFitnessLevel String?
 
@@ -457,10 +457,10 @@ model UserHealthMetrics {
   userId            String    @unique
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  activeInjuries    Json      // Array<{bodyPart, injuryType, severity, onsetDate, recoveryDeadline, restrictions}>
-  pastInjuries      Json      // Array<{bodyPart, injuryType, onsetDate, recoveryDate, notes}>
+  activeInjuries    Json?      // Array<{bodyPart, injuryType, severity, onsetDate, recoveryDeadline, restrictions}>
+  pastInjuries      Json?      // Array<{bodyPart, injuryType, onsetDate, recoveryDate, notes}>
   medicalRestrictions String[]
-  currentPainPoints Json      // Array<{bodyPart, painLevel, occurrence}>
+  currentPainPoints Json?      // Array<{bodyPart, painLevel, occurrence}>
   doctorNotes       String?
 
   createdAt         DateTime  @default(now())
@@ -475,13 +475,13 @@ model UserTrainingHistory {
   userId            String    @unique
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  trainingDaysPerWeek Int
+  trainingDaysPerWeek Int?
   preferredExercises  String[]
   dislikedExercises   String[]
-  personalRecords     Json     // Array<{exercise, weight_kg, reps, date}>
-  startingStats       Json     // {fitnessLevel, weight_kg, strengthBaseline}
-  trainingStyle       String   // Push/Pull/Legs, Upper/Lower, Full Body, PPL, Bro Split
-  preferredDuration   Int      // minutes
+  personalRecords     Json?     // Array<{exercise, weight_kg, reps, date}>
+  startingStats       Json?     // {fitnessLevel, weight_kg, strengthBaseline}
+  trainingStyle       String?   // Push/Pull/Legs, Upper/Lower, Full Body, PPL, Bro Split
+  preferredDuration   Int?      // minutes
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -495,14 +495,14 @@ model UserNutritionMetrics {
   userId            String    @unique
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  proteinTarget     Float     // grams/day
+  proteinTarget     Float?    // grams/day
   calorieTarget     Int?
-  dietType          String    // Omnivore, Vegetarian, Vegan, Keto, Paleo, Other
-  avgSleepHours     Float
-  stressLevel       Int       // 1-10
-  alcoholConsumption String   // None, Occasional, Regular, Daily
-  smoking           Boolean
-  waterIntakeTarget Float     // liters/day
+  dietType          String?   // Omnivore, Vegetarian, Vegan, Keto, Paleo, Other
+  avgSleepHours     Float?
+  stressLevel       Int?      // 1-10
+  alcoholConsumption String?  // None, Occasional, Regular, Daily
+  smoking           Boolean?
+  waterIntakeTarget Float?    // liters/day
   supplementStack   String[]
 
   createdAt         DateTime  @default(now())
