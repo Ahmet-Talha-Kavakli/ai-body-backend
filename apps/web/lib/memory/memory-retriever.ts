@@ -1,6 +1,5 @@
-import { openai } from '@/lib/ai/openai'
+import { openai } from '@/lib/ai/client'
 import { prisma } from '@/lib/db/client'
-import { logger } from '@/lib/logger'
 import type { MemoryContext } from './types'
 
 export interface RankParams {
