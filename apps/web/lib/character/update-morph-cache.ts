@@ -11,6 +11,6 @@ export async function updateCharacterMorphCache(
 
   await prisma.user.update({
     where: { id: userId },
-    data: { characterMorphCache: params },
+    data: { characterMorphCache: params as object },
   })
 }
