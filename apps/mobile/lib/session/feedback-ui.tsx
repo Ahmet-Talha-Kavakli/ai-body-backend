@@ -232,7 +232,7 @@ export const FeedbackUI: React.FC<FeedbackUIProps> = ({ formAnalysis, isVisible,
         timerRef.current = null
       }
     }
-  }, [isVisible, formAnalysis, slideAnim, fadeAnim])
+  }, [isVisible, formAnalysis, slideAnim, fadeAnim, shakeAnim])
 
   const handleDismiss = () => {
     if (timerRef.current) {
@@ -244,7 +244,7 @@ export const FeedbackUI: React.FC<FeedbackUIProps> = ({ formAnalysis, isVisible,
 
   // Don't render anything if not visible and no form analysis
   if (!isVisible || !formAnalysis) {
-    return <View testID="feedback-card" className="pointer-events-none h-0 opacity-0" />
+    return <View testID="feedback-card-empty" className="pointer-events-none h-0 opacity-0" />
   }
 
   return (
