@@ -2,18 +2,19 @@
  * FeedbackUI - Floating form score card component
  *
  * Displays real-time form analysis feedback during exercise sessions:
- * - Form score (0-100) with color coding
+ * - Form score (0-100) with color coding (NativeWind classes)
  * - Current rep count
  * - Form errors (sorted by severity)
  * - Muscle engagement indicator
  * - Animated appearance and auto-dismiss
+ * - Error shake animation for high-severity errors
  *
  * Uses React Native Animated API for smooth transitions
- * Styled with inline styles for cross-platform compatibility
+ * Styled with NativeWind (Tailwind CSS for React Native)
  */
 
 import React, { useEffect, useRef } from 'react'
-import { View, Text, Animated, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native'
+import { View, Text, Animated, TouchableOpacity, SafeAreaView } from 'react-native'
 import { FormAnalysisResult, FormError } from './types'
 
 interface FeedbackUIProps {
@@ -23,28 +24,28 @@ interface FeedbackUIProps {
 }
 
 /**
- * Get color for form score based on value
+ * Get NativeWind class name for form score based on value
  * Green: 75-100 (excellent)
  * Yellow: 50-74 (needs improvement)
  * Red: 0-49 (critical)
  */
-const getScoreColor = (score: number): string => {
-  if (score >= 75) return '#34C759' // Green
-  if (score >= 50) return '#FF9500' // Orange/Yellow
-  return '#FF3B30' // Red
+const getScoreClass = (score: number): string => {
+  if (score >= 75) return 'bg-green-500'
+  if (score >= 50) return 'bg-yellow-500'
+  return 'bg-red-500'
 }
 
 /**
- * Get color for error severity
+ * Get NativeWind class name for error severity
  */
-const getSeverityColor = (severity: 'low' | 'medium' | 'high'): string => {
+const getSeverityClass = (severity: 'low' | 'medium' | 'high'): string => {
   switch (severity) {
     case 'high':
-      return '#EF4444' // Red
+      return 'text-red-500'
     case 'medium':
-      return '#F97316' // Orange
+      return 'text-orange-500'
     case 'low':
-      return '#FBBF24' // Yellow
+      return 'text-yellow-500'
   }
 }
 
@@ -67,99 +68,6 @@ const getTopEngagedMuscle = (muscleEngagement: Record<string, number>): [string,
   return topMuscle || null
 }
 
-const styles = StyleSheet.create({
-  card: {
-    position: 'absolute',
-    width: 320,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  cardContent: {
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  exerciseInfo: {
-    flex: 1,
-  },
-  exerciseName: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#d1d5db',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  repCounter: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 4,
-  },
-  badge: {
-    borderRadius: 50,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 80,
-  },
-  score: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  errorList: {
-    marginBottom: 12,
-    paddingVertical: 8,
-  },
-  errorText: {
-    fontSize: 10,
-    fontWeight: '500',
-    lineHeight: 16,
-  },
-  engagementContainer: {
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  engagementText: {
-    fontSize: 10,
-    color: '#9ca3af',
-  },
-  dismissButton: {
-    marginTop: 12,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  dismissText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#9ca3af',
-  },
-  hidden: {
-    opacity: 0,
-    height: 0,
-    pointerEvents: 'none',
-  },
-  safeArea: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-  },
-})
-
 /**
  * FeedbackCard - Internal component for the card UI
  */
@@ -168,31 +76,36 @@ export const FeedbackCard: React.FC<{
   onDismiss: () => void
   slideAnim: Animated.Value
   fadeAnim: Animated.Value
-}> = ({ formAnalysis, onDismiss, slideAnim, fadeAnim }) => {
-  const scoreColor = getScoreColor(formAnalysis.formScore)
+  shakeAnim: Animated.Value
+}> = ({ formAnalysis, onDismiss, slideAnim, fadeAnim, shakeAnim }) => {
+  const scoreClass = getScoreClass(formAnalysis.formScore)
   const sortedErrors = sortErrorsBySeverity(formAnalysis.errors).slice(0, 3)
   const topMuscle = getTopEngagedMuscle(formAnalysis.muscleEngagement)
 
   return (
     <Animated.View
       testID="feedback-card"
+      className="absolute bottom-4 right-4 w-80 overflow-hidden rounded-xl border border-white/20 bg-black/10 shadow-lg"
       style={[
-        styles.card,
         {
           bottom: slideAnim,
           right: 16,
           opacity: fadeAnim,
+          transform: [{ translateX: shakeAnim }],
         },
       ]}
     >
-      <View style={styles.cardContent}>
+      <View className="rounded-xl bg-black/10 p-4">
         {/* Header with Score Badge and Exercise Name */}
-        <View style={styles.header}>
-          <View style={styles.exerciseInfo}>
-            <Text testID="exercise-name" style={styles.exerciseName}>
+        <View className="mb-3 flex-row items-center justify-between">
+          <View className="flex-1">
+            <Text
+              testID="exercise-name"
+              className="text-xs font-semibold uppercase tracking-wide text-gray-400"
+            >
               {formAnalysis.exercise}
             </Text>
-            <Text testID="rep-counter" style={styles.repCounter}>
+            <Text testID="rep-counter" className="mt-1 text-lg font-bold text-white">
               Rep {formAnalysis.repNumber}
             </Text>
           </View>
@@ -200,14 +113,9 @@ export const FeedbackCard: React.FC<{
           {/* Score Badge */}
           <View
             testID="score-badge"
-            style={[
-              styles.badge,
-              {
-                backgroundColor: scoreColor,
-              },
-            ]}
+            className={`${scoreClass} min-w-20 items-center justify-center rounded-full p-4`}
           >
-            <Text testID="form-score" style={styles.score}>
+            <Text testID="form-score" className="text-2xl font-bold text-white">
               {Math.round(formAnalysis.formScore)}
             </Text>
           </View>
@@ -215,17 +123,12 @@ export const FeedbackCard: React.FC<{
 
         {/* Error List */}
         {sortedErrors.length > 0 && (
-          <View testID="error-list" style={styles.errorList}>
+          <View testID="error-list" className="mb-3 py-2">
             {sortedErrors.map((error, index) => (
               <Text
                 key={`${error.bodyPart}-${index}`}
                 testID={`error-item-${index}`}
-                style={[
-                  styles.errorText,
-                  {
-                    color: getSeverityColor(error.severity),
-                  },
-                ]}
+                className={`text-xs font-medium leading-4 ${getSeverityClass(error.severity)}`}
               >
                 {error.bodyPart}: {error.cue}
               </Text>
@@ -235,16 +138,20 @@ export const FeedbackCard: React.FC<{
 
         {/* Muscle Engagement Indicator */}
         {topMuscle && (
-          <View testID="muscle-engagement" style={styles.engagementContainer}>
-            <Text style={styles.engagementText}>
+          <View testID="muscle-engagement" className="border-t border-white/10 py-2">
+            <Text className="text-xs text-gray-400">
               {topMuscle[0]}: {Math.round(topMuscle[1] * 100)}%
             </Text>
           </View>
         )}
 
         {/* Dismiss Button */}
-        <TouchableOpacity testID="dismiss-button" onPress={onDismiss} style={styles.dismissButton}>
-          <Text style={styles.dismissText}>Dismiss</Text>
+        <TouchableOpacity
+          testID="dismiss-button"
+          onPress={onDismiss}
+          className="mt-3 items-center py-2"
+        >
+          <Text className="text-xs font-semibold text-gray-400">Dismiss</Text>
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -258,7 +165,19 @@ export const FeedbackCard: React.FC<{
 export const FeedbackUI: React.FC<FeedbackUIProps> = ({ formAnalysis, isVisible, onDismiss }) => {
   const slideAnim = useRef(new Animated.Value(-100)).current
   const fadeAnim = useRef(new Animated.Value(0)).current
+  const shakeAnim = useRef(new Animated.Value(0)).current
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  /**
+   * Trigger shake animation for high-severity errors
+   */
+  const triggerShake = () => {
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start()
+  }
 
   useEffect(() => {
     if (isVisible && formAnalysis) {
@@ -275,6 +194,11 @@ export const FeedbackUI: React.FC<FeedbackUIProps> = ({ formAnalysis, isVisible,
           useNativeDriver: false,
         }),
       ]).start()
+
+      // Check for high-severity errors and trigger shake
+      if (formAnalysis.errors.some((e) => e.severity === 'high')) {
+        triggerShake()
+      }
 
       // Set auto-dismiss timer
       timerRef.current = setTimeout(() => {
@@ -320,16 +244,17 @@ export const FeedbackUI: React.FC<FeedbackUIProps> = ({ formAnalysis, isVisible,
 
   // Don't render anything if not visible and no form analysis
   if (!isVisible || !formAnalysis) {
-    return <View testID="feedback-card" style={styles.hidden} />
+    return <View testID="feedback-card" className="pointer-events-none h-0 opacity-0" />
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} pointerEvents="box-none">
+    <SafeAreaView className="absolute bottom-0 right-0" pointerEvents="box-none">
       <FeedbackCard
         formAnalysis={formAnalysis}
         onDismiss={handleDismiss}
         slideAnim={slideAnim}
         fadeAnim={fadeAnim}
+        shakeAnim={shakeAnim}
       />
     </SafeAreaView>
   )
