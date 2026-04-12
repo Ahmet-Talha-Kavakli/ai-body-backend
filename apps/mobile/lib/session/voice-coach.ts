@@ -27,6 +27,16 @@ export class VoiceCoach {
   }
 
   constructor(config: VoiceCoachConfig) {
+    // Validate required fields
+    if (!config.apiKey) {
+      throw new Error('VoiceCoachConfig: apiKey is required')
+    }
+    if (!config.assistantId) {
+      throw new Error('VoiceCoachConfig: assistantId is required')
+    }
+    if (!config.language) {
+      throw new Error('VoiceCoachConfig: language is required')
+    }
     this.config = config
   }
 
@@ -39,7 +49,8 @@ export class VoiceCoach {
 
       // In production, would initialize VAPI SDK here
       // import { Vapi } from 'vapi-js'
-      // const vapi = new Vapi(this.config.vapiPublicKey)
+      // const vapi = new Vapi(this.config.apiKey)
+      // const assistant = await vapi.getAssistant(this.config.assistantId)
       // await vapi.connect()
 
       // For now, simulate successful connection
@@ -70,13 +81,13 @@ export class VoiceCoach {
       }
 
       // Generate feedback message from analysis
-      const message = this.generateFeedbackMessage(analysis)
+      const message = this._generateFeedbackMessage(analysis)
 
       // Try VAPI first, fallback to TTS
       let feedback: VoiceMessage
 
       try {
-        const vapiResponse = await this.callVAPI(message)
+        const vapiResponse = await this._callVAPI(message)
         feedback = {
           id: this._generateId(),
           text: vapiResponse,
@@ -86,7 +97,7 @@ export class VoiceCoach {
         }
       } catch (error) {
         // Fallback to TTS
-        feedback = await this.generateTTSFallback(message)
+        feedback = await this._fallbackTTS(message)
       }
 
       this.feedbackQueue.push(feedback)
@@ -103,9 +114,9 @@ export class VoiceCoach {
   }
 
   /**
-   * Generate feedback message from form analysis
+   * Private: Generate feedback message from form analysis
    */
-  generateFeedbackMessage(analysis: FormAnalysisResult): string {
+  private _generateFeedbackMessage(analysis: FormAnalysisResult): string {
     const parts: string[] = []
 
     // Exercise context
@@ -151,28 +162,31 @@ export class VoiceCoach {
   }
 
   /**
-   * Call VAPI API with timeout
+   * Private: Call VAPI API with 4-second timeout
    */
-  async callVAPI(message: string, timeout = this.config.timeout): Promise<string> {
+  private async _callVAPI(message: string): Promise<string> {
     if (!this.abortController) {
       throw new Error('VoiceCoach not initialized')
     }
+
+    // Spec requires 4-second timeout for VAPI calls
+    const VAPI_TIMEOUT = 4000
 
     try {
       // In production, would call actual VAPI endpoint:
       // const response = await fetch(vapiEndpoint, {
       //   method: 'POST',
-      //   headers: { 'Authorization': `Bearer ${this.config.vapiPublicKey}` },
+      //   headers: { 'Authorization': `Bearer ${this.config.apiKey}` },
       //   body: JSON.stringify({
       //     assistantId: this.config.assistantId,
       //     message: message
       //   }),
       //   signal: this.abortController.signal,
-      //   timeout: timeout
+      //   timeout: VAPI_TIMEOUT
       // })
 
-      // Simulate VAPI call with timeout
-      return await this._simulateVAPICall(message, timeout)
+      // Simulate VAPI call with 4-second timeout
+      return await this._simulateVAPICall(message, VAPI_TIMEOUT)
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('VAPI request timeout')
@@ -182,12 +196,12 @@ export class VoiceCoach {
   }
 
   /**
-   * Generate TTS fallback message
+   * Private: Generate TTS fallback message
    */
-  async generateTTSFallback(message: string): Promise<VoiceMessage> {
+  private async _fallbackTTS(message: string): Promise<VoiceMessage> {
     // In production, would use:
     // import * as Speech from 'expo-speech'
-    // await Speech.speak(message, { language: this.getLanguageCode() })
+    // await Speech.speak(message, { language: this._getLanguageCode() })
 
     // For now, return the message as-is
     return {
@@ -334,8 +348,8 @@ export class VoiceCoach {
   /**
    * Private: Get language code for TTS
    */
-  private getLanguageCode(): string {
-    return this.config.voiceId.includes('turkish') ? 'tr-TR' : 'en-US'
+  private _getLanguageCode(): string {
+    return this.config.language === 'tr' ? 'tr-TR' : 'en-US'
   }
 
   /**

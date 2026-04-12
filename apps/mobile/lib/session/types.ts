@@ -57,12 +57,11 @@ export interface AvatarState {
 
 // Voice Coach
 export interface VoiceCoachConfig {
-  vapiPublicKey: string
-  modelId: 'gpt-4o-mini'
-  voiceId: 'turkish-female' | 'turkish-male'
-  systemPrompt: string
+  apiKey: string
+  assistantId: string
+  language: 'tr' | 'en'
   timeout: number // 4000ms
-  mode: 'real-time' | 'queue'
+  enableFallback: boolean
 }
 
 export interface VoiceMessage {
