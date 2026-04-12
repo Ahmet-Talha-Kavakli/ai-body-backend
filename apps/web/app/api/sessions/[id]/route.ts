@@ -118,7 +118,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         overallFormScore: overallFormScore ?? null,
         caloriesBurned: caloriesBurned ?? null,
         notes: notes ?? null,
-      }).catch(() => {}) // Hafıza hatası seans kaydını asla etkilemez
+      }).catch((err) => {
+        logger.error(
+          { err, sessionId: id, userId: user.id },
+          'writeSessionMemory: fire-and-forget failed'
+        )
+      }) // Hafıza hatası seans kaydını asla etkilemez
     }
 
     return NextResponse.json({ success: true, session })
