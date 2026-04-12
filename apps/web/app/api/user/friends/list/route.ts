@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
@@ -14,31 +15,28 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const acceptedFriends = await db.userFriend.findMany({
       where: {
         status: 'accepted',
-        OR: [
-          { userId: user.id },
-          { friendId: user.id }
-        ]
+        OR: [{ userId: user.id }, { friendId: user.id }],
       },
       include: {
         user: {
-          select: { id: true, name: true, avatarUrl: true, email: true }
+          select: { id: true, name: true, avatarUrl: true, email: true },
         },
         friend: {
-          select: { id: true, name: true, avatarUrl: true, email: true }
-        }
-      }
+          select: { id: true, name: true, avatarUrl: true, email: true },
+        },
+      },
     })
 
     // Transform to return the friend's info (not self)
-    const friends = acceptedFriends.map(relationship => ({
+    const friends = acceptedFriends.map((relationship) => ({
       id: relationship.id,
       friend: relationship.userId === user.id ? relationship.friend : relationship.user,
-      acceptedAt: relationship.acceptedAt
+      acceptedAt: relationship.acceptedAt,
     }))
 
     return NextResponse.json({ success: true, friends, count: friends.length })
   } catch (error) {
-    console.error('Error fetching friend list:', error)
+    logger.error({ err: error }, 'Error fetching friend list:')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

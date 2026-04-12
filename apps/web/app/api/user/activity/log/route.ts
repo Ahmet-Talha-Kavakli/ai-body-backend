@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { logger } from '@/lib/logger'
 
 const ACTIVITY_TYPES = ['workout_completed', 'pr_achieved', 'streak_milestone'] as const
-type ActivityType = typeof ACTIVITY_TYPES[number]
+type ActivityType = (typeof ACTIVITY_TYPES)[number]
 
 const VISIBILITY_TYPES = ['private', 'friends_only', 'public'] as const
-type VisibilityType = typeof VISIBILITY_TYPES[number]
+type VisibilityType = (typeof VISIBILITY_TYPES)[number]
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
@@ -56,13 +57,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         description,
         metadata: metadata || {},
         visibility: activityVisibility,
-        createdAt: new Date()
-      }
+        createdAt: new Date(),
+      },
     })
 
     return NextResponse.json({ success: true, activity }, { status: 201 })
   } catch (error) {
-    console.error('Error logging activity:', error)
+    logger.error({ err: error }, 'Error logging activity:')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

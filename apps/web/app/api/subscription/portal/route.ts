@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { stripe } from '@/lib/stripe/client'
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/subscription/portal
@@ -20,10 +21,7 @@ export async function POST() {
     })
 
     if (!user || !user.subscription?.stripeCustomerId) {
-      return NextResponse.json(
-        { error: 'No subscription found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'No subscription found' }, { status: 404 })
     }
 
     const session = await stripe.billingPortal.sessions.create({
@@ -33,10 +31,7 @@ export async function POST() {
 
     return NextResponse.json({ url: session.url })
   } catch (error) {
-    console.error('POST /api/subscription/portal error:', error)
-    return NextResponse.json(
-      { error: 'Failed to create portal session' },
-      { status: 500 }
-    )
+    logger.error({ err: error }, 'POST /api/subscription/portal error:')
+    return NextResponse.json({ error: 'Failed to create portal session' }, { status: 500 })
   }
 }

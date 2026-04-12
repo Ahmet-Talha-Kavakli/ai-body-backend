@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { createAppleHealthClient } from '@/lib/wearables/apple-health'
 import { prisma } from '@/lib/db/client'
 import { encryptToken } from '@/lib/crypto/token-encryption'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('[Apple Callback]', error)
+    logger.error({ err: error }, '[Apple Callback]')
     return NextResponse.json({ error: 'Failed to connect Apple Health' }, { status: 500 })
   }
 }

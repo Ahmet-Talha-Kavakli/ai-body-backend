@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
@@ -14,40 +15,37 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const friendships = await db.userFriend.findMany({
       where: {
         status: 'accepted',
-        OR: [
-          { userId: user.id },
-          { friendId: user.id }
-        ]
-      }
+        OR: [{ userId: user.id }, { friendId: user.id }],
+      },
     })
 
     // Extract friend IDs
-    const friendIds = friendships.map(f => f.userId === user.id ? f.friendId : f.userId)
+    const friendIds = friendships.map((f) => (f.userId === user.id ? f.friendId : f.userId))
 
     // Get activities from friends (that are not private)
     const activities = await db.userActivity.findMany({
       where: {
         userId: {
-          in: friendIds
+          in: friendIds,
         },
         visibility: {
-          in: ['friends_only', 'public']
-        }
+          in: ['friends_only', 'public'],
+        },
       },
       include: {
         user: {
-          select: { id: true, name: true, avatarUrl: true }
-        }
+          select: { id: true, name: true, avatarUrl: true },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
+        createdAt: 'desc',
       },
-      take: 50 // Limit to last 50 activities
+      take: 50, // Limit to last 50 activities
     })
 
     return NextResponse.json({ success: true, activities, count: activities.length })
   } catch (error) {
-    console.error('Error fetching activity feed:', error)
+    logger.error({ err: error }, 'Error fetching activity feed:')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

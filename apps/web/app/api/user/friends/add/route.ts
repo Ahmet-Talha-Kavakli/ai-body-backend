@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
@@ -37,9 +38,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       where: {
         OR: [
           { userId: user.id, friendId: friendId },
-          { userId: friendId, friendId: user.id }
-        ]
-      }
+          { userId: friendId, friendId: user.id },
+        ],
+      },
     })
 
     if (existingRequest) {
@@ -52,13 +53,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         userId: user.id,
         friendId: friendId,
         status: 'pending',
-        requestedAt: new Date()
-      }
+        requestedAt: new Date(),
+      },
     })
 
     return NextResponse.json({ success: true, friendRequest }, { status: 201 })
   } catch (error) {
-    console.error('Error adding friend:', error)
+    logger.error({ err: error }, 'Error adding friend:')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

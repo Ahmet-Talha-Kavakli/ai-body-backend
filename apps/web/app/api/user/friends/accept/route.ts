@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // Find the friend request
     const friendRequest = await db.userFriend.findUnique({
-      where: { id: friendRequestId }
+      where: { id: friendRequestId },
     })
 
     if (!friendRequest) {
@@ -46,13 +47,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       where: { id: friendRequestId },
       data: {
         status: 'accepted',
-        acceptedAt: new Date()
-      }
+        acceptedAt: new Date(),
+      },
     })
 
     return NextResponse.json({ success: true, friendRequest: updatedRequest })
   } catch (error) {
-    console.error('Error accepting friend request:', error)
+    logger.error({ err: error }, 'Error accepting friend request:')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

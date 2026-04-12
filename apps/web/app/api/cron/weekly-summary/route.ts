@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/client'
 import { isValidCronRequest } from '@/lib/env/validate'
+import { logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 
@@ -130,7 +131,7 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('[Weekly Summary Cron]', error)
+    logger.error({ err: error }, '[Weekly Summary Cron]')
     return NextResponse.json({ error: 'Failed to generate weekly summaries' }, { status: 500 })
   }
 }

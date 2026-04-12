@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { aggregateLeaderboards } from '@/lib/jobs/leaderboard-aggregation'
 import { isValidCronRequest } from '@/lib/env/validate'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     const result = await aggregateLeaderboards()
     return NextResponse.json(result)
   } catch (error) {
-    console.error('Leaderboard cron error:', error)
+    logger.error({ err: error }, 'Leaderboard cron error:')
     return NextResponse.json({ error: 'Failed to aggregate leaderboards' }, { status: 500 })
   }
 }

@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { withAiRateLimit } from '@/lib/redis/ratelimit-middleware'
+import { logger } from '@/lib/logger'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[Voice/Speak]', error)
+    logger.error({ err: error }, '[Voice/Speak]')
     return NextResponse.json({ error: 'TTS failed' }, { status: 500 })
   }
 }

@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { withAiRateLimit } from '@/lib/redis/ratelimit-middleware'
+import { logger } from '@/lib/logger'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ transcript: transcription.text })
   } catch (error) {
-    console.error('[Voice/Transcribe]', error)
+    logger.error({ err: error }, '[Voice/Transcribe]')
     return NextResponse.json({ error: 'Transcription failed' }, { status: 500 })
   }
 }

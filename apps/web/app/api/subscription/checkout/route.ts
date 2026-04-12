@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { stripe } from '@/lib/stripe/client'
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/subscription/checkout
@@ -91,10 +92,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url })
   } catch (error) {
-    console.error('POST /api/subscription/checkout error:', error)
-    return NextResponse.json(
-      { error: 'Failed to create checkout session' },
-      { status: 500 }
-    )
+    logger.error({ err: error }, 'POST /api/subscription/checkout error:')
+    return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 })
   }
 }

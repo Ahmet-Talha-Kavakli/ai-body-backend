@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { logger } from '@/lib/logger'
 
 export async function GET() {
   try {
@@ -41,7 +42,7 @@ export async function GET() {
 
     return NextResponse.json({ program, allPrograms })
   } catch (error) {
-    console.error('Program fetch error:', error)
+    logger.error({ err: error }, 'Program fetch error:')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

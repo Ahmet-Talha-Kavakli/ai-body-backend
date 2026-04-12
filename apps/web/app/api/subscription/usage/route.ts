@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { PLANS, canUseFeatureWithLimit } from '@/lib/stripe/plans'
+import { logger } from '@/lib/logger'
 
 /**
  * GET /api/subscription/usage
@@ -58,10 +59,7 @@ export async function GET() {
       usageResetAt: new Date(),
     })
   } catch (error) {
-    console.error('GET /api/subscription/usage error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    logger.error({ err: error }, 'GET /api/subscription/usage error:')
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

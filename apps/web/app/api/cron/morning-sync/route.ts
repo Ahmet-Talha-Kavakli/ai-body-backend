@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/client'
 import { isValidCronRequest } from '@/lib/env/validate'
+import { logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 
@@ -75,9 +76,9 @@ export async function POST(req: NextRequest) {
             syncedCount++
           }
         } catch (error) {
-          console.error(
-            `[Morning Sync] Error syncing wearable ${wearable.id} for user ${user.id}:`,
-            error
+          logger.error(
+            { err: error, wearableId: wearable.id, userId: user.id },
+            '[Morning Sync] Error syncing wearable'
           )
         }
       }
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('[Morning Sync Cron]', error)
+    logger.error({ err: error }, '[Morning Sync Cron]')
     return NextResponse.json({ error: 'Failed to sync sleep data' }, { status: 500 })
   }
 }

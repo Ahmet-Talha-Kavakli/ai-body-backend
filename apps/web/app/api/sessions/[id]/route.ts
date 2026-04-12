@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client'
 import { sessionCompleteSchema } from '@/lib/validation/schemas'
 import { writeSessionMemory } from '@/lib/memory/memory-writer'
 import type { SessionMemoryInput } from '@/lib/memory/types'
+import { logger } from '@/lib/logger'
 
 // Seansı bitir ve kaydet
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -122,7 +123,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     return NextResponse.json({ success: true, session })
   } catch (error) {
-    console.error('Session update error:', error)
+    logger.error({ err: error }, 'Session update error:')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

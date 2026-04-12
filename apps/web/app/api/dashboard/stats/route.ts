@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { withAuth } from '@/lib/api/with-auth'
+import { logger } from '@/lib/logger'
 
 export const GET = withAuth(async (_req: NextRequest, { user }) => {
   try {
@@ -106,7 +107,7 @@ export const GET = withAuth(async (_req: NextRequest, { user }) => {
       monthlyActivity: monthlyMap,
     })
   } catch (error) {
-    console.error('Stats error:', error)
+    logger.error({ err: error }, 'Stats error:')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 })

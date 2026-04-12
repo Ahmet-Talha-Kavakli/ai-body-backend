@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { logger } from '@/lib/logger'
 
 export async function POST() {
   try {
@@ -31,7 +32,7 @@ export async function POST() {
       onboardingCompleted: !!user.basicProfile || !!user.healthProfile,
     })
   } catch (error) {
-    console.error('User sync error:', error)
+    logger.error({ err: error }, 'User sync error:')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

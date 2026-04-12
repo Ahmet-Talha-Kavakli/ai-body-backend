@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { logger } from '@/lib/logger'
 
 const LEADERBOARD_TYPES = ['form_score', 'most_consistent', 'strongest', 'best_recovery'] as const
-type LeaderboardType = typeof LEADERBOARD_TYPES[number]
+type LeaderboardType = (typeof LEADERBOARD_TYPES)[number]
 
 const PERIODS = ['weekly', 'monthly', 'all_time'] as const
-type Period = typeof PERIODS[number]
+type Period = (typeof PERIODS)[number]
 
 export async function GET(
   req: NextRequest,
@@ -45,9 +46,9 @@ export async function GET(
       where: {
         leaderboardType_period: {
           leaderboardType: type,
-          period: period
-        }
-      }
+          period: period,
+        },
+      },
     })
 
     if (!leaderboard) {
@@ -58,8 +59,8 @@ export async function GET(
           leaderboardType: type,
           period: period,
           entries: [],
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       })
     }
 
@@ -69,11 +70,11 @@ export async function GET(
         leaderboardType: leaderboard.leaderboardType,
         period: leaderboard.period,
         entries: leaderboard.entries,
-        updatedAt: leaderboard.updatedAt
-      }
+        updatedAt: leaderboard.updatedAt,
+      },
     })
   } catch (error) {
-    console.error('Error fetching leaderboard:', error)
+    logger.error({ err: error }, 'Error fetching leaderboard:')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

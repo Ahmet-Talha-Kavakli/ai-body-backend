@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { logger } from '@/lib/logger'
 
 export async function DELETE(request: NextRequest): Promise<NextResponse> {
   const { userId } = await auth()
@@ -25,7 +26,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting activity:', error)
+    logger.error({ err: error }, 'Error deleting activity:')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

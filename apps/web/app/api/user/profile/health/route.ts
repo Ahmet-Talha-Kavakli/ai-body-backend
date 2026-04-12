@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/client'
 import { healthProfileSchema } from '@/lib/validation/schemas'
+import { logger } from '@/lib/logger'
 
 async function getDbUserId(clerkId: string): Promise<string | null> {
   const user = await prisma.user.findUnique({ where: { clerkId }, select: { id: true } })
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: metrics })
   } catch (error) {
-    console.error('Error fetching health metrics:', error)
+    logger.error({ err: error }, 'Error fetching health metrics:')
     return NextResponse.json({ success: false, error: String(error) }, { status: 500 })
   }
 }
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: metrics })
   } catch (error) {
-    console.error('Error saving health metrics:', error)
+    logger.error({ err: error }, 'Error saving health metrics:')
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
 }

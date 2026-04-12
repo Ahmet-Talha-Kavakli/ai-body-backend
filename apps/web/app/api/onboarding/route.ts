@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { logger } from '@/lib/logger'
 
 export async function POST(req: NextRequest) {
   try {
     const { userId: clerkId } = await auth()
     if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    let body: Record<string, unknown>
+    let body: {
+      fitnessLevel?: string
+      goals?: string[]
+      sessionDuration?: string
+      injuries?: string[]
+      equipment?: string[]
+      age?: number
+      weightKg?: number
+      heightCm?: number
+      gender?: string
+    }
     try {
       body = await req.json()
     } catch {
@@ -78,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Onboarding error:', error)
+    logger.error({ err: error }, 'Onboarding error:')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
