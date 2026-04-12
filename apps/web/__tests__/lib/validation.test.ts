@@ -63,8 +63,9 @@ describe('sessionCompleteSchema', () => {
 
 describe('mealAnalyzeSchema', () => {
   it('accepts valid image data', () => {
+    const valid = Buffer.from('fake image data').toString('base64')
     const result = mealAnalyzeSchema.safeParse({
-      imageBase64: 'base64encodedstring',
+      imageBase64: valid,
       mealType: 'breakfast',
     })
     expect(result.success).toBe(true)
@@ -76,8 +77,26 @@ describe('mealAnalyzeSchema', () => {
   })
 
   it('rejects invalid mealType', () => {
-    const result = mealAnalyzeSchema.safeParse({ imageBase64: 'data', mealType: 'brunch' })
+    const valid = Buffer.from('data').toString('base64')
+    const result = mealAnalyzeSchema.safeParse({ imageBase64: valid, mealType: 'brunch' })
     expect(result.success).toBe(false)
+  })
+
+  it('rejects non-base64 string with special chars', () => {
+    const result = mealAnalyzeSchema.safeParse({ imageBase64: 'not-base64!!!' })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects oversized base64 (> 5MB equivalent)', () => {
+    const big = 'A'.repeat(Math.ceil(5 * 1024 * 1024 * 1.4) + 1)
+    const result = mealAnalyzeSchema.safeParse({ imageBase64: big })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts valid base64 string', () => {
+    const valid = Buffer.from('fake image data').toString('base64')
+    const result = mealAnalyzeSchema.safeParse({ imageBase64: valid })
+    expect(result.success).toBe(true)
   })
 })
 

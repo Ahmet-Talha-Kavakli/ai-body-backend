@@ -38,8 +38,17 @@ export const sessionCompleteSchema = z.object({
     .optional(),
 })
 
+// Base64 regex: only A-Z, a-z, 0-9, +, /, = characters
+const BASE64_REGEX = /^[A-Za-z0-9+/]+=*$/
+// 5MB raw → ~6.7MB base64 (base64 expands by ~4/3)
+const MAX_BASE64_LENGTH = Math.ceil(5 * 1024 * 1024 * 1.4)
+
 export const mealAnalyzeSchema = z.object({
-  imageBase64: z.string().min(1),
+  imageBase64: z
+    .string()
+    .min(1, 'Görsel boş olamaz')
+    .max(MAX_BASE64_LENGTH, 'Görsel 5MB limitini aşıyor')
+    .refine((val) => BASE64_REGEX.test(val), 'Geçersiz base64 formatı'),
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional(),
 })
 
