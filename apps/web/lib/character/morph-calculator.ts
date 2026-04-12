@@ -3,7 +3,7 @@ import type {
   MorphCalculatorInput,
   FitnessLevel,
   Gender,
-} from '@repo/shared-types'
+} from '@fitai/shared-types'
 
 const FITNESS_LEVELS: FitnessLevel[] = ['beginner', 'intermediate', 'advanced', 'elite']
 const GENDERS: Gender[] = ['male', 'female', 'other', 'prefer_not_to_say']

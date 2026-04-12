@@ -1,4 +1,4 @@
-import type { FitnessLevel } from '@repo/shared-types'
+import type { FitnessLevel } from '@fitai/shared-types'
 
 export function workoutCountToFitnessLevel(count: number): FitnessLevel {
   if (count >= 100) return 'elite'
