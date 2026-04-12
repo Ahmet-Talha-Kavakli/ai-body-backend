@@ -63,6 +63,7 @@ model User {
   readinessScores ReadinessScore[] @relation("UserReadinessScores")
   weeklySummaries WeeklySummary[] @relation("UserWeeklySummaries")
   bloodWorkRecords BloodWorkRecord[]
+  characterMorphCache  Json?
 
   @@index([clerkId])
   @@index([email])
