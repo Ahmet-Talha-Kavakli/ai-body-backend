@@ -13,7 +13,7 @@ import { db } from '@/lib/db/client'
 import type { User } from '@prisma/client'
 
 type RouteContext = {
-  params?: Record<string, string>
+  params?: Record<string, string | string[]> | Promise<Record<string, string | string[]>>
 }
 
 type AuthenticatedHandler<C extends RouteContext = RouteContext> = (
@@ -26,7 +26,7 @@ type AuthenticatedHandler<C extends RouteContext = RouteContext> = (
  * Returns 401 if not authenticated, 404 if user not in DB.
  */
 export function withAuth<C extends RouteContext = RouteContext>(handler: AuthenticatedHandler<C>) {
-  return async (req: NextRequest, ctx: C): Promise<NextResponse> => {
+  return async (req: NextRequest, ctx: any): Promise<NextResponse> => {
     const { userId: clerkId } = await auth()
 
     if (!clerkId) {
