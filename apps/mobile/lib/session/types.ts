@@ -89,3 +89,11 @@ export interface SyncConflict {
   resolutionStrategy: 'local-wins' | 'server-wins' | 'merge'
   metadata: Record<string, any>
 }
+
+// Session Configuration
+export interface SessionConfig {
+  userId: string
+  exercise: string
+  db: any // SQLite Database instance
+  voiceCoachConfig?: VoiceCoachConfig
+}
