@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
 import { logger } from '@/lib/logger'
+import { updateCharacterMorphCache } from '@/lib/character/update-morph-cache'
 
 export async function POST(req: NextRequest) {
   try {
@@ -86,6 +87,14 @@ export async function POST(req: NextRequest) {
         })),
       })
     }
+
+    // Fire-and-forget: update character morph cache
+    updateCharacterMorphCache(user.id, {
+      weightKg: weightKg ?? 70,
+      heightCm: heightCm ?? 175,
+      gender: gender ?? 'other',
+      totalWorkoutCount: 0,
+    }).catch((err: unknown) => logger.error({ err }, 'Failed to update morph cache on onboarding'))
 
     return NextResponse.json({ success: true })
   } catch (error) {

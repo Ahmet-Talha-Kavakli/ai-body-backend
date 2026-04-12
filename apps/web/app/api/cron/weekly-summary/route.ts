@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/client'
 import { isValidCronRequest } from '@/lib/env/validate'
 import { logger } from '@/lib/logger'
+import { updateCharacterMorphCache } from '@/lib/character/update-morph-cache'
 
 export const runtime = 'nodejs'
 
@@ -120,6 +121,21 @@ export async function POST(req: NextRequest) {
       })
 
       summaries.push(summary)
+
+      // Update character morph cache for user
+      const profile = await prisma.healthProfile.findUnique({
+        where: { userId: user.id },
+        select: { weightKg: true, heightCm: true, gender: true },
+      })
+      if (profile) {
+        const totalWorkoutCount = await prisma.workoutSession.count({ where: { userId: user.id } })
+        await updateCharacterMorphCache(user.id, {
+          weightKg: profile.weightKg ?? 70,
+          heightCm: profile.heightCm ?? 175,
+          gender: (profile.gender as string) ?? 'other',
+          totalWorkoutCount,
+        })
+      }
     }
 
     return NextResponse.json(
