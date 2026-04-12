@@ -63,6 +63,7 @@ model User {
   readinessScores ReadinessScore[] @relation("UserReadinessScores")
   weeklySummaries WeeklySummary[] @relation("UserWeeklySummaries")
   bloodWorkRecords BloodWorkRecord[]
+  fitnessCoachSessions FitnessCoachSession[]
   characterMorphCache  Json?
 
   @@index([clerkId])
@@ -754,6 +755,18 @@ model BloodWorkRecord {
   analysis  Json
   uploadedAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model FitnessCoachSession {
+  id              String   @id @default(cuid())
+  userId          String
+  transcript      Json
+  durationSeconds Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
