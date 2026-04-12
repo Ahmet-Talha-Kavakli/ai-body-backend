@@ -7,8 +7,23 @@ export async function POST(req: NextRequest) {
     const { userId: clerkId } = await auth()
     if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = await req.json()
-    const { fitnessLevel, goals, sessionDuration, injuries, equipment, age, weightKg, heightCm, gender } = body
+    let body: Record<string, unknown>
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ error: 'Geçersiz JSON formatı' }, { status: 400 })
+    }
+    const {
+      fitnessLevel,
+      goals,
+      sessionDuration,
+      injuries,
+      equipment,
+      age,
+      weightKg,
+      heightCm,
+      gender,
+    } = body
 
     // Kullanıcıyı bul
     const user = await db.user.findUnique({ where: { clerkId } })
