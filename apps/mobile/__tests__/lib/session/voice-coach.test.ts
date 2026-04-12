@@ -370,9 +370,10 @@ describe('VoiceCoach', () => {
 
       expect(state).toHaveProperty('isListening')
       expect(state).toHaveProperty('isProcessing')
-      expect(state).toHaveProperty('feedbackQueue')
       expect(state).toHaveProperty('error')
-      expect(Array.isArray(state.feedbackQueue)).toBe(true)
+      // feedbackQueue is accessed via getQueue() method, not state
+      expect(voiceCoach.getQueue()).toBeDefined()
+      expect(Array.isArray(voiceCoach.getQueue())).toBe(true)
     })
   })
 

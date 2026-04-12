@@ -1,4 +1,5 @@
 import { VoiceCoachConfig, VoiceMessage, FormAnalysisResult } from '@/lib/session/types'
+import { VOICE } from '@/lib/session/constants'
 
 /**
  * VoiceCoach: AI-powered voice feedback system using VAPI integration
@@ -17,12 +18,12 @@ export class VoiceCoach {
   private connected = false
   private feedbackQueue: VoiceMessage[] = []
   private lastBatchedErrors: Map<string, number> = new Map()
-  private batchThreshold = 3000 // ms between batches for same error
+  private readonly batchThreshold: number
+  private readonly vapiTimeout: number
   private abortController: AbortController | null = null
   private state = {
     isListening: true,
     isProcessing: false,
-    feedbackQueue: [] as VoiceMessage[],
     error: null as Error | null,
   }
 
@@ -37,7 +38,16 @@ export class VoiceCoach {
     if (!config.language) {
       throw new Error('VoiceCoachConfig: language is required')
     }
+    if (!config.timeout || config.timeout < 1000) {
+      throw new Error('VoiceCoachConfig: timeout must be >= 1000ms')
+    }
+    if (config.enableFallback === undefined) {
+      throw new Error('VoiceCoachConfig: enableFallback is required')
+    }
+
     this.config = config
+    this.vapiTimeout = config.timeout
+    this.batchThreshold = VOICE.MIN_REST_BETWEEN_FEEDBACK
   }
 
   /**
@@ -69,6 +79,7 @@ export class VoiceCoach {
    */
   async sendFormAnalysis(analysis: FormAnalysisResult): Promise<void> {
     if (!this.connected) {
+      this.setError(new Error('VoiceCoach not connected — feedback dropped'))
       return
     }
 
@@ -96,12 +107,15 @@ export class VoiceCoach {
           played: false,
         }
       } catch (error) {
-        // Fallback to TTS
-        feedback = await this._fallbackTTS(message)
+        // Fallback to TTS if enabled
+        if (this.config.enableFallback) {
+          feedback = await this._fallbackTTS(message)
+        } else {
+          throw error
+        }
       }
 
       this.feedbackQueue.push(feedback)
-      this.state.feedbackQueue = [...this.feedbackQueue]
 
       // Track this error for batching
       this._recordErrorBatch(analysis)
@@ -157,20 +171,16 @@ export class VoiceCoach {
     }
 
     const feedback = this.feedbackQueue.shift()!
-    this.state.feedbackQueue = [...this.feedbackQueue]
     return feedback
   }
 
   /**
-   * Private: Call VAPI API with 4-second timeout
+   * Private: Call VAPI API with configured timeout
    */
   private async _callVAPI(message: string): Promise<string> {
     if (!this.abortController) {
       throw new Error('VoiceCoach not initialized')
     }
-
-    // Spec requires 4-second timeout for VAPI calls
-    const VAPI_TIMEOUT = 4000
 
     try {
       // In production, would call actual VAPI endpoint:
@@ -182,11 +192,11 @@ export class VoiceCoach {
       //     message: message
       //   }),
       //   signal: this.abortController.signal,
-      //   timeout: VAPI_TIMEOUT
+      //   timeout: this.vapiTimeout
       // })
 
-      // Simulate VAPI call with 4-second timeout
-      return await this._simulateVAPICall(message, VAPI_TIMEOUT)
+      // Simulate VAPI call with configured timeout
+      return await this._simulateVAPICall(message, this.vapiTimeout)
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('VAPI request timeout')
@@ -238,7 +248,6 @@ export class VoiceCoach {
     this.feedbackQueue = []
     this.lastBatchedErrors.clear()
     this.connected = false
-    this.state.feedbackQueue = []
   }
 
   /**
