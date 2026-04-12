@@ -37,7 +37,12 @@ export async function POST(request: NextRequest) {
     const metrics = await prisma.userNutritionMetrics.upsert({
       where: { userId },
       update: parsed.data as any,
-      create: { userId, ...parsed.data } as any,
+      create: {
+        userId,
+        ...parsed.data,
+        alcoholConsumption: parsed.data.alcoholConsumption || 'None',
+        smoking: parsed.data.smoking ?? false,
+      } as any,
     })
 
     return NextResponse.json({ success: true, data: metrics })
