@@ -117,6 +117,7 @@ model WorkoutProgram {
   mesoCycleWeeks Int           @default(4)
   currentWeek    Int           @default(1)
   deloadWeek     Int?
+  weeklyPlanJson Json?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 

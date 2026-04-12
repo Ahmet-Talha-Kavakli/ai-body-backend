@@ -145,6 +145,7 @@ Türkçe yanıt ver. Sadece JSON döndür, açıklama ekleme.`
           generatedByAi: true,
           aiVersion: 'gpt-4o-mini',
           isActive: true,
+          weeklyPlanJson: programData as never,
         },
       })
 
