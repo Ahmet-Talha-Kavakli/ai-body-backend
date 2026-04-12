@@ -6,7 +6,8 @@ import { canUseFeatureWithLimit, getPlanLimits, isUsageResetNeeded } from '@/lib
 import { withAiRateLimit } from '@/lib/redis/ratelimit-middleware'
 import { mealAnalyzeSchema } from '@/lib/validation/schemas'
 import { logger } from '@/lib/logger'
-import { injectMemoryIntoPrompt } from '@/lib/memory/prompt-injector'
+import { retrieveMemoryContext, injectMemoryIntoPrompt } from '@/lib/memory'
+import type { Prisma } from '@prisma/client'
 
 export async function POST(req: NextRequest) {
   try {
@@ -93,12 +94,12 @@ Türkçe yanıt ver. Sadece JSON döndür:
 }`
 
     // Beslenme hafızasını çek ve prompt'a ekle
-    const enrichedPrompt = await injectMemoryIntoPrompt(
+    const memoryContext = await retrieveMemoryContext(
       user.id,
       'nutrition meals protein calorie intake diet habits',
-      userPrompt,
       { types: ['WEEKLY_SUMMARY', 'NUTRITION_PATTERN', 'SESSION_SUMMARY'], limit: 3 }
     )
+    const enrichedPrompt = injectMemoryIntoPrompt(userPrompt, memoryContext)
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -134,13 +135,13 @@ Türkçe yanıt ver. Sadece JSON döndür:
       data: {
         userId: user.id,
         mealType: mealType ?? 'snack',
-        items: analysis.foodItems ?? [],
-        totalCalories: analysis.totalCalories ?? 0,
-        totalProteinG: analysis.totalProteinG ?? 0,
-        totalCarbsG: analysis.totalCarbsG ?? 0,
-        totalFatG: analysis.totalFatG ?? 0,
+        items: (analysis.foodItems as Prisma.InputJsonValue) ?? [],
+        totalCalories: (analysis.totalCalories as number) ?? 0,
+        totalProteinG: (analysis.totalProteinG as number) ?? 0,
+        totalCarbsG: (analysis.totalCarbsG as number) ?? 0,
+        totalFatG: (analysis.totalFatG as number) ?? 0,
         aiAnalyzed: true,
-        notes: analysis.notes,
+        notes: (analysis.notes as string) ?? null,
       },
     })
 

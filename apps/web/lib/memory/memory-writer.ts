@@ -62,19 +62,15 @@ async function writeMemory(params: {
     const embedding = await createEmbedding(params.content)
     const decayScore = calculateDecayScore(new Date(), params.type)
 
-    await prisma.userMemoryEmbedding.create({
-      data: {
-        userId: params.userId,
-        content: params.content,
-        embedding: embedding as never,
-        type: params.type,
-        importance: params.importance,
-        decayScore,
-        tags: params.tags,
-        sourceId: params.sourceId,
-        sourceType: params.sourceType,
-      },
-    })
+    // Convert embedding array to pgvector format: [1,2,3] -> "[1,2,3]"::vector
+    const embeddingStr = JSON.stringify(embedding)
+
+    // Insert with raw SQL for pgvector support since Prisma doesn't handle Unsupported types in create
+    await prisma.$executeRaw`
+      INSERT INTO "UserMemoryEmbedding"
+      ("userId", "content", "embedding", "type", "importance", "decayScore", "tags", "sourceId", "sourceType", "createdAt")
+      VALUES (${params.userId}, ${params.content}, ${embeddingStr}::vector, ${params.type}, ${params.importance}, ${decayScore}, ${params.tags}, ${params.sourceId}, ${params.sourceType}, NOW())
+    `
   } catch (err) {
     logger.error({ err, userId: params.userId, type: params.type }, 'memory write failed')
   }

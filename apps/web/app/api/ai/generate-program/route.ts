@@ -5,7 +5,7 @@ import { openai } from '@/lib/ai/client'
 import { canUseFeatureWithLimit, getPlanLimits, isUsageResetNeeded } from '@/lib/stripe/plans'
 import { withAiRateLimit } from '@/lib/redis/ratelimit-middleware'
 import { logger } from '@/lib/logger'
-import { injectMemoryIntoPrompt } from '@/lib/memory/prompt-injector'
+import { retrieveMemoryContext, injectMemoryIntoPrompt } from '@/lib/memory'
 
 export async function POST(req: NextRequest) {
   try {
@@ -113,11 +113,11 @@ KULLANICI PROFİLİ:
 Türkçe yanıt ver. Sadece JSON döndür, açıklama ekleme.`
 
     // Kullanıcının geçmiş antrenman hafızasını sessizce enjekte et
-    const enrichedPrompt = await injectMemoryIntoPrompt(
+    const memoryContext = await retrieveMemoryContext(
       user.id,
-      `program generation ${healthProfile.fitnessLevel} ${healthProfile.goals.join(' ')} ${healthProfile.availableEquipment.join(' ')}`,
-      prompt
+      `program generation ${healthProfile.fitnessLevel} ${healthProfile.goals.join(' ')} ${healthProfile.availableEquipment.join(' ')}`
     )
+    const enrichedPrompt = injectMemoryIntoPrompt(prompt, memoryContext)
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -140,8 +140,8 @@ Türkçe yanıt ver. Sadece JSON döndür, açıklama ekleme.`
       const newProgram = await tx.workoutProgram.create({
         data: {
           userId: user.id,
-          name: programData.programName ?? 'AI Programı',
-          description: programData.description ?? '',
+          name: (programData.programName as string) ?? 'AI Programı',
+          description: (programData.description as string) ?? '',
           generatedByAi: true,
           aiVersion: 'gpt-4o-mini',
           isActive: true,

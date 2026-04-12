@@ -1,5 +1,6 @@
 import { openai } from '@/lib/ai/client'
 import { prisma } from '@/lib/db/client'
+import { logger } from '@/lib/logger'
 import type { MemoryContext } from './types'
 
 export interface RankParams {
@@ -47,7 +48,10 @@ async function generatePromptEmbedding(prompt: string): Promise<number[]> {
     })
     return response.data[0].embedding
   } catch (error) {
-    logger.error({ error: error instanceof Error ? error.message : String(error) }, 'failed to generate prompt embedding')
+    logger.error(
+      { error: error instanceof Error ? error.message : String(error) },
+      'failed to generate prompt embedding'
+    )
     // Return zero vector on error (graceful degradation)
     return Array(1536).fill(0)
   }
