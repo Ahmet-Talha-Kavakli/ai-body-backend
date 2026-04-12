@@ -10,3 +10,5 @@ export * from './health'
 export * from './ai'
 // Common
 export * from './common'
+// Character Morph
+export * from './character'
