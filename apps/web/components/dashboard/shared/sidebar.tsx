@@ -38,14 +38,14 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
         animate={{ x: 0 }}
         exit={{ x: -280 }}
         transition={{ duration: 0.3 }}
-        className="hidden lg:flex flex-col w-64 border-r border-border/30 bg-card/50 backdrop-blur-sm"
+        className="border-border/30 bg-card/50 hidden w-64 flex-col border-r backdrop-blur-sm lg:flex"
       >
         <div className="flex items-center gap-2 px-6 py-8">
-          <div className="w-8 h-8 bg-primary rounded-lg" />
-          <span className="font-bold text-xl">FitAI</span>
+          <div className="bg-primary h-8 w-8 rounded-lg" />
+          <span className="text-xl font-bold">FitAI</span>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2">
+        <nav className="flex-1 space-y-2 px-4">
           {sidebarItems.map((item, idx) => {
             const isActive = pathname === item.href
 
@@ -63,10 +63,17 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
                     variant={isActive ? 'default' : 'ghost'}
                     className={cn(
                       'w-full justify-start gap-3 transition-all',
-                      isActive && 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                      isActive && 'bg-primary text-primary-foreground shadow-primary/20 shadow-lg'
                     )}
                   >
-                    <Image src={item.icon} alt={item.label} width={16} height={16} unoptimized className="w-4 h-4" />
+                    <Image
+                      src={item.icon}
+                      alt={item.label}
+                      width={16}
+                      height={16}
+                      unoptimized
+                      className="h-4 w-4"
+                    />
                     {item.label}
                   </Button>
                 </Link>
@@ -75,17 +82,13 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
           })}
         </nav>
 
-        <div className="px-4 py-6 border-t border-border/30">
-          <motion.button
-            whileHover={{ x: 4 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full"
-          >
+        <div className="border-border/30 border-t px-4 py-6">
+          <motion.div whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }} className="w-full">
             <Button variant="ghost" className="w-full justify-start gap-3 transition-all">
-              <LogOut className="w-4 h-4" />
+              <LogOut className="h-4 w-4" />
               Sign Out
             </Button>
-          </motion.button>
+          </motion.div>
         </div>
       </motion.div>
 
@@ -95,14 +98,14 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
           initial={{ x: -280 }}
           animate={{ x: 0 }}
           exit={{ x: -280 }}
-          className="fixed inset-y-0 left-0 z-50 w-64 border-r border-border/30 bg-card backdrop-blur-sm lg:hidden"
+          className="border-border/30 bg-card fixed inset-y-0 left-0 z-50 w-64 border-r backdrop-blur-sm lg:hidden"
         >
           <div className="flex items-center gap-2 px-6 py-8">
-            <div className="w-8 h-8 bg-primary rounded-lg" />
-            <span className="font-bold text-xl">FitAI</span>
+            <div className="bg-primary h-8 w-8 rounded-lg" />
+            <span className="text-xl font-bold">FitAI</span>
           </div>
 
-          <nav className="px-4 space-y-2">
+          <nav className="space-y-2 px-4">
             {sidebarItems.map((item, idx) => {
               const isActive = pathname === item.href
 
@@ -115,19 +118,22 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
                   whileHover={{ x: 4 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <Link
-                    href={item.href}
-                    onClick={onClose}
-                    prefetch
-                  >
+                  <Link href={item.href} onClick={onClose} prefetch>
                     <Button
                       variant={isActive ? 'default' : 'ghost'}
                       className={cn(
                         'w-full justify-start gap-3 transition-all',
-                        isActive && 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                        isActive && 'bg-primary text-primary-foreground shadow-primary/20 shadow-lg'
                       )}
                     >
-                      <Image src={item.icon} alt={item.label} width={16} height={16} unoptimized className="w-4 h-4" />
+                      <Image
+                        src={item.icon}
+                        alt={item.label}
+                        width={16}
+                        height={16}
+                        unoptimized
+                        className="h-4 w-4"
+                      />
                       {item.label}
                     </Button>
                   </Link>
@@ -137,16 +143,12 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
           </nav>
 
           <div className="absolute bottom-6 left-4 right-4">
-            <motion.button
-              whileHover={{ x: 4 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full"
-            >
+            <motion.div whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }} className="w-full">
               <Button variant="ghost" className="w-full justify-start gap-3 transition-all">
-                <LogOut className="w-4 h-4" />
+                <LogOut className="h-4 w-4" />
                 Sign Out
               </Button>
-            </motion.button>
+            </motion.div>
           </div>
         </motion.div>
       )}

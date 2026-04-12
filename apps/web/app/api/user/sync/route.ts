@@ -23,12 +23,12 @@ export async function POST() {
         name: `${clerkUser.firstName ?? ''} ${clerkUser.lastName ?? ''}`.trim() || 'Kullanıcı',
         avatarUrl: clerkUser.imageUrl,
       },
-      include: { healthProfile: true },
+      include: { healthProfile: true, basicProfile: true },
     })
 
     return NextResponse.json({
       user,
-      onboardingCompleted: !!user.healthProfile,
+      onboardingCompleted: !!user.basicProfile || !!user.healthProfile,
     })
   } catch (error) {
     console.error('User sync error:', error)
@@ -43,12 +43,12 @@ export async function GET() {
 
     const user = await db.user.findUnique({
       where: { clerkId },
-      include: { healthProfile: true, subscription: true },
+      include: { healthProfile: true, basicProfile: true, subscription: true },
     })
 
     return NextResponse.json({
       user,
-      onboardingCompleted: !!user?.healthProfile,
+      onboardingCompleted: !!user?.basicProfile || !!user?.healthProfile,
     })
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

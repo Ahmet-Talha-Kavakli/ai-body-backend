@@ -3,10 +3,18 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db/client'
 import { profileUpdateSchema } from '@/lib/validation/schemas'
 
+async function getDbUserId(clerkId: string): Promise<string | null> {
+  const user = await prisma.user.findUnique({ where: { clerkId }, select: { id: true } })
+  return user?.id ?? null
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth()
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { userId: clerkId } = await auth()
+    if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const userId = await getDbUserId(clerkId)
+    if (!userId) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
     const profile = await prisma.userBasicProfile.findUnique({
       where: { userId },
@@ -21,8 +29,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth()
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { userId: clerkId } = await auth()
+    if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const userId = await getDbUserId(clerkId)
+    if (!userId) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
     const body = await request.json()
 

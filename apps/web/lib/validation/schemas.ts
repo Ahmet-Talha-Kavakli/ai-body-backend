@@ -53,15 +53,19 @@ export const coachMessageSchema = z.object({
 })
 
 export const healthProfileSchema = z.object({
-  injuries: z.array(z.string()).optional(),
-  restrictions: z.array(z.string()).optional(),
-  painPoints: z.array(z.string()).optional(),
+  activeInjuries: z.any().optional(),
+  pastInjuries: z.any().optional(),
+  medicalRestrictions: z.array(z.string()).optional(),
+  currentPainPoints: z.any().optional(),
+  doctorNotes: z.string().optional(),
 })
 
 export const trainingProfileSchema = z.object({
   trainingDaysPerWeek: z.number().int().min(1).max(7).optional(),
   preferredExercises: z.array(z.string()).optional(),
   dislikedExercises: z.array(z.string()).optional(),
+  personalRecords: z.any().optional(),
+  startingStats: z.any().optional(),
   trainingStyle: z.string().optional(),
   preferredDuration: z.number().int().min(10).optional(),
 })
@@ -72,6 +76,8 @@ export const nutritionProfileSchema = z.object({
   dietType: z.string().optional(),
   avgSleepHours: z.number().min(0).max(24).optional(),
   stressLevel: z.number().int().min(0).max(10).optional(),
+  alcoholConsumption: z.string().optional(),
+  smoking: z.boolean().optional(),
   waterIntakeTarget: z.number().nonnegative().optional(),
   supplementStack: z.array(z.string()).optional(),
 })

@@ -56,22 +56,24 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
     'Permissions-Policy',
     'camera=(self), microphone=(self), geolocation=(self), payment=()'
   )
-  // Content Security Policy
-  const csp = [
-    "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.com https://*.clerk.accounts.dev https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live https://*.vercel.dev`,
-    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.vercel.live https://*.vercel.dev`,
-    `font-src 'self' https://fonts.gstatic.com`,
-    `img-src 'self' data: blob: https: http:`,
-    `connect-src 'self' https://api.clerk.com https://*.clerk.accounts.dev https://clerk.com https://*.clerk.com https://vercel.live https://*.vercel.live https://clerk-telemetry.com https://*.vercel.dev wss: ${isDev ? 'ws:' : ''}`,
-    `frame-src 'self' https://clerk.com https://*.clerk.accounts.dev https://vercel.live https://*.vercel.live`,
-    `media-src 'self' blob:`,
-    `worker-src 'self' blob:`,
-    `frame-ancestors 'none'`,
-  ]
-    .filter(Boolean)
-    .join('; ')
-  response.headers.set('Content-Security-Policy', csp)
+  // Content Security Policy - dev'de gevşek, prod'da sıkı
+  if (!isDev) {
+    const csp = [
+      "default-src 'self'",
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.com https://*.clerk.accounts.dev https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live https://*.vercel.dev`,
+      `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.vercel.live https://*.vercel.dev`,
+      `font-src 'self' https://fonts.gstatic.com`,
+      `img-src 'self' data: blob: https: http:`,
+      `connect-src 'self' https://api.clerk.com https://*.clerk.accounts.dev https://clerk.com https://*.clerk.com https://vercel.live https://*.vercel.live https://clerk-telemetry.com https://*.vercel.dev wss:`,
+      `frame-src 'self' https://clerk.com https://*.clerk.accounts.dev https://vercel.live https://*.vercel.live`,
+      `media-src 'self' blob:`,
+      `worker-src 'self' blob:`,
+      `frame-ancestors 'none'`,
+    ]
+      .filter(Boolean)
+      .join('; ')
+    response.headers.set('Content-Security-Policy', csp)
+  }
 
   return response
 }
