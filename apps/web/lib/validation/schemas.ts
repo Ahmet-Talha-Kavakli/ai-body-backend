@@ -49,7 +49,9 @@ export const mealAnalyzeSchema = z.object({
     .min(1, 'Görsel boş olamaz')
     .max(MAX_BASE64_LENGTH, 'Görsel 5MB limitini aşıyor')
     .refine((val) => BASE64_REGEX.test(val), 'Geçersiz base64 formatı'),
-  mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional(),
+  mealType: z
+    .enum(['breakfast', 'lunch', 'dinner', 'snack', 'pre_workout', 'post_workout'])
+    .optional(),
 })
 
 export const coachMessageSchema = z.object({
