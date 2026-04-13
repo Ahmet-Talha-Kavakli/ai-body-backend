@@ -402,40 +402,82 @@ model MealTemplate {
 
 ## 12. Phase Boundaries
 
-### Phase 1 — Core Logging (this spec)
+### Phase 1 — Core Logging
 
 - `TodayTab` (CalorieRing, MacroBars, WaterTracker, MealTimeline, QuickAddBar)
 - `ExploreTab` (FoodSearchBar, FoodSearchResults, RecentFoods, BarcodeScanner)
 - All modals (AddMeal, FoodDetail, Barcode, PhotoAnalyzer)
-- DB migration (WaterLog, MealTemplate)
+- Porsiyon hesaplama (kaşık / bardak / dilim / paket) — FoodDetailModal içinde
+- Öğün kopyalama (dünün öğününü bugüne kopyala) — MealTimelineItem üzerinde
+- Lif takibi — makro barların yanına eklenir
+- Glisemik indeks gösterimi — FoodDetailModal ve timeline item'da
+- Alerjen uyarıları (gluten, laktoz, fındık vs.) — Open Food Facts'ten çekilir, FoodDetailModal'da gösterilir
+- Diyet profili (keto, vegan, paleo, düşük karbonhidrat) — ProfileTab, arama filtresi olarak kullanılır
+- Streak sistemi (kaç gün üst üste hedef tutturuldu) — TodayTab hero alanında rozet olarak
+- Beslenme puanı (günlük skor 0-100) — TodayTab hero alanında
+- DB migration (WaterLog, MealTemplate, NutritionStreak, DietProfile)
 - New API routes
 - i18n foundation (TR + EN)
 
-### Phase 2 — History & Insights
+### Phase 2 — History, Insights & Vitamins
 
 - `HistoryTab` (WeeklyChart, MonthlyHeatmap, StatsRow)
 - `AiNutritionTip`
 - Water goal progress
+- Vitamin & mineral takibi (D, B12, demir, kalsiyum vs.) — Open Food Facts micronutrient data
+- Besin etiketi tarama (fotoğraftan makro okuma — AI OCR) — MealPhotoAnalyzer genişletmesi
+- Rozet / başarım sistemi (streak milestone, makro hedef, haftalık mükemmel gün)
 
-### Phase 3 — Advanced & Social
+### Phase 3 — Planning & Advanced
 
 - `ProfileTab` + MealTemplates
+- Öğün planlama (haftalık menu oluştur) — yeni `PlannerTab`
+- Alışveriş listesi (öğün planından otomatik oluştur)
 - Turkish food database (custom DB)
 - Friends comparison
 - 30+ language i18n expansion
 
 ---
 
-## 13. Out of Scope (Phase 1)
+## 13. New DB Models (additions)
+
+```prisma
+model NutritionStreak {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak Int     @default(0)
+  longestStreak Int     @default(0)
+  lastLogDate  DateTime?
+  updatedAt    DateTime @updatedAt
+}
+
+model DietProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // "keto" | "vegan" | "paleo" | "low_carb" | "balanced"
+  updatedAt DateTime @updatedAt
+}
+```
+
+`NutritionGoal` modeline `fiberG Float @default(25)` alanı eklenir (lif hedefi).
+
+---
+
+## 14. Out of Scope (Phase 1)
 
 - Push notification reminders
 - PDF/export reports
 - Social feed
 - Custom food database (Open Food Facts only for Phase 1)
+- Vitamin/mineral takibi (Phase 2)
+- Besin etiketi fotoğraf OCR (Phase 2)
+- Rozet sistemi (Phase 2)
 
 ---
 
-## 14. Success Criteria
+## 15. Success Criteria
 
 - Calorie ring animates at 60fps on first render
 - Food search returns results within 500ms (debounced 300ms + API)
@@ -444,3 +486,5 @@ model MealTemplate {
 - `prefers-reduced-motion` disables all animations
 - Barcode scan identifies product within 2 seconds
 - TR/EN language switch works without page reload
+- Streak güncellenir her öğün kayıt sonrası
+- Beslenme puanı anlık hesaplanır (hedef dolum oranı bazlı)
