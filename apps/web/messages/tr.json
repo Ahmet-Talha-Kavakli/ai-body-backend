@@ -1,0 +1,62 @@
+{
+  "nutrition": {
+    "title": "Beslenme",
+    "subtitle": "Günlük besin takibi",
+    "tabs": {
+      "today": "Bugün",
+      "explore": "Keşfet",
+      "history": "Geçmiş",
+      "profile": "Profil"
+    },
+    "today": {
+      "caloriesConsumed": "Tüketilen kalori",
+      "caloriesRemaining": "kalan",
+      "caloriesOver": "fazla",
+      "protein": "Protein",
+      "carbs": "Karbonhidrat",
+      "fat": "Yağ",
+      "fiber": "Lif",
+      "water": "Su",
+      "meals": "Bugünkü Öğünler",
+      "noMeals": "Henüz öğün eklenmedi",
+      "addFirst": "İlk öğünü ekle",
+      "quickAdd": "Hızlı Ekle",
+      "streak": "günlük seri",
+      "score": "Beslenme puanı"
+    },
+    "explore": {
+      "searchPlaceholder": "Besin ara...",
+      "recentFoods": "Son Kullanılanlar",
+      "noResults": "Sonuç bulunamadı",
+      "addToLog": "Günlüğe Ekle",
+      "per100g": "100g başına"
+    },
+    "mealTypes": {
+      "breakfast": "Kahvaltı",
+      "lunch": "Öğle Yemeği",
+      "dinner": "Akşam Yemeği",
+      "snack": "Ara Öğün",
+      "pre_workout": "Antrenman Öncesi",
+      "post_workout": "Antrenman Sonrası"
+    },
+    "actions": {
+      "addMeal": "Öğün Ekle",
+      "photoAnalysis": "Fotoğrafla",
+      "scanBarcode": "Barkod Tara",
+      "copyMeal": "Kopyala",
+      "delete": "Sil",
+      "save": "Kaydet",
+      "cancel": "İptal"
+    },
+    "allergens": {
+      "gluten": "Gluten",
+      "milk": "Süt",
+      "eggs": "Yumurta",
+      "nuts": "Kuruyemiş",
+      "peanuts": "Fıstık",
+      "soy": "Soya",
+      "fish": "Balık",
+      "shellfish": "Kabuklu Deniz Ürünleri"
+    }
+  }
+}

@@ -66,6 +66,11 @@ model User {
   fitnessCoachSessions FitnessCoachSession[]
   characterMorphCache  Json?
 
+  // Nutrition Hub Phase 1
+  waterLogs        WaterLog[]
+  nutritionStreak  NutritionStreak?
+  dietProfile      DietProfile?
+
   @@index([clerkId])
   @@index([email])
 }
@@ -283,8 +288,43 @@ model NutritionGoal {
   carbsG         Float
   fatG           Float
   waterMl        Float    @default(2500)
+  fiberG         Float    @default(25)
+  waterGoalMl    Float    @default(2500)
   generatedByAi  Boolean  @default(false)
   updatedAt      DateTime @updatedAt
+}
+
+model WaterLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  glasses   Int      @default(0)
+  loggedAt  DateTime @default(now())
+  amountMl  Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model NutritionStreak {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak Int       @default(0)
+  longestStreak Int       @default(0)
+  lastLogDate   DateTime?
+  updatedAt     DateTime  @updatedAt
+}
+
+model DietProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   @default("balanced")
+  updatedAt DateTime @updatedAt
 }
 
 // ──────────────────────────────────────────

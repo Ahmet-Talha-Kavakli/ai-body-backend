@@ -1,0 +1,62 @@
+{
+  "nutrition": {
+    "title": "Nutrition",
+    "subtitle": "Daily food tracking",
+    "tabs": {
+      "today": "Today",
+      "explore": "Explore",
+      "history": "History",
+      "profile": "Profile"
+    },
+    "today": {
+      "caloriesConsumed": "Calories consumed",
+      "caloriesRemaining": "remaining",
+      "caloriesOver": "over",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fat",
+      "fiber": "Fiber",
+      "water": "Water",
+      "meals": "Today's Meals",
+      "noMeals": "No meals logged yet",
+      "addFirst": "Add your first meal",
+      "quickAdd": "Quick Add",
+      "streak": "day streak",
+      "score": "Nutrition score"
+    },
+    "explore": {
+      "searchPlaceholder": "Search food...",
+      "recentFoods": "Recent Foods",
+      "noResults": "No results found",
+      "addToLog": "Add to Log",
+      "per100g": "per 100g"
+    },
+    "mealTypes": {
+      "breakfast": "Breakfast",
+      "lunch": "Lunch",
+      "dinner": "Dinner",
+      "snack": "Snack",
+      "pre_workout": "Pre-Workout",
+      "post_workout": "Post-Workout"
+    },
+    "actions": {
+      "addMeal": "Add Meal",
+      "photoAnalysis": "Photo",
+      "scanBarcode": "Scan Barcode",
+      "copyMeal": "Copy",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "allergens": {
+      "gluten": "Gluten",
+      "milk": "Milk",
+      "eggs": "Eggs",
+      "nuts": "Tree Nuts",
+      "peanuts": "Peanuts",
+      "soy": "Soy",
+      "fish": "Fish",
+      "shellfish": "Shellfish"
+    }
+  }
+}
