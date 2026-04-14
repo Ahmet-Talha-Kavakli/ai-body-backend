@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { openai } from '@/lib/ai/client'
 
 function todayDate() {
   const d = new Date()
@@ -94,7 +95,41 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    return NextResponse.json({ success: true, glasses: log.glasses, amountMl: log.amountMl })
+    // AI koç yorumu üret
+    let coachMessage: string | null = null
+    try {
+      const hour = new Date().getHours()
+      const timeOfDay = hour < 12 ? 'sabah' : hour < 17 ? 'öğleden sonra' : 'akşam'
+      const percentage = Math.round((newAmountMl / dailyGoalMl) * 100)
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Sen bir su içme koçusun. Kullanıcıya kısa (1-2 cümle), samimi ve motive edici Türkçe yorumlar yap. Emoji kullanabilirsin.',
+          },
+          {
+            role: 'user',
+            content: `Kullanıcı ${timeOfDay} saatinde ${addMl}ml su içti. Günlük hedefe ulaşma oranı: %${percentage}. Kısa bir yorum yap.`,
+          },
+        ],
+        max_tokens: 80,
+        temperature: 0.8,
+      })
+      coachMessage = completion.choices[0]?.message?.content ?? null
+    } catch {
+      // AI başarısız olursa sessizce devam et
+      coachMessage = null
+    }
+
+    return NextResponse.json({
+      success: true,
+      glasses: log.glasses,
+      amountMl: log.amountMl,
+      coachMessage,
+    })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
