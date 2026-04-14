@@ -44,14 +44,15 @@ export async function PUT(req: NextRequest) {
       city,
     } = await req.json()
 
-    const data: Record<string, unknown> = {}
-    if (dailyGoalMl !== undefined) data.dailyGoalMl = dailyGoalMl
-    if (cupSizeMl !== undefined) data.cupSizeMl = cupSizeMl
-    if (reminderMode !== undefined) data.reminderMode = reminderMode
-    if (reminderIntervalHours !== undefined) data.reminderIntervalHours = reminderIntervalHours
-    if (reminderTimes !== undefined) data.reminderTimes = reminderTimes
-    if (isManualGoal !== undefined) data.isManualGoal = isManualGoal
-    if (city !== undefined) data.city = city
+    // Build update object — only include provided fields
+    const update: Record<string, unknown> = {}
+    if (dailyGoalMl !== undefined) update.dailyGoalMl = dailyGoalMl
+    if (cupSizeMl !== undefined) update.cupSizeMl = cupSizeMl
+    if (reminderMode !== undefined) update.reminderMode = reminderMode
+    if (reminderIntervalHours !== undefined) update.reminderIntervalHours = reminderIntervalHours
+    if (reminderTimes !== undefined) update.reminderTimes = reminderTimes
+    if (isManualGoal !== undefined) update.isManualGoal = isManualGoal
+    if (city !== undefined) update.city = city
 
     await db.waterSettings.upsert({
       where: { userId: user.id },
@@ -59,9 +60,13 @@ export async function PUT(req: NextRequest) {
         userId: user.id,
         dailyGoalMl: dailyGoalMl ?? 2500,
         cupSizeMl: cupSizeMl ?? 200,
-        ...data,
+        reminderMode: reminderMode ?? 'interval',
+        reminderIntervalHours: reminderIntervalHours ?? 2,
+        reminderTimes: reminderTimes ?? [],
+        isManualGoal: isManualGoal ?? false,
+        city: city ?? null,
       },
-      update: data,
+      update,
     })
     return NextResponse.json({ success: true })
   } catch {
