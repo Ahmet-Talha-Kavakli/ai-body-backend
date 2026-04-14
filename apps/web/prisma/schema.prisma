@@ -77,6 +77,8 @@ model User {
   notificationPrefs NotificationPreference?
   userAchievements  UserAchievement[]
   userXP            UserXP?
+  weightEntries     WeightEntry[]
+  healthGoal        HealthGoal?
 
   @@index([clerkId])
   @@index([email])
@@ -929,4 +931,31 @@ model UserXP {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+// ──────────────────────────────────────────
+// HEALTH DASHBOARD
+// ──────────────────────────────────────────
+
+model WeightEntry {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weightKg   Float
+  note       String?
+  recordedAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([recordedAt])
+}
+
+model HealthGoal {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailySteps     Int      @default(10000)
+  sleepHours     Float    @default(8.0)
+  waterMl        Float    @default(2500)
+  targetWeightKg Float?
+  updatedAt      DateTime @updatedAt
 }

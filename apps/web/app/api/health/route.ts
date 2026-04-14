@@ -9,47 +9,56 @@ export async function GET() {
 
     const user = await db.user.findUnique({
       where: { clerkId },
-      include: { healthProfile: true },
+      include: {
+        healthProfile: true,
+        healthGoal: true,
+      },
     })
     if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    // Son 7 günlük wearable okumalar
-    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
 
-    const readings = await db.wearableReading.findMany({
-      where: { userId: user.id, recordedAt: { gte: weekAgo } },
-      orderBy: { recordedAt: 'desc' },
-    })
+    const [readings, devices, weightEntries] = await Promise.all([
+      db.wearableReading.findMany({
+        where: { userId: user.id, recordedAt: { gte: weekAgo } },
+        orderBy: { recordedAt: 'desc' },
+      }),
+      db.wearableDevice.findMany({ where: { userId: user.id } }),
+      db.weightEntry.findMany({
+        where: { userId: user.id },
+        orderBy: { recordedAt: 'desc' },
+        take: 30,
+      }),
+    ])
 
-    const devices = await db.wearableDevice.findMany({
-      where: { userId: user.id },
-    })
-
-    // Tip bazında son okuma
     const latest: Record<string, number> = {}
-    readings.forEach(r => {
+    readings.forEach((r) => {
       if (!(r.type in latest)) latest[r.type] = r.value
     })
 
-    // Son 7 gün adım ortalaması
-    const stepReadings = readings.filter(r => r.type === 'steps')
+    const stepReadings = readings.filter((r) => r.type === 'steps')
     const avgSteps = stepReadings.length
       ? Math.round(stepReadings.reduce((s, r) => s + r.value, 0) / stepReadings.length)
       : 0
 
-    // Son 7 gün uyku (dakika)
-    const sleepReadings = readings.filter(r => r.type === 'sleep_minutes')
+    const sleepReadings = readings.filter((r) => r.type === 'sleep_minutes')
 
     return NextResponse.json({
       profile: user.healthProfile,
+      goal: user.healthGoal,
       devices,
       latestReadings: latest,
       avgSteps,
-      sleepData: sleepReadings.slice(0, 7).map(r => ({
+      sleepData: sleepReadings.slice(0, 7).map((r) => ({
         date: r.recordedAt,
-        hours: r.value / 60,
+        hours: +(r.value / 60).toFixed(1),
       })),
-      hasDevice: devices.some(d => d.isConnected),
+      weightEntries: weightEntries.map((w) => ({
+        date: w.recordedAt,
+        weightKg: w.weightKg,
+      })),
+      hasDevice: devices.some((d) => d.isConnected),
     })
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
