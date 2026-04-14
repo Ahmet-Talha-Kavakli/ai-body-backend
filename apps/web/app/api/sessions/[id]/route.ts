@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
 import { sessionCompleteSchema } from '@/lib/validation/schemas'
+import { checkAndAwardAchievements } from '@/lib/achievements/checker'
 import { writeSessionMemory } from '@/lib/memory/memory-writer'
 import type { SessionMemoryInput } from '@/lib/memory/types'
 import { logger } from '@/lib/logger'
@@ -84,6 +85,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
       return updatedSession
     })
+
+    // Achievement checker — fire-and-forget, response'u bloklamaz
+    checkAndAwardAchievements(user.id, 'workout_completed').catch(() => {})
 
     // Hafıza katmanına yaz — fire-and-forget, response'u bloklamaz
     if (completedSets && completedSets.length > 0) {

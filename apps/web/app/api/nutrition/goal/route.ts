@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { checkAndAwardAchievements } from '@/lib/achievements/checker'
 
 export async function GET() {
   try {
@@ -49,6 +50,9 @@ export async function PUT(req: NextRequest) {
       create: { userId: user.id, ...body },
       update: body,
     })
+
+    checkAndAwardAchievements(user.id, 'goal_set').catch(() => {})
+
     return NextResponse.json({ goal })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

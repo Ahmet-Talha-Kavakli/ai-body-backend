@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { checkAndAwardAchievements } from '@/lib/achievements/checker'
 
 export async function GET() {
   try {
@@ -42,6 +43,8 @@ export async function POST(req: NextRequest) {
         totalFatG,
       },
     })
+
+    checkAndAwardAchievements(user.id, 'template_created').catch(() => {})
 
     return NextResponse.json({ template })
   } catch {

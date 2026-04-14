@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
+import { checkAndAwardAchievements } from '@/lib/achievements/checker'
 
 // Öğün kaydet
 export async function POST(req: NextRequest) {
@@ -12,7 +13,17 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
     const body = await req.json()
-    const { mealType, items, totalCalories, totalProteinG, totalCarbsG, totalFatG, notes, photoUrl, aiAnalyzed } = body
+    const {
+      mealType,
+      items,
+      totalCalories,
+      totalProteinG,
+      totalCarbsG,
+      totalFatG,
+      notes,
+      photoUrl,
+      aiAnalyzed,
+    } = body
 
     const meal = await db.mealLog.create({
       data: {
@@ -28,6 +39,8 @@ export async function POST(req: NextRequest) {
         aiAnalyzed: aiAnalyzed ?? false,
       },
     })
+
+    checkAndAwardAchievements(user.id, 'meal_logged').catch(() => {})
 
     return NextResponse.json({ success: true, meal })
   } catch (error) {
