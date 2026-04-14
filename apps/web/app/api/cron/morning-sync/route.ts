@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/client'
 import { isValidCronRequest } from '@/lib/env/validate'
 import { logger } from '@/lib/logger'
+import { getTempBonusMl } from '@/lib/water/weather'
 
 export const runtime = 'nodejs'
 
@@ -81,6 +82,24 @@ export async function POST(req: NextRequest) {
             '[Morning Sync] Error syncing wearable'
           )
         }
+      }
+
+      // Hava sıcaklığına göre su bonusu güncelle
+      try {
+        const waterSettings = await prisma.waterSettings.findUnique({
+          where: { userId: user.id },
+        })
+        if (waterSettings?.city) {
+          const bonus = await getTempBonusMl(waterSettings.city)
+          if (bonus !== null) {
+            await prisma.waterSettings.update({
+              where: { userId: user.id },
+              data: { tempBonusMl: bonus },
+            })
+          }
+        }
+      } catch {
+        // Hava sıcaklığı hatası tüm sync'i durdurmasın
       }
     }
 
