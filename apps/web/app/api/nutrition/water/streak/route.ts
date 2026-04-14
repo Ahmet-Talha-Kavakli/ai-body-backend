@@ -11,12 +11,15 @@ export async function GET() {
 
     const streak = await db.waterStreak.findUnique({ where: { userId: user.id } })
     return NextResponse.json({
-      streak: streak ?? {
-        currentStreak: 0,
-        longestStreak: 0,
-        totalDaysGoal: 0,
-        lastGoalDate: null,
-      },
+      streak: streak
+        ? { ...streak, freezeCharges: streak.freezeCharges ?? 0 }
+        : {
+            currentStreak: 0,
+            longestStreak: 0,
+            totalDaysGoal: 0,
+            lastGoalDate: null,
+            freezeCharges: 0,
+          },
     })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

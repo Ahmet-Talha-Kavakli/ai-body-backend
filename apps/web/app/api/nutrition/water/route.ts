@@ -95,6 +95,18 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    // Freeze milestone kontrolü (7 ve 30 günlük streak)
+    if (
+      newAmountMl >= dailyGoalMl &&
+      !alreadyCountedToday &&
+      (newCurrent === 7 || newCurrent === 30)
+    ) {
+      await db.waterStreak.update({
+        where: { userId: user.id },
+        data: { freezeCharges: { increment: 1 } },
+      })
+    }
+
     // AI koç yorumu üret
     let coachMessage: string | null = null
     try {

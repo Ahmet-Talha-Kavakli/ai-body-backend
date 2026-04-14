@@ -32,6 +32,7 @@ interface StreakState {
   longestStreak: number
   totalDaysGoal: number
   totalMlEver: number
+  freezeCharges: number
 }
 
 interface HistoryItem {
@@ -58,6 +59,7 @@ export default function WaterPage() {
     longestStreak: 0,
     totalDaysGoal: 0,
     totalMlEver: 0,
+    freezeCharges: 0,
   })
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [period, setPeriod] = useState<'week' | 'month'>('week')
@@ -94,6 +96,7 @@ export default function WaterPage() {
         longestStreak: streakRes.streak?.longestStreak ?? 0,
         totalDaysGoal: streakRes.streak?.totalDaysGoal ?? 0,
         totalMlEver,
+        freezeCharges: streakRes.streak?.freezeCharges ?? 0,
       })
       setHistory(historyRes.history ?? [])
       setLoading(false)
@@ -233,6 +236,7 @@ export default function WaterPage() {
           currentStreak={streak.currentStreak}
           longestStreak={streak.longestStreak}
           totalDaysGoal={streak.totalDaysGoal}
+          freezeCharges={streak.freezeCharges}
         />
       </motion.div>
 
