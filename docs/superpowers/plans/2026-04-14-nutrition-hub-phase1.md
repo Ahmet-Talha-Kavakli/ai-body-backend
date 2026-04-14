@@ -952,7 +952,7 @@ const intlMiddleware = createMiddleware({
 const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)'])
 
 export default clerkMiddleware((auth, req) => {
-  if (!isPublicRoute(req)) auth().protect()
+  if (!isPublicRoute(req)) auth.protect()
   return intlMiddleware(req)
 })
 
