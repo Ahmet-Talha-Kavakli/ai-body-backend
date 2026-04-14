@@ -70,6 +70,7 @@ model User {
   waterLogs        WaterLog[]
   waterSettings    WaterSettings?
   waterStreak      WaterStreak?
+  drinkLogs        DrinkLog[]
   nutritionStreak  NutritionStreak?
   dietProfile      DietProfile?
   mealTemplates    MealTemplate[]
@@ -347,6 +348,18 @@ model WaterStreak {
   updatedAt     DateTime  @updatedAt
 
   @@index([userId])
+}
+
+model DrinkLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  drinkType String   // "coffee" | "tea" | "juice" | "milk" | "energy"
+  amountMl  Float
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
 }
 
 model NutritionStreak {
