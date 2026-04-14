@@ -19,6 +19,11 @@ const HistoryTab = dynamic(() => import('./components/tabs/HistoryTab').then((m)
   loading: () => <div className="py-20 text-center text-sm text-[#64748B]">Yükleniyor...</div>,
 })
 
+const ProfileTab = dynamic(() => import('./components/tabs/ProfileTab').then((m) => m.ProfileTab), {
+  ssr: false,
+  loading: () => <div className="py-20 text-center text-sm text-[#64748B]">Yükleniyor...</div>,
+})
+
 function NutritionPageInner() {
   const searchParams = useSearchParams()
   const tab = searchParams.get('tab') ?? 'today'
@@ -126,11 +131,7 @@ function NutritionPageInner() {
             />
           )}
           {tab === 'history' && <HistoryTab />}
-          {tab === 'profile' && (
-            <div className="py-20 text-center text-sm text-[#64748B]">
-              Profil — Phase 3&apos;te gelecek
-            </div>
-          )}
+          {tab === 'profile' && <ProfileTab />}
         </motion.div>
       </AnimatePresence>
 
