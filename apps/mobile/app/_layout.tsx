@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { useEffect } from 'react'
 import '../global.css'
+import { useNotifications } from '@/hooks/useNotifications'
 
 const tokenCache = {
   async getToken(key: string) {
@@ -21,6 +22,7 @@ function AuthGuard() {
   const { isSignedIn, isLoaded } = useAuth()
   const segments = useSegments()
   const router = useRouter()
+  const { scheduleWaterReminders, scheduleMealReminders } = useNotifications()
 
   useEffect(() => {
     if (!isLoaded) return
@@ -34,6 +36,14 @@ function AuthGuard() {
       router.replace('/(app)/home')
     }
   }, [isSignedIn, isLoaded, segments])
+
+  // Schedule local notifications when user is signed in
+  useEffect(() => {
+    if (isSignedIn) {
+      scheduleWaterReminders()
+      scheduleMealReminders()
+    }
+  }, [isSignedIn])
 
   return null
 }

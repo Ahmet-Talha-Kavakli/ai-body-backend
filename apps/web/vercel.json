@@ -9,6 +9,10 @@
     {
       "path": "/api/cron/morning-sync",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/smart-notification",
+      "schedule": "0 18 * * *"
     }
   ]
 }

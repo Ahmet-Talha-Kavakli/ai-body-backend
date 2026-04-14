@@ -8,6 +8,7 @@ import { useClerk, useUser } from '@clerk/nextjs'
 import { useTheme } from 'next-themes'
 import Image from 'next/image'
 import { THIINGS } from '@/lib/thiings'
+import { NotificationSettings } from '@/components/settings/NotificationSettings'
 
 interface ProfileData {
   user: {
@@ -37,11 +38,26 @@ interface SubscriptionData {
 }
 
 const NOTIFICATIONS = [
-  { label: 'Antrenman Hatırlatıcısı', desc: 'Günlük seans saatinde bildirim al', key: 'workout', default: true },
-  { label: 'Başarı Rozetleri', desc: 'Yeni başarı kazandığında bildirim al', key: 'badges', default: true },
+  {
+    label: 'Antrenman Hatırlatıcısı',
+    desc: 'Günlük seans saatinde bildirim al',
+    key: 'workout',
+    default: true,
+  },
+  {
+    label: 'Başarı Rozetleri',
+    desc: 'Yeni başarı kazandığında bildirim al',
+    key: 'badges',
+    default: true,
+  },
   { label: 'Haftalık Rapor', desc: 'Her Pazartesi haftalık özet', key: 'weekly', default: false },
   { label: 'AI Koç Tavsiyeleri', desc: 'Kişiselleştirilmiş öneriler', key: 'ai', default: true },
-  { label: 'Pazarlama E-postaları', desc: 'Kampanya ve fırsatlardan haberdar ol', key: 'marketing', default: false },
+  {
+    label: 'Pazarlama E-postaları',
+    desc: 'Kampanya ve fırsatlardan haberdar ol',
+    key: 'marketing',
+    default: false,
+  },
 ]
 
 const FITNESS_LEVELS: Record<string, string> = {
@@ -54,12 +70,12 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void 
   return (
     <button
       onClick={onChange}
-      className={`relative w-11 h-6 rounded-full transition-colors ${enabled ? 'bg-blue-600' : 'bg-muted'}`}
+      className={`relative h-6 w-11 rounded-full transition-colors ${enabled ? 'bg-blue-600' : 'bg-muted'}`}
     >
       <motion.div
         animate={{ x: enabled ? 20 : 2 }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-        className="absolute top-1 w-4 h-4 bg-white rounded-full shadow"
+        className="absolute top-1 h-4 w-4 rounded-full bg-white shadow"
       />
     </button>
   )
@@ -78,7 +94,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [toggles, setToggles] = useState(
-    Object.fromEntries(NOTIFICATIONS.map(n => [n.key, n.default]))
+    Object.fromEntries(NOTIFICATIONS.map((n) => [n.key, n.default]))
   )
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
@@ -86,14 +102,14 @@ export default function SettingsPage() {
   useEffect(() => {
     Promise.all([
       fetch('/api/user/profile')
-        .then(r => r.json())
+        .then((r) => r.json())
         .then((data: ProfileData) => {
           setProfileData(data)
           setName(data.user?.name ?? clerkUser?.fullName ?? '')
         })
         .catch(console.error),
       fetch('/api/subscription/usage')
-        .then(r => r.json())
+        .then((r) => r.json())
         .then((data: SubscriptionData) => {
           setSubscriptionData(data)
         })
@@ -103,7 +119,7 @@ export default function SettingsPage() {
   }, [clerkUser])
 
   const flipToggle = (key: string) => {
-    setToggles(prev => ({ ...prev, [key]: !prev[key] }))
+    setToggles((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
   const handleSaveName = async () => {
@@ -164,9 +180,9 @@ export default function SettingsPage() {
   const goals = profileData?.user?.healthProfile?.goals ?? []
 
   return (
-    <div className="space-y-8 max-w-2xl">
+    <div className="max-w-2xl space-y-8">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-black mb-1">Ayarlar</h1>
+        <h1 className="mb-1 text-3xl font-black">Ayarlar</h1>
         <p className="text-muted-foreground">Hesap ve tercihlerini yönet</p>
       </motion.div>
 
@@ -175,47 +191,54 @@ export default function SettingsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-card/50 border border-border/30 rounded-2xl p-5"
+        className="bg-card/50 border-border/30 rounded-2xl border p-5"
       >
-        <div className="flex items-center gap-3 mb-5">
-          <Image src={THIINGS.profileIcon} alt="profile" width={36} height={36} unoptimized className="rounded-xl" />
+        <div className="mb-5 flex items-center gap-3">
+          <Image
+            src={THIINGS.profileIcon}
+            alt="profile"
+            width={36}
+            height={36}
+            unoptimized
+            className="rounded-xl"
+          />
           <div>
             <h3 className="font-bold">Profil Bilgileri</h3>
-            <p className="text-xs text-muted-foreground">Hesap bilgilerini düzenle</p>
+            <p className="text-muted-foreground text-xs">Hesap bilgilerini düzenle</p>
           </div>
         </div>
 
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-12 bg-muted/30 rounded-xl animate-pulse" />
+              <div key={i} className="bg-muted/30 h-12 animate-pulse rounded-xl" />
             ))}
           </div>
         ) : (
           <div className="space-y-1">
             {/* Ad Soyad */}
-            <div className="flex items-center justify-between py-3 border-b border-border/20">
+            <div className="border-border/20 flex items-center justify-between border-b py-3">
               <div className="flex-1">
-                <p className="text-xs text-muted-foreground">Ad Soyad</p>
+                <p className="text-muted-foreground text-xs">Ad Soyad</p>
                 {editName ? (
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="mt-1 flex items-center gap-2">
                     <input
                       autoFocus
                       value={name}
-                      onChange={e => setName(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleSaveName()}
-                      className="text-sm font-semibold bg-transparent border-b border-blue-500 outline-none flex-1"
+                      onChange={(e) => setName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                      className="flex-1 border-b border-blue-500 bg-transparent text-sm font-semibold outline-none"
                     />
                     <button
                       onClick={handleSaveName}
                       disabled={saving}
-                      className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+                      className="flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300"
                     >
                       <Save size={12} /> {saving ? 'Kaydediliyor...' : 'Kaydet'}
                     </button>
                     <button
                       onClick={() => setEditName(false)}
-                      className="text-xs text-muted-foreground hover:text-foreground"
+                      className="text-muted-foreground hover:text-foreground text-xs"
                     >
                       İptal
                     </button>
@@ -223,14 +246,16 @@ export default function SettingsPage() {
                 ) : (
                   <p className="text-sm font-semibold">
                     {name || '–'}
-                    {saveSuccess && <span className="ml-2 text-xs text-green-400">✓ Kaydedildi</span>}
+                    {saveSuccess && (
+                      <span className="ml-2 text-xs text-green-400">✓ Kaydedildi</span>
+                    )}
                   </p>
                 )}
               </div>
               {!editName && (
                 <button
                   onClick={() => setEditName(true)}
-                  className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+                  className="text-xs font-medium text-blue-400 hover:text-blue-300"
                 >
                   Düzenle
                 </button>
@@ -239,12 +264,18 @@ export default function SettingsPage() {
 
             {[
               { label: 'E-posta', value: email },
-              { label: 'Fitness Seviyesi', value: fitnessLevel ? FITNESS_LEVELS[fitnessLevel] ?? fitnessLevel : '–' },
+              {
+                label: 'Fitness Seviyesi',
+                value: fitnessLevel ? (FITNESS_LEVELS[fitnessLevel] ?? fitnessLevel) : '–',
+              },
               { label: 'Hedefler', value: goals.length > 0 ? goals.join(', ') : '–' },
-            ].map(field => (
-              <div key={field.label} className="flex items-center justify-between py-3 border-b border-border/20 last:border-0">
+            ].map((field) => (
+              <div
+                key={field.label}
+                className="border-border/20 flex items-center justify-between border-b py-3 last:border-0"
+              >
                 <div>
-                  <p className="text-xs text-muted-foreground">{field.label}</p>
+                  <p className="text-muted-foreground text-xs">{field.label}</p>
                   <p className="text-sm font-semibold">{field.value}</p>
                 </div>
               </div>
@@ -258,47 +289,62 @@ export default function SettingsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.12 }}
-        className="bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 border border-blue-500/20 rounded-2xl p-5"
+        className="rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 p-5"
       >
-        <div className="flex items-center gap-3 mb-5">
-          <div className="p-2 bg-blue-500/10 rounded-lg">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="rounded-lg bg-blue-500/10 p-2">
             <Star size={24} className="text-blue-400" />
           </div>
           <div>
             <h3 className="font-bold">Abonelik Planı</h3>
-            <p className="text-xs text-muted-foreground">Mevcut planını yönet ve özellik limitleri</p>
+            <p className="text-muted-foreground text-xs">
+              Mevcut planını yönet ve özellik limitleri
+            </p>
           </div>
         </div>
 
         {subLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-10 bg-muted/30 rounded-xl animate-pulse" />
+              <div key={i} className="bg-muted/30 h-10 animate-pulse rounded-xl" />
             ))}
           </div>
         ) : subscriptionData ? (
           <div className="space-y-4">
             {/* Mevcut Plan */}
-            <div className="flex items-center justify-between p-3 bg-card/50 rounded-xl border border-border/30">
+            <div className="bg-card/50 border-border/30 flex items-center justify-between rounded-xl border p-3">
               <div>
-                <p className="text-xs text-muted-foreground">Mevcut Plan</p>
-                <div className="flex items-center gap-2 mt-1">
+                <p className="text-muted-foreground text-xs">Mevcut Plan</p>
+                <div className="mt-1 flex items-center gap-2">
                   <p className="text-lg font-bold capitalize">
                     {subscriptionData.tier === 'free' && 'Ücretsiz'}
                     {subscriptionData.tier === 'basic' && 'Basic'}
                     {subscriptionData.tier === 'standard' && 'Standart'}
                     {subscriptionData.tier === 'pro' && 'Pro'}
                   </p>
-                  {subscriptionData.tier !== 'pro' && (
-                    <Zap size={16} className="text-yellow-500" />
-                  )}
+                  {subscriptionData.tier !== 'pro' && <Zap size={16} className="text-yellow-500" />}
                 </div>
               </div>
               {subscriptionData.tier !== 'pro' && (
                 <Button
-                  onClick={() => handleUpgrade(subscriptionData.tier === 'free' ? 'basic' : subscriptionData.tier === 'basic' ? 'standard' : 'pro')}
-                  disabled={checkoutLoading === (subscriptionData.tier === 'free' ? 'basic' : subscriptionData.tier === 'basic' ? 'standard' : 'pro')}
-                  className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs h-8"
+                  onClick={() =>
+                    handleUpgrade(
+                      subscriptionData.tier === 'free'
+                        ? 'basic'
+                        : subscriptionData.tier === 'basic'
+                          ? 'standard'
+                          : 'pro'
+                    )
+                  }
+                  disabled={
+                    checkoutLoading ===
+                    (subscriptionData.tier === 'free'
+                      ? 'basic'
+                      : subscriptionData.tier === 'basic'
+                        ? 'standard'
+                        : 'pro')
+                  }
+                  className="h-8 bg-gradient-to-r from-green-500 to-emerald-600 text-xs text-white"
                 >
                   {checkoutLoading ? 'Yükleniyor...' : 'Yükselten'}
                 </Button>
@@ -307,27 +353,29 @@ export default function SettingsPage() {
 
             {/* Kullanım */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground">AYLIK KULLANIM</p>
+              <p className="text-muted-foreground text-xs font-semibold">AYLIK KULLANIM</p>
               {[
                 { label: 'Seans', usage: subscriptionData.usage.sessions },
                 { label: 'AI Program', usage: subscriptionData.usage.aiPrograms },
                 { label: 'Yemek Analizi', usage: subscriptionData.usage.aiMeals },
                 { label: 'Koç Mesajı', usage: subscriptionData.usage.aiCoach },
-              ].map(item => (
+              ].map((item) => (
                 <div key={item.label} className="space-y-1">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {item.usage.used}/{item.usage.limit === Infinity ? '∞' : item.usage.limit}
                     </p>
                   </div>
                   {item.usage.limit !== Infinity && (
-                    <div className="w-full bg-muted/30 rounded-full h-1.5">
+                    <div className="bg-muted/30 h-1.5 w-full rounded-full">
                       <div
                         className={`h-1.5 rounded-full transition-all ${
                           item.usage.used >= item.usage.limit ? 'bg-red-500' : 'bg-blue-500'
                         }`}
-                        style={{ width: `${Math.min((item.usage.used / item.usage.limit) * 100, 100)}%` }}
+                        style={{
+                          width: `${Math.min((item.usage.used / item.usage.limit) * 100, 100)}%`,
+                        }}
                       />
                     </div>
                   )}
@@ -337,20 +385,28 @@ export default function SettingsPage() {
 
             {/* Özellikler */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground">PREMIUM ÖZELLIKLER</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <p className="text-muted-foreground text-xs font-semibold">PREMIUM ÖZELLIKLER</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {[
                   { label: 'Akıllı Saat Sync', enabled: subscriptionData.features.wearableSync },
-                  { label: 'Gelişmiş Analiz', enabled: subscriptionData.features.advancedAnalytics },
+                  {
+                    label: 'Gelişmiş Analiz',
+                    enabled: subscriptionData.features.advancedAnalytics,
+                  },
                   { label: 'Öncelikli Destek', enabled: subscriptionData.features.prioritySupport },
-                ].map(feature => (
-                  <div key={feature.label} className="flex items-center gap-2 p-2 bg-card/50 rounded-lg border border-border/30">
+                ].map((feature) => (
+                  <div
+                    key={feature.label}
+                    className="bg-card/50 border-border/30 flex items-center gap-2 rounded-lg border p-2"
+                  >
                     {feature.enabled ? (
-                      <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
+                      <CheckCircle size={14} className="flex-shrink-0 text-green-500" />
                     ) : (
                       <Lock size={14} className="text-muted-foreground flex-shrink-0" />
                     )}
-                    <span className={`text-xs font-medium ${!feature.enabled && 'text-muted-foreground'}`}>
+                    <span
+                      className={`text-xs font-medium ${!feature.enabled && 'text-muted-foreground'}`}
+                    >
                       {feature.label}
                     </span>
                   </div>
@@ -364,7 +420,7 @@ export default function SettingsPage() {
                 onClick={handlePortal}
                 disabled={portalLoading}
                 variant="outline"
-                className="w-full text-xs h-9"
+                className="h-9 w-full text-xs"
               >
                 {portalLoading ? 'Yükleniyor...' : 'Fatura Yönetimi'}
               </Button>
@@ -378,25 +434,32 @@ export default function SettingsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="bg-card/50 border border-border/30 rounded-2xl p-5"
+        className="bg-card/50 border-border/30 rounded-2xl border p-5"
       >
-        <div className="flex items-center gap-3 mb-5">
-          <Image src={THIINGS.settings} alt="settings" width={36} height={36} unoptimized className="rounded-xl" />
+        <div className="mb-5 flex items-center gap-3">
+          <Image
+            src={THIINGS.settings}
+            alt="settings"
+            width={36}
+            height={36}
+            unoptimized
+            className="rounded-xl"
+          />
           <div>
             <h3 className="font-bold">Görünüm ve Dil</h3>
-            <p className="text-xs text-muted-foreground">Tema ve dil tercihlerini seç</p>
+            <p className="text-muted-foreground text-xs">Tema ve dil tercihlerini seç</p>
           </div>
         </div>
 
-        <div className="flex items-center justify-between py-3 border-b border-border/20">
+        <div className="border-border/20 flex items-center justify-between border-b py-3">
           <div>
             <p className="text-sm font-semibold">Tema</p>
-            <p className="text-xs text-muted-foreground">Açık veya koyu mod</p>
+            <p className="text-muted-foreground text-xs">Açık veya koyu mod</p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setTheme('light')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 theme === 'light' ? 'bg-blue-600 text-white' : 'bg-muted/30 text-muted-foreground'
               }`}
             >
@@ -404,8 +467,10 @@ export default function SettingsPage() {
             </button>
             <button
               onClick={() => setTheme('dark')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                theme === 'dark' || theme === 'system' ? 'bg-blue-600 text-white' : 'bg-muted/30 text-muted-foreground'
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                theme === 'dark' || theme === 'system'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-muted/30 text-muted-foreground'
               }`}
             >
               <Moon size={12} /> Koyu
@@ -416,9 +481,9 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between py-3">
           <div>
             <p className="text-sm font-semibold">Dil</p>
-            <p className="text-xs text-muted-foreground">Uygulama dili</p>
+            <p className="text-muted-foreground text-xs">Uygulama dili</p>
           </div>
-          <select className="text-sm bg-muted/30 border border-border/30 rounded-lg px-3 py-1.5 focus:outline-none">
+          <select className="bg-muted/30 border-border/30 rounded-lg border px-3 py-1.5 text-sm focus:outline-none">
             <option>Türkçe</option>
             <option>English</option>
           </select>
@@ -430,30 +495,23 @@ export default function SettingsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-card/50 border border-border/30 rounded-2xl p-5"
+        className="bg-card/50 border-border/30 rounded-2xl border p-5"
       >
-        <div className="flex items-center gap-3 mb-5">
-          <Image src={THIINGS.bell} alt="notifications" width={36} height={36} unoptimized className="rounded-xl" />
+        <div className="mb-5 flex items-center gap-3">
+          <Image
+            src={THIINGS.bell}
+            alt="notifications"
+            width={36}
+            height={36}
+            unoptimized
+            className="rounded-xl"
+          />
           <div>
             <h3 className="font-bold">Bildirimler</h3>
-            <p className="text-xs text-muted-foreground">Bildirim tercihlerini yönet</p>
+            <p className="text-muted-foreground text-xs">Bildirim tercihlerini yönet</p>
           </div>
         </div>
-
-        <div className="space-y-1">
-          {NOTIFICATIONS.map(notif => (
-            <div key={notif.key} className="flex items-center justify-between py-3 border-b border-border/20 last:border-0">
-              <div>
-                <p className="text-sm font-semibold">{notif.label}</p>
-                <p className="text-xs text-muted-foreground">{notif.desc}</p>
-              </div>
-              <Toggle
-                enabled={!!toggles[notif.key]}
-                onChange={() => flipToggle(notif.key)}
-              />
-            </div>
-          ))}
-        </div>
+        <NotificationSettings />
       </motion.div>
 
       {/* Güvenlik */}
@@ -461,13 +519,20 @@ export default function SettingsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
-        className="bg-card/50 border border-border/30 rounded-2xl p-5"
+        className="bg-card/50 border-border/30 rounded-2xl border p-5"
       >
-        <div className="flex items-center gap-3 mb-5">
-          <Image src={THIINGS.settings} alt="security" width={36} height={36} unoptimized className="rounded-xl" />
+        <div className="mb-5 flex items-center gap-3">
+          <Image
+            src={THIINGS.settings}
+            alt="security"
+            width={36}
+            height={36}
+            unoptimized
+            className="rounded-xl"
+          />
           <div>
             <h3 className="font-bold">Gizlilik ve Güvenlik</h3>
-            <p className="text-xs text-muted-foreground">Hesap güvenliğini yönet</p>
+            <p className="text-muted-foreground text-xs">Hesap güvenliğini yönet</p>
           </div>
         </div>
 
@@ -476,13 +541,16 @@ export default function SettingsPage() {
             { label: 'İki Faktörlü Doğrulama', value: 'Aktif', action: 'Devre Dışı Bırak' },
             { label: 'Son Şifre Değişimi', value: '30 gün önce', action: 'Değiştir' },
             { label: 'Oturum Geçmişi', value: '3 aktif cihaz', action: 'Görüntüle' },
-          ].map(item => (
-            <div key={item.label} className="flex items-center justify-between py-3 border-b border-border/20 last:border-0">
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="border-border/20 flex items-center justify-between border-b py-3 last:border-0"
+            >
               <div>
                 <p className="text-sm font-semibold">{item.label}</p>
-                <p className="text-xs text-muted-foreground">{item.value}</p>
+                <p className="text-muted-foreground text-xs">{item.value}</p>
               </div>
-              <button className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+              <button className="flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300">
                 {item.action} <ChevronRight size={12} />
               </button>
             </div>
@@ -495,31 +563,44 @@ export default function SettingsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5"
+        className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5"
       >
-        <div className="flex items-center gap-3 mb-5">
-          <Image src={THIINGS.trashBin} alt="danger" width={36} height={36} unoptimized className="rounded-xl" />
+        <div className="mb-5 flex items-center gap-3">
+          <Image
+            src={THIINGS.trashBin}
+            alt="danger"
+            width={36}
+            height={36}
+            unoptimized
+            className="rounded-xl"
+          />
           <div>
             <h3 className="font-bold text-red-400">Tehlikeli Alan</h3>
-            <p className="text-xs text-muted-foreground">Geri alınamaz işlemler</p>
+            <p className="text-muted-foreground text-xs">Geri alınamaz işlemler</p>
           </div>
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between py-3 border-b border-red-500/20">
+          <div className="flex items-center justify-between border-b border-red-500/20 py-3">
             <div>
               <p className="text-sm font-semibold">Tüm Verilerimi Sil</p>
-              <p className="text-xs text-muted-foreground">Antrenman geçmişi ve beslenme verileri silinir</p>
+              <p className="text-muted-foreground text-xs">
+                Antrenman geçmişi ve beslenme verileri silinir
+              </p>
             </div>
-            <Button variant="outline" size="sm" className="border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-red-500/30 text-xs text-red-400 hover:bg-red-500/10"
+            >
               Sil
             </Button>
           </div>
 
-          <div className="flex items-center justify-between py-3 border-b border-red-500/20">
+          <div className="flex items-center justify-between border-b border-red-500/20 py-3">
             <div>
               <p className="text-sm font-semibold">Hesabı Sil</p>
-              <p className="text-xs text-muted-foreground">FitAI hesabın kalıcı olarak silinir</p>
+              <p className="text-muted-foreground text-xs">FitAI hesabın kalıcı olarak silinir</p>
             </div>
             <Button variant="destructive" size="sm" className="text-xs">
               Hesabı Sil
@@ -529,13 +610,13 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between py-3">
             <div>
               <p className="text-sm font-semibold">Çıkış Yap</p>
-              <p className="text-xs text-muted-foreground">Tüm cihazlardan çıkış yap</p>
+              <p className="text-muted-foreground text-xs">Tüm cihazlardan çıkış yap</p>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => signOut({ redirectUrl: '/' })}
-              className="gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs"
+              className="gap-1.5 border-red-500/30 text-xs text-red-400 hover:bg-red-500/10"
             >
               <LogOut size={12} />
               Çıkış Yap
