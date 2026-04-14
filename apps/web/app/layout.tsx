@@ -1,6 +1,13 @@
 import type { Metadata, Viewport } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
+import { Barlow_Condensed } from 'next/font/google'
+
+const barlowCondensed = Barlow_Condensed({
+  subsets: ['latin'],
+  weight: ['400', '600', '700'],
+  variable: '--font-barlow-condensed',
+})
 import { ClerkProvider } from '@clerk/nextjs'
 import { Providers } from '@/components/shared/providers'
 import './globals.css'
@@ -50,7 +57,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
-        <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}>
+        <body className={`${GeistSans.variable} ${GeistMono.variable} ${barlowCondensed.variable} font-sans antialiased`}>
           <Providers>
             <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
               <PillBase />
