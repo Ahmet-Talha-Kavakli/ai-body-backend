@@ -68,6 +68,8 @@ model User {
 
   // Nutrition Hub Phase 1
   waterLogs        WaterLog[]
+  waterSettings    WaterSettings?
+  waterStreak      WaterStreak?
   nutritionStreak  NutritionStreak?
   dietProfile      DietProfile?
   mealTemplates    MealTemplate[]
@@ -310,6 +312,32 @@ model WaterLog {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, date])
+  @@index([userId])
+}
+
+model WaterSettings {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyGoalMl   Float    @default(2500)
+  cupSizeMl     Float    @default(200)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model WaterStreak {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak Int       @default(0)
+  longestStreak Int       @default(0)
+  lastGoalDate  DateTime?
+  totalDaysGoal Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   @@index([userId])
 }
 
