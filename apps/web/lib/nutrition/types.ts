@@ -97,3 +97,44 @@ export interface SearchResult {
   allergens: string[]
   imageUrl?: string
 }
+
+export interface DailyEntry {
+  date: string // YYYY-MM-DD
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+}
+
+export interface WeeklyStats {
+  weekLabel: string // e.g. "14 Apr - 20 Apr"
+  avgCalories: number
+  avgProtein: number
+  avgCarbs: number
+  avgFat: number
+  daysLogged: number
+  goalHitDays: number
+  badge: 'excellent' | 'good' | 'needs_work'
+}
+
+export interface MealTimingStats {
+  breakfast: number // avg calories
+  lunch: number
+  dinner: number
+  snack: number
+}
+
+export interface TopFood {
+  name: string
+  count: number
+  avgCalories: number
+}
+
+export interface HistoryStats {
+  daily: DailyEntry[]
+  goal: { dailyCalories: number; proteinG: number; carbsG: number; fatG: number } | null
+  goalHitPercent: number // 0-100
+  topFoods: TopFood[]
+  mealTiming: MealTimingStats
+  streakCalendar: Record<string, boolean> // YYYY-MM-DD -> logged?
+}
