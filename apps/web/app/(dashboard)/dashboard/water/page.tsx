@@ -10,6 +10,7 @@ import { WaterHistory } from '@/components/water/WaterHistory'
 import { WaterStreakCard } from '@/components/water/WaterStreakCard'
 import { WaterAchievements } from '@/components/water/WaterAchievements'
 import { NotificationSettings } from '@/components/settings/NotificationSettings'
+import { CoachToast } from '@/components/water/CoachToast'
 
 interface WaterState {
   amountMl: number
@@ -47,6 +48,7 @@ export default function WaterPage() {
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [period, setPeriod] = useState<'week' | 'month'>('week')
   const [loading, setLoading] = useState(true)
+  const [coachMessage, setCoachMessage] = useState<string | null>(null)
 
   const fetchAll = useCallback(
     async (p: 'week' | 'month' = period) => {
@@ -88,6 +90,10 @@ export default function WaterPage() {
       body: JSON.stringify({ ml }),
     }).then((r) => r.json())
     setWater((prev) => ({ ...prev, amountMl: res.amountMl, glasses: res.glasses }))
+    if (res.coachMessage) {
+      setCoachMessage(res.coachMessage)
+      setTimeout(() => setCoachMessage(null), 5000)
+    }
     fetch('/api/nutrition/water/streak')
       .then((r) => r.json())
       .then((d) => setStreak((prev) => ({ ...prev, ...d.streak })))
@@ -154,6 +160,9 @@ export default function WaterPage() {
       >
         <WaterWave percentage={percentage} amountMl={water.amountMl} goalMl={water.dailyGoalMl} />
       </motion.div>
+
+      {/* AI Koç Yorumu */}
+      <CoachToast message={coachMessage} />
 
       {/* Hızlı Ekleme */}
       <motion.div
