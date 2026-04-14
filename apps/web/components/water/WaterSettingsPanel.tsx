@@ -3,12 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Settings, X, Loader2, Plus, Trash2 } from 'lucide-react'
-
-interface ReminderSettings {
-  reminderMode: 'interval' | 'manual'
-  reminderIntervalHours: number
-  reminderTimes: string[]
-}
+import type { ReminderSettings } from '@/lib/water/types'
 
 interface WaterSettingsPanelProps {
   dailyGoalMl: number
@@ -46,13 +41,16 @@ export function WaterSettingsPanel({
 
   const handleSave = async () => {
     setSaving(true)
-    await onSave(goal, cup, {
-      reminderMode: mode,
-      reminderIntervalHours: intervalHours,
-      reminderTimes: times,
-    })
-    setSaving(false)
-    setOpen(false)
+    try {
+      await onSave(goal, cup, {
+        reminderMode: mode,
+        reminderIntervalHours: intervalHours,
+        reminderTimes: times,
+      })
+      setOpen(false)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (

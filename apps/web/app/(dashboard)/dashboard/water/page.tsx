@@ -11,6 +11,7 @@ import { WaterStreakCard } from '@/components/water/WaterStreakCard'
 import { WaterAchievements } from '@/components/water/WaterAchievements'
 import { NotificationSettings } from '@/components/settings/NotificationSettings'
 import { CoachToast } from '@/components/water/CoachToast'
+import type { ReminderSettings } from '@/lib/water/types'
 
 interface WaterState {
   amountMl: number
@@ -121,11 +122,7 @@ export default function WaterPage() {
   const handleSaveSettings = async (
     dailyGoalMl: number,
     cupSizeMl: number,
-    reminder: {
-      reminderMode: 'interval' | 'manual'
-      reminderIntervalHours: number
-      reminderTimes: string[]
-    }
+    reminder: ReminderSettings
   ) => {
     await fetch('/api/nutrition/water/settings', {
       method: 'PUT',
@@ -137,7 +134,6 @@ export default function WaterPage() {
 
   const handlePeriodChange = (p: 'week' | 'month') => {
     setPeriod(p)
-    fetchAll(p)
   }
 
   const percentage = water.dailyGoalMl > 0 ? (water.amountMl / water.dailyGoalMl) * 100 : 0
