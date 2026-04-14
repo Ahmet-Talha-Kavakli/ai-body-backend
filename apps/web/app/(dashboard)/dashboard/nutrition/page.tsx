@@ -11,7 +11,13 @@ import { AddMealModal } from './components/modals/AddMealModal'
 import { FoodDetailModal } from './components/modals/FoodDetailModal'
 import { BarcodeModal } from './components/modals/BarcodeModal'
 import { MealPhotoAnalyzer } from './components/modals/MealPhotoAnalyzer'
+import dynamic from 'next/dynamic'
 import type { SearchResult, MealType } from '@/lib/nutrition/types'
+
+const HistoryTab = dynamic(() => import('./components/tabs/HistoryTab').then((m) => m.HistoryTab), {
+  ssr: false,
+  loading: () => <div className="py-20 text-center text-sm text-[#64748B]">Yükleniyor...</div>,
+})
 
 function NutritionPageInner() {
   const searchParams = useSearchParams()
@@ -119,11 +125,7 @@ function NutritionPageInner() {
               onBarcode={() => setShowBarcode(true)}
             />
           )}
-          {tab === 'history' && (
-            <div className="py-20 text-center text-sm text-[#64748B]">
-              Geçmiş — Phase 2&apos;de gelecek
-            </div>
-          )}
+          {tab === 'history' && <HistoryTab />}
           {tab === 'profile' && (
             <div className="py-20 text-center text-sm text-[#64748B]">
               Profil — Phase 3&apos;te gelecek
@@ -133,8 +135,16 @@ function NutritionPageInner() {
       </AnimatePresence>
 
       {/* Modals */}
-      <AddMealModal open={showAddMeal} onClose={() => setShowAddMeal(false)} onSave={handleManualAdd} />
-      <BarcodeModal open={showBarcode} onClose={() => setShowBarcode(false)} onFound={setSelectedFood} />
+      <AddMealModal
+        open={showAddMeal}
+        onClose={() => setShowAddMeal(false)}
+        onSave={handleManualAdd}
+      />
+      <BarcodeModal
+        open={showBarcode}
+        onClose={() => setShowBarcode(false)}
+        onFound={setSelectedFood}
+      />
       <AnimatePresence>
         {showPhoto && (
           <MealPhotoAnalyzer
