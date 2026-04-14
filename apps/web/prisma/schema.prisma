@@ -71,6 +71,7 @@ model User {
   nutritionStreak  NutritionStreak?
   dietProfile      DietProfile?
   mealTemplates    MealTemplate[]
+  notificationPrefs NotificationPreference?
   userAchievements  UserAchievement[]
   userXP            UserXP?
 
@@ -342,6 +343,34 @@ model MealTemplate {
   totalCarbsG   Float
   totalFatG     Float
   createdAt     DateTime @default(now())
+
+  @@index([userId])
+}
+
+model NotificationPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Web push
+  webPushEnabled  Boolean  @default(false)
+  webPushEndpoint String?
+  webPushAuth     String?
+  webPushP256dh   String?
+
+  // Mobile push
+  mobilePushEnabled Boolean @default(false)
+  expoPushToken     String?
+
+  // Temel bildirimler
+  waterReminder     Boolean @default(true)
+  mealReminder      Boolean @default(true)
+
+  // Akıllı bildirimler
+  smartCalorie      Boolean @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([userId])
 }
