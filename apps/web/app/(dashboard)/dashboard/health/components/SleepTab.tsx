@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Moon, Clock, Star } from 'lucide-react'
 import {
@@ -16,16 +15,20 @@ import { TimeRangeFilter, TimeRange } from '@/components/health/TimeRangeFilter'
 import { AIInsightCard } from '@/components/health/AIInsightCard'
 import { HealthMetricCard } from '@/components/health/HealthMetricCard'
 
+const DAYS_MAP: Record<TimeRange, number> = { '7d': 7, '30d': 30, '90d': 90 }
+const RANGE_MAP: Record<number, TimeRange> = { 7: '7d', 30: '30d', 90: '90d' }
+const toTimeRange = (days: number): TimeRange => RANGE_MAP[days] ?? '7d'
+
 interface SleepTabProps {
   chartData: { date: string; hours: number }[]
   avg: number
   goal: number
   aiInsight: string
+  days: number
+  onDaysChange: (days: number) => void
 }
 
-export function SleepTab({ chartData, avg, goal, aiInsight }: SleepTabProps) {
-  const [range, setRange] = useState<TimeRange>('7d')
-
+export function SleepTab({ chartData, avg, goal, aiInsight, days, onDaysChange }: SleepTabProps) {
   const formatted = chartData.map((d) => ({
     ...d,
     day: new Date(d.date).toLocaleDateString('tr-TR', { weekday: 'short' }),
@@ -39,7 +42,7 @@ export function SleepTab({ chartData, avg, goal, aiInsight }: SleepTabProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">Uyku</h2>
-        <TimeRangeFilter value={range} onChange={setRange} />
+        <TimeRangeFilter value={toTimeRange(days)} onChange={(r) => onDaysChange(DAYS_MAP[r])} />
       </div>
 
       <div className="grid grid-cols-3 gap-4">

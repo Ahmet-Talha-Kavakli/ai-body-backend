@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Footprints, Flame, Zap, Heart } from 'lucide-react'
 import { TimeRangeFilter, TimeRange } from '@/components/health/TimeRangeFilter'
@@ -8,6 +7,10 @@ import { GoalRing } from '@/components/health/GoalRing'
 import { WeeklyBarChart } from '@/components/health/WeeklyBarChart'
 import { AIInsightCard } from '@/components/health/AIInsightCard'
 import { HealthMetricCard } from '@/components/health/HealthMetricCard'
+
+const DAYS_MAP: Record<TimeRange, number> = { '7d': 7, '30d': 30, '90d': 90 }
+const RANGE_MAP: Record<number, TimeRange> = { 7: '7d', 30: '30d', 90: '90d' }
+const toTimeRange = (days: number): TimeRange => RANGE_MAP[days] ?? '7d'
 
 const HEART_ZONES = [
   { name: 'Dinlenme', range: '< 60 bpm', color: 'bg-blue-500', pct: 40 },
@@ -25,6 +28,8 @@ interface ActivityTabProps {
   chartData: { date: string; value: number }[]
   caloriesData: { date: string; value: number }[]
   aiInsight: string
+  days: number
+  onDaysChange: (days: number) => void
 }
 
 export function ActivityTab({
@@ -35,15 +40,16 @@ export function ActivityTab({
   chartData,
   caloriesData,
   aiInsight,
+  days,
+  onDaysChange,
 }: ActivityTabProps) {
-  const [range, setRange] = useState<TimeRange>('7d')
   const estimatedCalories = Math.round(todaySteps * 0.04)
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">Aktivite</h2>
-        <TimeRangeFilter value={range} onChange={setRange} />
+        <TimeRangeFilter value={toTimeRange(days)} onChange={(r) => onDaysChange(DAYS_MAP[r])} />
       </div>
 
       {/* Goal Rings */}

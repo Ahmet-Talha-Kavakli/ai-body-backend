@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Activity, Moon, Droplets, Scale, Watch, LayoutDashboard } from 'lucide-react'
+import { Activity, Moon, Droplets, Scale, Watch, LayoutDashboard, Settings2 } from 'lucide-react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { MacbookLoader } from '@/components/ui/macbook-loader'
+import { GoalsModal } from '@/components/health/GoalsModal'
 import { OverviewTab } from './components/OverviewTab'
 import { ActivityTab } from './components/ActivityTab'
 import { SleepTab } from './components/SleepTab'
@@ -32,23 +33,38 @@ const DEFAULT_INSIGHTS: Record<Tab, string> = {
   devices: '',
 }
 
+interface Goals {
+  dailySteps: number
+  sleepHours: number
+  waterMl: number
+  targetWeightKg: number | null
+}
+
 function HealthPageInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
   const [activeTab, setActiveTab] = useState<Tab>((searchParams.get('tab') as Tab) ?? 'overview')
   const [loading, setLoading] = useState(true)
+  const [goalsOpen, setGoalsOpen] = useState(false)
+
+  // Time range state — controls how many days API fetches
+  const [activityDays, setActivityDays] = useState(7)
+  const [sleepDays, setSleepDays] = useState(7)
 
   // Data state
   const [overview, setOverview] = useState<any>(null)
   const [activityData, setActivityData] = useState<any>(null)
   const [sleepData, setSleepData] = useState<any>(null)
-  const [waterData, setWaterData] = useState<{ totalMl: number; count: number }>({
-    totalMl: 0,
-    count: 0,
-  })
+  const [waterData, setWaterData] = useState<{ totalMl: number; count: number; weeklyData: any[] }>(
+    {
+      totalMl: 0,
+      count: 0,
+      weeklyData: [],
+    }
+  )
   const [devices, setDevices] = useState<any[]>([])
-  const [goals, setGoals] = useState<any>({
+  const [goals, setGoals] = useState<Goals>({
     dailySteps: 10000,
     sleepHours: 8,
     waterMl: 2500,
@@ -56,14 +72,26 @@ function HealthPageInner() {
   })
   const [insights, setInsights] = useState<Record<Tab, string>>(DEFAULT_INSIGHTS)
 
+  const fetchActivity = useCallback(async (days: number) => {
+    const res = await fetch(`/api/health/activity?days=${days}`)
+    const data = await res.json()
+    setActivityData(data)
+  }, [])
+
+  const fetchSleep = useCallback(async (days: number) => {
+    const res = await fetch(`/api/health/sleep?days=${days}`)
+    const data = await res.json()
+    setSleepData(data)
+  }, [])
+
   const fetchAll = useCallback(async () => {
     setLoading(true)
     try {
       const [ovRes, actRes, sleepRes, waterRes, devRes, goalRes] = await Promise.all([
         fetch('/api/health'),
-        fetch('/api/health/activity?days=7'),
-        fetch('/api/health/sleep?days=7'),
-        fetch('/api/health/water'),
+        fetch(`/api/health/activity?days=${activityDays}`),
+        fetch(`/api/health/sleep?days=${sleepDays}`),
+        fetch('/api/health/water?weekly=true'),
         fetch('/api/health/devices'),
         fetch('/api/health/goals'),
       ])
@@ -78,7 +106,11 @@ function HealthPageInner() {
       setOverview(ov)
       setActivityData(act)
       setSleepData(sleep)
-      setWaterData(water)
+      setWaterData({
+        totalMl: water.totalMl ?? 0,
+        count: water.count ?? 0,
+        weeklyData: water.weeklyData ?? [],
+      })
       setDevices(Array.isArray(devs) ? devs : [])
       setGoals(goal)
     } catch (e) {
@@ -86,22 +118,28 @@ function HealthPageInner() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [activityDays, sleepDays])
 
   useEffect(() => {
     fetchAll()
   }, [fetchAll])
 
-  // OAuth success toast
+  // Re-fetch activity when days change
+  useEffect(() => {
+    if (!loading) fetchActivity(activityDays)
+  }, [activityDays]) // eslint-disable-line
+
+  // Re-fetch sleep when days change
+  useEffect(() => {
+    if (!loading) fetchSleep(sleepDays)
+  }, [sleepDays]) // eslint-disable-line
+
+  // OAuth success handling
   useEffect(() => {
     const connected = searchParams.get('connected')
     const error = searchParams.get('error')
-    if (connected) {
-      // Refresh data and clear param
-      fetchAll()
-      router.replace('/dashboard/health?tab=devices', { scroll: false })
-    }
-    if (error) {
+    if (connected || error) {
+      if (connected) fetchAll()
       router.replace('/dashboard/health?tab=devices', { scroll: false })
     }
   }, []) // eslint-disable-line
@@ -117,9 +155,7 @@ function HealthPageInner() {
     })
       .then((r) => r.json())
       .then((d) => {
-        if (d.insight) {
-          setInsights((prev) => ({ ...prev, [activeTab]: d.insight }))
-        }
+        if (d.insight) setInsights((prev) => ({ ...prev, [activeTab]: d.insight }))
       })
       .catch(() => {})
   }, [activeTab, loading]) // eslint-disable-line
@@ -133,6 +169,12 @@ function HealthPageInner() {
       latestWeight && heightCm
         ? +(latestWeight / Math.pow(heightCm / 100, 2)).toFixed(1)
         : undefined
+    const hrv = latest['hrv']
+    // Stres skoru: HRV'den hesapla (düşük HRV = yüksek stres)
+    // Normal HRV range: 20-100ms. Stres: 100 - normalize(hrv)
+    const stressScore = hrv
+      ? Math.max(0, Math.min(100, Math.round(100 - ((hrv - 20) / 80) * 100)))
+      : null
 
     return {
       tab,
@@ -141,19 +183,32 @@ function HealthPageInner() {
       stepGoal: goals.dailySteps,
       avgSleepH: sleepData?.avg,
       sleepGoal: goals.sleepHours,
-      waterLiters: waterData?.totalMl ? +(waterData.totalMl / 1000).toFixed(1) : undefined,
+      waterLiters: waterData.totalMl ? +(waterData.totalMl / 1000).toFixed(1) : undefined,
       waterGoalL: +(goals.waterMl / 1000).toFixed(1),
       weightKg: latestWeight,
       targetWeightKg: goals.targetWeightKg,
       bmi,
-      hrv: latest['hrv'],
+      hrv,
       spo2: latest['spo2'],
+      stressScore,
     }
   }
 
   function handleTabChange(tab: Tab) {
     setActiveTab(tab)
     router.replace(`/dashboard/health?tab=${tab}`, { scroll: false })
+  }
+
+  async function handleSaveGoals(newGoals: Goals) {
+    const res = await fetch('/api/health/goals', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newGoals),
+    })
+    if (res.ok) {
+      const saved = await res.json()
+      setGoals(saved)
+    }
   }
 
   async function handleAddWater(ml: number) {
@@ -164,7 +219,7 @@ function HealthPageInner() {
     })
     const data = await res.json()
     if (data.totalMl !== undefined) {
-      setWaterData((prev) => ({ totalMl: data.totalMl, count: prev.count + 1 }))
+      setWaterData((prev) => ({ ...prev, totalMl: data.totalMl, count: prev.count + 1 }))
     }
   }
 
@@ -222,6 +277,11 @@ function HealthPageInner() {
   const weightEntries = overview?.weightEntries ?? []
   const heightCm = overview?.profile?.heightCm ?? 170
 
+  // Stres skoru HRV'den
+  const stressScore = hrv
+    ? Math.max(0, Math.min(100, Math.round(100 - ((hrv - 20) / 80) * 100)))
+    : null
+
   const activityChartData = (activityData?.chartData ?? []).map((d: any) => ({
     date: d.date,
     value: d.steps ?? 0,
@@ -234,11 +294,26 @@ function HealthPageInner() {
   return (
     <div className="max-w-4xl space-y-6">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="mb-1 text-3xl font-black">Sağlık Merkezi</h1>
-        <p className="text-muted-foreground text-sm">
-          Tüm sağlık verilerini tek bir yerden takip et
-        </p>
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-start justify-between"
+      >
+        <div>
+          <h1 className="mb-1 text-3xl font-black">Sağlık Merkezi</h1>
+          <p className="text-muted-foreground text-sm">
+            Tüm sağlık verilerini tek bir yerden takip et
+          </p>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setGoalsOpen(true)}
+          className="bg-muted/30 border-border/30 hover:border-border/60 flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition-all"
+        >
+          <Settings2 size={13} className="text-purple-400" />
+          Hedefler
+        </motion.button>
       </motion.div>
 
       {/* Tab Bar */}
@@ -286,7 +361,7 @@ function HealthPageInner() {
               avgSteps={overview?.avgSteps ?? 0}
               avgSleepH={sleepData?.avg ?? 0}
               waterLiters={waterData.totalMl ? waterData.totalMl / 1000 : 0}
-              stressScore={null}
+              stressScore={stressScore}
               waterGoalL={goals.waterMl / 1000}
               stepGoal={goals.dailySteps}
               sleepGoal={goals.sleepHours}
@@ -303,6 +378,8 @@ function HealthPageInner() {
               chartData={activityChartData}
               caloriesData={caloriesData}
               aiInsight={insights.activity}
+              days={activityDays}
+              onDaysChange={setActivityDays}
             />
           )}
 
@@ -312,6 +389,8 @@ function HealthPageInner() {
               avg={sleepData?.avg ?? 0}
               goal={goals.sleepHours}
               aiInsight={insights.sleep}
+              days={sleepDays}
+              onDaysChange={setSleepDays}
             />
           )}
 
@@ -320,7 +399,7 @@ function HealthPageInner() {
               totalMl={waterData.totalMl}
               goalMl={goals.waterMl}
               count={waterData.count}
-              weeklyData={[]}
+              weeklyData={waterData.weeklyData}
               aiInsight={insights.water}
               onAddWater={handleAddWater}
             />
@@ -347,6 +426,14 @@ function HealthPageInner() {
           )}
         </motion.div>
       </AnimatePresence>
+
+      {/* Goals Modal */}
+      <GoalsModal
+        open={goalsOpen}
+        onClose={() => setGoalsOpen(false)}
+        goals={goals}
+        onSave={handleSaveGoals}
+      />
     </div>
   )
 }
