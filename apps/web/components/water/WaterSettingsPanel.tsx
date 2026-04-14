@@ -2,23 +2,55 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Settings, X, Loader2 } from 'lucide-react'
+import { Settings, X, Loader2, Plus, Trash2 } from 'lucide-react'
+
+interface ReminderSettings {
+  reminderMode: 'interval' | 'manual'
+  reminderIntervalHours: number
+  reminderTimes: string[]
+}
 
 interface WaterSettingsPanelProps {
   dailyGoalMl: number
   cupSizeMl: number
-  onSave: (dailyGoalMl: number, cupSizeMl: number) => Promise<void>
+  reminderMode: 'interval' | 'manual'
+  reminderIntervalHours: number
+  reminderTimes: string[]
+  onSave: (dailyGoalMl: number, cupSizeMl: number, reminder: ReminderSettings) => Promise<void>
 }
 
-export function WaterSettingsPanel({ dailyGoalMl, cupSizeMl, onSave }: WaterSettingsPanelProps) {
+export function WaterSettingsPanel({
+  dailyGoalMl,
+  cupSizeMl,
+  reminderMode,
+  reminderIntervalHours,
+  reminderTimes,
+  onSave,
+}: WaterSettingsPanelProps) {
   const [open, setOpen] = useState(false)
   const [goal, setGoal] = useState(dailyGoalMl)
   const [cup, setCup] = useState(cupSizeMl)
+  const [mode, setMode] = useState<'interval' | 'manual'>(reminderMode)
+  const [intervalHours, setIntervalHours] = useState(reminderIntervalHours)
+  const [times, setTimes] = useState<string[]>(reminderTimes)
+  const [newTime, setNewTime] = useState('09:00')
   const [saving, setSaving] = useState(false)
+
+  const addTime = () => {
+    if (!times.includes(newTime)) {
+      setTimes((prev) => [...prev, newTime].sort())
+    }
+  }
+
+  const removeTime = (t: string) => setTimes((prev) => prev.filter((x) => x !== t))
 
   const handleSave = async () => {
     setSaving(true)
-    await onSave(goal, cup)
+    await onSave(goal, cup, {
+      reminderMode: mode,
+      reminderIntervalHours: intervalHours,
+      reminderTimes: times,
+    })
     setSaving(false)
     setOpen(false)
   }
@@ -47,7 +79,7 @@ export function WaterSettingsPanel({ dailyGoalMl, cupSizeMl, onSave }: WaterSett
               exit={{ y: 60, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm space-y-5 rounded-3xl border border-white/[0.08] bg-[#111118] p-6"
+              className="max-h-[90vh] w-full max-w-sm space-y-5 overflow-y-auto rounded-3xl border border-white/[0.08] bg-[#111118] p-6"
             >
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-white">Su Takip Ayarları</h3>
@@ -56,6 +88,7 @@ export function WaterSettingsPanel({ dailyGoalMl, cupSizeMl, onSave }: WaterSett
                 </button>
               </div>
 
+              {/* Günlük Hedef */}
               <div className="space-y-4">
                 <div>
                   <label className="mb-2 block text-xs text-[#64748B]">Günlük Hedef (ml)</label>
@@ -82,6 +115,7 @@ export function WaterSettingsPanel({ dailyGoalMl, cupSizeMl, onSave }: WaterSett
                   />
                 </div>
 
+                {/* Bardak Boyutu */}
                 <div>
                   <label className="mb-2 block text-xs text-[#64748B]">Bardak Boyutu (ml)</label>
                   <div className="flex items-center gap-2">
@@ -99,6 +133,101 @@ export function WaterSettingsPanel({ dailyGoalMl, cupSizeMl, onSave }: WaterSett
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Hatırlatıcılar */}
+                <div>
+                  <label className="mb-2 block text-xs text-[#64748B]">Hatırlatıcı Modu</label>
+                  <div className="flex gap-2">
+                    {(['interval', 'manual'] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setMode(m)}
+                        className={`flex-1 rounded-xl py-2 text-xs font-semibold transition-colors ${
+                          mode === m
+                            ? 'bg-[#3B82F6] text-white'
+                            : 'bg-white/[0.04] text-[#64748B] hover:bg-white/[0.08]'
+                        }`}
+                      >
+                        {m === 'interval' ? '⏱ Aralıklı' : '🕐 Manuel Saatler'}
+                      </button>
+                    ))}
+                  </div>
+
+                  <AnimatePresence mode="wait">
+                    {mode === 'interval' ? (
+                      <motion.div
+                        key="interval"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-3"
+                      >
+                        <label className="mb-2 block text-xs text-[#64748B]">
+                          Her kaç saatte bir?
+                        </label>
+                        <div className="flex gap-2">
+                          {[1, 2, 3, 4].map((h) => (
+                            <button
+                              key={h}
+                              onClick={() => setIntervalHours(h)}
+                              className={`flex-1 rounded-xl py-2 text-xs font-semibold transition-colors ${
+                                intervalHours === h
+                                  ? 'bg-[#3B82F6] text-white'
+                                  : 'bg-white/[0.04] text-[#64748B] hover:bg-white/[0.08]'
+                              }`}
+                            >
+                              {h}s
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="manual"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-3 space-y-2"
+                      >
+                        <div className="flex gap-2">
+                          <input
+                            type="time"
+                            value={newTime}
+                            onChange={(e) => setNewTime(e.target.value)}
+                            className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-[#3B82F6]/50"
+                          />
+                          <button
+                            onClick={addTime}
+                            className="flex items-center gap-1 rounded-xl bg-[#3B82F6]/20 px-3 py-2 text-xs text-[#3B82F6] hover:bg-[#3B82F6]/30"
+                          >
+                            <Plus size={14} /> Ekle
+                          </button>
+                        </div>
+                        <div className="space-y-1">
+                          {times.map((t) => (
+                            <div
+                              key={t}
+                              className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2"
+                            >
+                              <span className="text-sm text-white">{t}</span>
+                              <button
+                                onClick={() => removeTime(t)}
+                                className="text-red-400/60 hover:text-red-400"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ))}
+                          {times.length === 0 && (
+                            <p className="text-center text-xs text-[#64748B]">
+                              Henüz saat eklenmedi
+                            </p>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
 

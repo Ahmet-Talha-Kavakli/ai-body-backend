@@ -17,6 +17,9 @@ interface WaterState {
   glasses: number
   dailyGoalMl: number
   cupSizeMl: number
+  reminderMode: 'interval' | 'manual'
+  reminderIntervalHours: number
+  reminderTimes: string[]
 }
 
 interface StreakState {
@@ -38,6 +41,9 @@ export default function WaterPage() {
     glasses: 0,
     dailyGoalMl: 2500,
     cupSizeMl: 200,
+    reminderMode: 'interval',
+    reminderIntervalHours: 2,
+    reminderTimes: [],
   })
   const [streak, setStreak] = useState<StreakState>({
     currentStreak: 0,
@@ -52,16 +58,20 @@ export default function WaterPage() {
 
   const fetchAll = useCallback(
     async (p: 'week' | 'month' = period) => {
-      const [waterRes, streakRes, historyRes] = await Promise.all([
+      const [waterRes, streakRes, historyRes, settingsRes] = await Promise.all([
         fetch('/api/nutrition/water').then((r) => r.json()),
         fetch('/api/nutrition/water/streak').then((r) => r.json()),
         fetch(`/api/nutrition/water/history?period=${p}`).then((r) => r.json()),
+        fetch('/api/nutrition/water/settings').then((r) => r.json()),
       ])
       setWater({
         amountMl: waterRes.amountMl ?? 0,
         glasses: waterRes.glasses ?? 0,
         dailyGoalMl: waterRes.dailyGoalMl ?? 2500,
         cupSizeMl: waterRes.cupSizeMl ?? 200,
+        reminderMode: settingsRes.settings?.reminderMode ?? 'interval',
+        reminderIntervalHours: settingsRes.settings?.reminderIntervalHours ?? 2,
+        reminderTimes: settingsRes.settings?.reminderTimes ?? [],
       })
       const totalMlEver = (historyRes.history ?? []).reduce(
         (s: number, d: HistoryItem) => s + d.amountMl,
@@ -108,13 +118,21 @@ export default function WaterPage() {
     setWater((prev) => ({ ...prev, amountMl: res.amountMl, glasses: res.glasses }))
   }
 
-  const handleSaveSettings = async (dailyGoalMl: number, cupSizeMl: number) => {
+  const handleSaveSettings = async (
+    dailyGoalMl: number,
+    cupSizeMl: number,
+    reminder: {
+      reminderMode: 'interval' | 'manual'
+      reminderIntervalHours: number
+      reminderTimes: string[]
+    }
+  ) => {
     await fetch('/api/nutrition/water/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dailyGoalMl, cupSizeMl }),
+      body: JSON.stringify({ dailyGoalMl, cupSizeMl, ...reminder }),
     })
-    setWater((prev) => ({ ...prev, dailyGoalMl, cupSizeMl }))
+    setWater((prev) => ({ ...prev, dailyGoalMl, cupSizeMl, ...reminder }))
   }
 
   const handlePeriodChange = (p: 'week' | 'month') => {
@@ -147,6 +165,9 @@ export default function WaterPage() {
         <WaterSettingsPanel
           dailyGoalMl={water.dailyGoalMl}
           cupSizeMl={water.cupSizeMl}
+          reminderMode={water.reminderMode}
+          reminderIntervalHours={water.reminderIntervalHours}
+          reminderTimes={water.reminderTimes}
           onSave={handleSaveSettings}
         />
       </motion.div>
