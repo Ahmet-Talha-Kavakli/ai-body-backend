@@ -22,7 +22,6 @@ interface MealTemplate {
   totalProteinG: number
   totalCarbsG: number
   totalFatG: number
-  items: unknown[]
   createdAt: string
 }
 
@@ -52,45 +51,55 @@ export function AddMealModal({ open, onClose, onSave }: Props) {
   const [saving, setSaving] = useState(false)
   const [templates, setTemplates] = useState<MealTemplate[]>([])
   const [templatesLoading, setTemplatesLoading] = useState(false)
+  const [templatesError, setTemplatesError] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setTemplatesLoading(true)
+    setTemplatesError(false)
     fetch('/api/nutrition/templates')
       .then((r) => r.json())
       .then((data) => setTemplates(data.templates ?? []))
-      .catch(() => {})
+      .catch(() => {
+        setTemplatesError(true)
+      })
       .finally(() => setTemplatesLoading(false))
   }, [open])
 
   const handleManualSave = async () => {
     if (!form.name || !form.calories) return
     setSaving(true)
-    await onSave({
-      name: form.name,
-      calories: Number(form.calories),
-      protein: Number(form.protein || 0),
-      carbs: Number(form.carbs || 0),
-      fat: Number(form.fat || 0),
-      mealType: form.mealType,
-    })
-    setSaving(false)
-    setForm({ name: '', calories: '', protein: '', carbs: '', fat: '', mealType: 'snack' })
-    onClose()
+    try {
+      await onSave({
+        name: form.name,
+        calories: Number(form.calories),
+        protein: Number(form.protein || 0),
+        carbs: Number(form.carbs || 0),
+        fat: Number(form.fat || 0),
+        mealType: form.mealType,
+      })
+      setForm({ name: '', calories: '', protein: '', carbs: '', fat: '', mealType: 'snack' })
+      onClose()
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleTemplateSave = async (tpl: MealTemplate) => {
     setSaving(true)
-    await onSave({
-      name: tpl.name,
-      calories: tpl.totalCalories,
-      protein: tpl.totalProteinG,
-      carbs: tpl.totalCarbsG,
-      fat: tpl.totalFatG,
-      mealType: tpl.mealType as MealType,
-    })
-    setSaving(false)
-    onClose()
+    try {
+      await onSave({
+        name: tpl.name,
+        calories: tpl.totalCalories,
+        protein: tpl.totalProteinG,
+        carbs: tpl.totalCarbsG,
+        fat: tpl.totalFatG,
+        mealType: tpl.mealType as MealType,
+      })
+      onClose()
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -116,7 +125,9 @@ export function AddMealModal({ open, onClose, onSave }: Props) {
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-white">Öğün Ekle</h3>
                 <button
+                  type="button"
                   onClick={onClose}
+                  aria-label="Kapat"
                   className="cursor-pointer rounded-lg p-1.5 transition-colors hover:bg-white/[0.08]"
                 >
                   <X size={16} className="text-[#64748B]" />
@@ -128,6 +139,7 @@ export function AddMealModal({ open, onClose, onSave }: Props) {
                 {(['manual', 'templates'] as const).map((t) => (
                   <button
                     key={t}
+                    type="button"
                     onClick={() => setTab(t)}
                     className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors ${
                       tab === t ? 'bg-[#6366F1] text-white' : 'text-[#64748B] hover:text-white'
@@ -153,6 +165,7 @@ export function AddMealModal({ open, onClose, onSave }: Props) {
                     {(Object.entries(MEAL_LABELS) as [MealType, string][]).map(([type, label]) => (
                       <button
                         key={type}
+                        type="button"
                         onClick={() => setForm((p) => ({ ...p, mealType: type }))}
                         className={`cursor-pointer rounded-full px-3 py-1 text-xs transition-colors ${form.mealType === type ? 'bg-[#6366F1] text-white' : 'bg-white/[0.04] text-[#64748B]'}`}
                       >
@@ -201,6 +214,10 @@ export function AddMealModal({ open, onClose, onSave }: Props) {
                     <div className="flex h-[200px] items-center justify-center">
                       <Loader2 size={20} className="animate-spin text-[#64748B]" />
                     </div>
+                  ) : templatesError ? (
+                    <div className="flex h-[200px] flex-col items-center justify-center gap-2">
+                      <p className="text-sm text-[#64748B]">Şablonlar yüklenemedi</p>
+                    </div>
                   ) : templates.length === 0 ? (
                     <div className="flex h-[200px] flex-col items-center justify-center gap-2">
                       <p className="text-sm text-[#64748B]">Henüz şablon yok</p>
@@ -213,6 +230,7 @@ export function AddMealModal({ open, onClose, onSave }: Props) {
                       {templates.map((tpl) => (
                         <li key={tpl.id}>
                           <button
+                            type="button"
                             onClick={() => handleTemplateSave(tpl)}
                             disabled={saving}
                             className="w-full rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3 text-left transition-colors hover:bg-white/[0.06] disabled:opacity-50"
