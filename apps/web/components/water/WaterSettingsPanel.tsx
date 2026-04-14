@@ -11,7 +11,15 @@ interface WaterSettingsPanelProps {
   reminderMode: 'interval' | 'manual'
   reminderIntervalHours: number
   reminderTimes: string[]
-  onSave: (dailyGoalMl: number, cupSizeMl: number, reminder: ReminderSettings) => Promise<void>
+  city: string
+  isManualGoal: boolean
+  onSave: (
+    dailyGoalMl: number,
+    cupSizeMl: number,
+    reminder: ReminderSettings,
+    city: string,
+    isManualGoal: boolean
+  ) => Promise<void>
 }
 
 export function WaterSettingsPanel({
@@ -20,6 +28,8 @@ export function WaterSettingsPanel({
   reminderMode,
   reminderIntervalHours,
   reminderTimes,
+  city: cityProp,
+  isManualGoal: isManualGoalProp,
   onSave,
 }: WaterSettingsPanelProps) {
   const [open, setOpen] = useState(false)
@@ -30,6 +40,8 @@ export function WaterSettingsPanel({
   const [times, setTimes] = useState<string[]>(reminderTimes)
   const [newTime, setNewTime] = useState('09:00')
   const [saving, setSaving] = useState(false)
+  const [city, setCity] = useState(cityProp)
+  const [isManualGoal, setIsManualGoal] = useState(isManualGoalProp)
 
   const addTime = () => {
     if (!times.includes(newTime)) {
@@ -42,11 +54,17 @@ export function WaterSettingsPanel({
   const handleSave = async () => {
     setSaving(true)
     try {
-      await onSave(goal, cup, {
-        reminderMode: mode,
-        reminderIntervalHours: intervalHours,
-        reminderTimes: times,
-      })
+      await onSave(
+        goal,
+        cup,
+        {
+          reminderMode: mode,
+          reminderIntervalHours: intervalHours,
+          reminderTimes: times,
+        },
+        city,
+        isManualGoal
+      )
       setOpen(false)
     } finally {
       setSaving(false)
@@ -111,6 +129,18 @@ export function WaterSettingsPanel({
                     onChange={(e) => setGoal(Number(e.target.value))}
                     className="mt-2 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-[#3B82F6]/50"
                   />
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="manualGoal"
+                      checked={isManualGoal}
+                      onChange={(e) => setIsManualGoal(e.target.checked)}
+                      className="rounded"
+                    />
+                    <label htmlFor="manualGoal" className="text-xs text-[#64748B]">
+                      Manuel hedef (kiloya göre otomatik hesaplama kapalı)
+                    </label>
+                  </div>
                 </div>
 
                 {/* Bardak Boyutu */}
@@ -227,6 +257,21 @@ export function WaterSettingsPanel({
                     )}
                   </AnimatePresence>
                 </div>
+              </div>
+
+              {/* Şehir (Hava Sıcaklığı için) */}
+              <div>
+                <label className="mb-2 block text-xs text-[#64748B]">🌡 Hava Sıcaklığı Şehri</label>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="ör. Istanbul, Ankara, Izmir"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none placeholder:text-[#64748B] focus:border-[#3B82F6]/50"
+                />
+                <p className="mt-1 text-[10px] text-[#64748B]">
+                  Sıcak havalarda su hedefiniz otomatik artırılır
+                </p>
               </div>
 
               <button
