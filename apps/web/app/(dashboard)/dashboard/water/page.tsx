@@ -9,6 +9,7 @@ import { WaterSettingsPanel } from '@/components/water/WaterSettingsPanel'
 import { WaterHistory } from '@/components/water/WaterHistory'
 import { WaterStreakCard } from '@/components/water/WaterStreakCard'
 import { WaterAchievements } from '@/components/water/WaterAchievements'
+import { DrinkTracker } from '@/components/water/DrinkTracker'
 import { NotificationSettings } from '@/components/settings/NotificationSettings'
 import { CoachToast } from '@/components/water/CoachToast'
 import type { ReminderSettings } from '@/lib/water/types'
@@ -224,6 +225,15 @@ export default function WaterPage() {
         transition={{ delay: 0.3 }}
       >
         <WaterAchievements stats={streak} />
+      </motion.div>
+
+      {/* Diğer İçecekler */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.32 }}
+      >
+        <DrinkTracker />
       </motion.div>
 
       {/* Bildirimler */}
