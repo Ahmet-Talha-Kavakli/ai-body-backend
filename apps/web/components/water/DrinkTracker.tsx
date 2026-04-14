@@ -79,12 +79,14 @@ export function DrinkTracker() {
   }
 
   const removeDrink = async (id: string) => {
-    await fetch('/api/nutrition/drinks', {
+    const res = await fetch('/api/nutrition/drinks', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
-    })
-    setLogs((prev) => prev.filter((l) => l.id !== id))
+    }).then((r) => r.json())
+    if (res.success) {
+      setLogs((prev) => prev.filter((l) => l.id !== id))
+    }
   }
 
   const totalByType = logs.reduce(
