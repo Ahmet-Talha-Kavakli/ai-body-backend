@@ -319,16 +319,16 @@ model WaterSettings {
   id            String   @id @default(cuid())
   userId        String   @unique
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dailyGoalMl   Float    @default(2500)
+  dailyGoalMl           Float    @default(2500)
   cupSizeMl             Float    @default(200)
   reminderMode          String   @default("interval") // "interval" | "manual"
   reminderIntervalHours Int      @default(2)
   reminderTimes         String[] @default([])
   isManualGoal          Boolean  @default(false)
   city                  String?
-  tempBonusMl           Int      @default(0)
+  tempBonusMl           Float    @default(0)
   createdAt             DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  updatedAt             DateTime @updatedAt
 
   @@index([userId])
 }
