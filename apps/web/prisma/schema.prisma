@@ -71,6 +71,8 @@ model User {
   nutritionStreak  NutritionStreak?
   dietProfile      DietProfile?
   mealTemplates    MealTemplate[]
+  userAchievements  UserAchievement[]
+  userXP            UserXP?
 
   @@index([clerkId])
   @@index([email])
@@ -824,6 +826,29 @@ model FitnessCoachSession {
   createdAt       DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String   // e.g. "streak_7", "calories_goal_30", "first_workout"
+  earnedAt      DateTime @default(now())
+  xpAwarded     Int
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+model UserXP {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  total     Int      @default(0)
+  level     Int      @default(1)
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
