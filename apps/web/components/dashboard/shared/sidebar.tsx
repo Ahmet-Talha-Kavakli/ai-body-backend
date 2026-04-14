@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { label: 'Seans', href: '/dashboard/session', icon: THIINGS.flame },
   { label: 'Egzersiz Planım', href: '/dashboard/workouts', icon: THIINGS.dumbbell },
   { label: 'Beslenme', href: '/dashboard/nutrition', icon: THIINGS.apple },
+  { label: 'Su Takibi', href: '/dashboard/water', icon: THIINGS.waterBottle },
   { label: 'Sağlık & Akıllı Saat', href: '/dashboard/health', icon: THIINGS.heart },
   { label: 'İlerleyiş', href: '/dashboard/progress', icon: THIINGS.trophy },
   { label: 'Başarımlar', href: '/dashboard/achievements', icon: THIINGS.award },
