@@ -70,6 +70,7 @@ model User {
   waterLogs        WaterLog[]
   nutritionStreak  NutritionStreak?
   dietProfile      DietProfile?
+  mealTemplates    MealTemplate[]
 
   @@index([clerkId])
   @@index([email])
@@ -325,6 +326,22 @@ model DietProfile {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      String   @default("balanced")
   updatedAt DateTime @updatedAt
+}
+
+model MealTemplate {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  mealType      String   // breakfast | lunch | dinner | snack | pre_workout | post_workout
+  items         Json     // FoodItem[]
+  totalCalories Int
+  totalProteinG Float
+  totalCarbsG   Float
+  totalFatG     Float
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ──────────────────────────────────────────
