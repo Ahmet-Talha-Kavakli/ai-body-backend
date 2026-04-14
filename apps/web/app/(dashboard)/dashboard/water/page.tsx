@@ -24,6 +24,7 @@ interface WaterState {
   reminderTimes: string[]
   city?: string
   isManualGoal?: boolean
+  tempBonusMl?: number
 }
 
 interface StreakState {
@@ -50,6 +51,7 @@ export default function WaterPage() {
     reminderTimes: [],
     city: '',
     isManualGoal: false,
+    tempBonusMl: 0,
   })
   const [streak, setStreak] = useState<StreakState>({
     currentStreak: 0,
@@ -81,6 +83,7 @@ export default function WaterPage() {
         reminderTimes: settingsRes.settings?.reminderTimes ?? [],
         city: settingsRes.settings?.city ?? '',
         isManualGoal: settingsRes.settings?.isManualGoal ?? false,
+        tempBonusMl: settingsRes.settings?.tempBonusMl ?? 0,
       })
       const totalMlEver = (historyRes.history ?? []).reduce(
         (s: number, d: HistoryItem) => s + d.amountMl,
@@ -146,7 +149,8 @@ export default function WaterPage() {
     setPeriod(p)
   }
 
-  const percentage = water.dailyGoalMl > 0 ? (water.amountMl / water.dailyGoalMl) * 100 : 0
+  const effectiveGoal = water.dailyGoalMl + (water.tempBonusMl ?? 0)
+  const percentage = effectiveGoal > 0 ? (water.amountMl / effectiveGoal) * 100 : 0
 
   if (loading) {
     return (
@@ -187,8 +191,25 @@ export default function WaterPage() {
         transition={{ delay: 0.1 }}
         className="flex justify-center"
       >
-        <WaterWave percentage={percentage} amountMl={water.amountMl} goalMl={water.dailyGoalMl} />
+        <WaterWave percentage={percentage} amountMl={water.amountMl} goalMl={effectiveGoal} />
       </motion.div>
+
+      {/* Hava Sıcaklığı Bonusu */}
+      {(water.tempBonusMl ?? 0) > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 rounded-2xl border border-orange-500/20 bg-orange-500/10 px-4 py-2.5"
+        >
+          <span className="text-base">🌡</span>
+          <div>
+            <p className="text-xs font-semibold text-orange-400">Sıcak Hava Bonusu</p>
+            <p className="text-[10px] text-[#64748B]">
+              Bugün +{water.tempBonusMl}ml eklendi ({water.city} için)
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       {/* AI Koç Yorumu */}
       <CoachToast message={coachMessage} />
@@ -223,7 +244,7 @@ export default function WaterPage() {
       >
         <WaterHistory
           history={history}
-          dailyGoalMl={water.dailyGoalMl}
+          dailyGoalMl={effectiveGoal}
           period={period}
           onPeriodChange={handlePeriodChange}
         />
