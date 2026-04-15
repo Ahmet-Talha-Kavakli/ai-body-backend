@@ -1,9 +1,24 @@
 'use client'
 
-import { PTCharacter3D } from '@/components/session/character/PTCharacter3D'
+import dynamic from 'next/dynamic'
 import { VoiceWaveform } from '../ui/VoiceWaveform'
 import { useCharacterMorph } from '@/components/session/character/useCharacterMorph'
 import type { AnimationState } from '../hooks/useSpeechAnimation'
+
+const PTCharacter3D = dynamic(
+  () =>
+    import('@/components/session/character/PTCharacter3D').then((m) => ({
+      default: m.PTCharacter3D,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+      </div>
+    ),
+  }
+)
 
 interface CoachCharacterPanelProps {
   animState: AnimationState
@@ -16,7 +31,7 @@ export function CoachCharacterPanel({
   audioLevel,
   isSpeaking,
 }: CoachCharacterPanelProps) {
-  const { params, isLoading } = useCharacterMorph()
+  const { params } = useCharacterMorph()
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-emerald-500/20 bg-gray-950">
@@ -36,19 +51,12 @@ export function CoachCharacterPanel({
 
       {/* 3D Character */}
       <div className="flex-1">
-        {!isLoading && (
-          <PTCharacter3D
-            morphParams={params}
-            exerciseSlug="idle"
-            isActive={false}
-            className="h-full w-full"
-          />
-        )}
-        {isLoading && (
-          <div className="flex h-full w-full items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-          </div>
-        )}
+        <PTCharacter3D
+          morphParams={params}
+          exerciseSlug="idle"
+          isActive={false}
+          className="h-full w-full"
+        />
       </div>
 
       {/* Waveform */}
