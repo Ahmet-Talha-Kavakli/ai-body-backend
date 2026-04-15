@@ -1,55 +1,91 @@
 'use client'
 
-import { Search } from 'lucide-react'
+import { useUser } from '@clerk/nextjs'
+import { Bell, Menu } from 'lucide-react'
 import Image from 'next/image'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { THIINGS } from '@/lib/thiings'
 
 interface DashboardHeaderProps {
   onMenuClick: () => void
 }
 
 export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
+  const { user } = useUser()
+  const avatarUrl = user?.imageUrl
+  const initials = user?.firstName?.[0] ?? 'U'
+
   return (
-    <header className="sticky top-0 z-40 border-b border-border/30 bg-card/50 backdrop-blur-sm">
-      <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-        {/* Menu button (mobile only) */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="lg:hidden"
-          onClick={onMenuClick}
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <line x1="2" y1="4" x2="18" y2="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <line x1="2" y1="16" x2="18" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </Button>
-
-        {/* Logo (mobile only) */}
-        <div className="lg:hidden font-bold text-lg">FitAI</div>
-
-        {/* Search bar (hidden on mobile) */}
-        <div className="hidden sm:flex flex-1 max-w-xs ml-4">
-          <div className="relative w-full">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search workouts..."
-              className="pl-8"
-            />
+    <header className="sticky top-0 z-40 border-b border-white/5 bg-black/60 backdrop-blur-xl">
+      <div className="flex h-16 items-center justify-between px-4">
+        {/* MOBILE */}
+        <div className="flex w-full items-center justify-between lg:hidden">
+          {/* Sol: Avatar */}
+          <div className="h-9 w-9 overflow-hidden rounded-full ring-2 ring-indigo-500/30">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt="avatar"
+                width={36}
+                height={36}
+                className="h-full w-full object-cover"
+                unoptimized
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-indigo-500 text-sm font-bold text-white">
+                {initials}
+              </div>
+            )}
           </div>
+
+          {/* Orta: Logo */}
+          <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-lg font-black text-transparent">
+            FitAI
+          </span>
+
+          {/* Sağ: Bildirim */}
+          <button className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/5">
+            <Bell size={20} className="text-white/70" />
+            <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[9px] font-bold text-white">
+              3
+            </span>
+          </button>
         </div>
 
-        {/* Right actions */}
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <Image src={THIINGS.bell} alt="notifications" width={20} height={20} unoptimized className="w-5 h-5" />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <Image src={THIINGS.profileIcon} alt="user" width={20} height={20} unoptimized className="w-5 h-5" />
-          </Button>
+        {/* DESKTOP */}
+        <div className="hidden w-full items-center justify-between lg:flex">
+          {/* Sol: Hamburger menü */}
+          <button
+            onClick={onMenuClick}
+            className="rounded-lg p-2 text-white/70 transition-colors hover:bg-white/5"
+          >
+            <Menu size={20} />
+          </button>
+
+          {/* Sağ: Bildirim + Avatar */}
+          <div className="flex items-center gap-4">
+            <button className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/5">
+              <Bell size={20} className="text-white/70" />
+              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[9px] font-bold text-white">
+                3
+              </span>
+            </button>
+
+            <div className="h-8 w-8 overflow-hidden rounded-full ring-2 ring-indigo-500/30">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt="avatar"
+                  width={32}
+                  height={32}
+                  className="h-full w-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-indigo-500 text-xs font-bold text-white">
+                  {initials}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </header>
