@@ -550,6 +550,17 @@ section[id] {
   --space-3xl: 64px;
 }
 
+.dark {
+  /* Nav dark mode */
+  --nav-bg: rgba(13, 13, 26, 0.85);
+  --nav-border: rgba(255, 255, 255, 0.08);
+  --nav-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+
+  /* Card dark mode */
+  --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --card-shadow-hover: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
 /* Utility classes for new design system */
 @layer utilities {
   .glass {
