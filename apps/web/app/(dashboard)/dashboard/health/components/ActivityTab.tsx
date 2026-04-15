@@ -153,7 +153,7 @@ export function ActivityTab({
         <HealthMetricCard
           icon={Footprints}
           label="Toplam Adım"
-          value={todaySteps.toLocaleString('tr-TR')}
+          value={(todaySteps ?? 0).toLocaleString('tr-TR')}
           unit="adım"
           accentColor="purple"
           delay={0.14}

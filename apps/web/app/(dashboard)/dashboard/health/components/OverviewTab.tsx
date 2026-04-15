@@ -55,10 +55,10 @@ export function OverviewTab({
     {
       icon: Footprints,
       label: 'Ort. Adım',
-      value: avgSteps.toLocaleString('tr-TR'),
+      value: (avgSteps ?? 0).toLocaleString('tr-TR'),
       unit: 'adım',
       accentColor: 'purple',
-      status: `Hedef: ${stepGoal.toLocaleString('tr-TR')}`,
+      status: `Hedef: ${(stepGoal ?? 0).toLocaleString('tr-TR')}`,
     },
     {
       icon: Moon,
@@ -71,7 +71,7 @@ export function OverviewTab({
     {
       icon: Droplets,
       label: 'Su Tüketimi',
-      value: waterLiters.toFixed(1),
+      value: (waterLiters ?? 0).toFixed(1),
       unit: 'L',
       accentColor: 'blue',
       status: `Hedef: ${waterGoalL}L`,

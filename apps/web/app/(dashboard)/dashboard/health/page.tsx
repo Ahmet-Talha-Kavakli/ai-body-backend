@@ -103,16 +103,22 @@ function HealthPageInner() {
         devRes.json(),
         goalRes.json(),
       ])
-      setOverview(ov)
-      setActivityData(act)
-      setSleepData(sleep)
+      setOverview(ov?.error ? null : ov)
+      setActivityData(act?.error ? null : act)
+      setSleepData(sleep?.error ? null : sleep)
       setWaterData({
         totalMl: water.totalMl ?? 0,
         count: water.count ?? 0,
         weeklyData: water.weeklyData ?? [],
       })
       setDevices(Array.isArray(devs) ? devs : [])
-      setGoals(goal)
+      if (!goal?.error)
+        setGoals({
+          dailySteps: goal.dailySteps ?? 10000,
+          sleepHours: goal.sleepHours ?? 8,
+          waterMl: goal.waterMl ?? 2500,
+          targetWeightKg: goal.targetWeightKg ?? null,
+        })
     } catch (e) {
       console.error(e)
     } finally {
