@@ -70,6 +70,19 @@ export function DevicesTab({
 
   async function handleSync() {
     setSyncing(true)
+    // Sync real devices first, then refresh all data
+    const realDevices = devices.filter(
+      (d) => d.isConnected && d.type !== 'manual' && !d.id.startsWith('mock-')
+    )
+    await Promise.all(
+      realDevices.map((d) =>
+        fetch('/api/health/devices/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceId: d.id }),
+        }).catch(() => {})
+      )
+    )
     await onSync()
     setSyncing(false)
   }

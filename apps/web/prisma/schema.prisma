@@ -439,7 +439,9 @@ model WearableDevice {
   model         String
   isConnected   Boolean           @default(false)
   lastSyncedAt  DateTime?
-  accessToken   String?           // encrypted
+  accessToken    String?
+  refreshToken   String?
+  externalUserId String?
 
   readings      WearableReading[]
 
