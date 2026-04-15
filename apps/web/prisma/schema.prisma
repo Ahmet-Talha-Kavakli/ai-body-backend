@@ -81,6 +81,11 @@ model User {
   healthGoal        HealthGoal?
   roadmap          Roadmap?
 
+  supplements    Supplement[]
+  supplementLogs SupplementLog[]
+  medications    Medication[]
+  medicationLogs MedicationLog[]
+
   @@index([clerkId])
   @@index([email])
 }
@@ -1008,4 +1013,63 @@ model RoadmapTask {
   createdAt DateTime    @default(now())
 
   @@index([weekId])
+}
+
+// ──────────────────────────────────────────
+// SUPPLEMENT & MEDICATION TRACKING
+// ──────────────────────────────────────────
+
+model Supplement {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  dosage    String
+  unit      String          @default("mg")
+  timing    String          @default("morning")
+  isActive  Boolean         @default(true)
+  logs      SupplementLog[]
+  createdAt DateTime        @default(now())
+
+  @@index([userId])
+}
+
+model SupplementLog {
+  id           String     @id @default(cuid())
+  supplementId String
+  supplement   Supplement @relation(fields: [supplementId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  takenAt      DateTime   @default(now())
+
+  @@index([userId])
+  @@index([userId, takenAt])
+}
+
+model Medication {
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  dosage     String
+  frequency  String          @default("daily")
+  reminderAt String?
+  isActive   Boolean         @default(true)
+  logs       MedicationLog[]
+  createdAt  DateTime        @default(now())
+
+  @@index([userId])
+}
+
+model MedicationLog {
+  id           String     @id @default(cuid())
+  medicationId String
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  takenAt      DateTime   @default(now())
+  skipped      Boolean    @default(false)
+
+  @@index([userId])
+  @@index([userId, takenAt])
 }
