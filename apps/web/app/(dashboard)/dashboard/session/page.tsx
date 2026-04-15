@@ -1,5 +1,5 @@
-import { SessionModeSelector } from '@/components/session/SessionModeSelector'
+import { redirect } from 'next/navigation'
 
 export default function SessionPage() {
-  return <SessionModeSelector />
+  redirect('/dashboard/sessions')
 }
