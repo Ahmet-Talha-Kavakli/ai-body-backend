@@ -423,11 +423,20 @@ model NotificationPreference {
   expoPushToken     String?
 
   // Temel bildirimler
-  waterReminder     Boolean @default(true)
-  mealReminder      Boolean @default(true)
+  waterReminder       Boolean @default(true)
+  mealReminder        Boolean @default(true)
+  medicationReminder  Boolean @default(true)
+  sleepReminder       Boolean @default(true)
+  workoutReminder     Boolean @default(true)
+
+  // Evcil hayvan & gamification
+  petNotification     Boolean @default(true)
+  streakWarning       Boolean @default(true)
+  achievementAlert    Boolean @default(true)
+  roadmapUpdate       Boolean @default(true)
 
   // Akıllı bildirimler
-  smartCalorie      Boolean @default(true)
+  smartCalorie        Boolean @default(true)
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
