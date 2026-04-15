@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { CharacterMorphParams } from '@fitai/shared-types'
 
@@ -45,7 +44,7 @@ function fitnessToColor(level: FitnessLevel): number {
   return map[level] ?? 0x10b981
 }
 
-function buildCharacterParts(params: CharacterMorphParams): THREE.Object3D[] {
+function buildCharacterGroup(params: CharacterMorphParams): THREE.Group {
   const level = params.fitnessLevel as FitnessLevel
   const bodyScaleX = bmiToBodyScale(params.bmi)
   const shoulderScale = fitnessToShoulderScale(level)
@@ -63,104 +62,61 @@ function buildCharacterParts(params: CharacterMorphParams): THREE.Object3D[] {
   const skinMat = new THREE.MeshStandardMaterial({ color: 0xd4a574, roughness: 0.8 })
   const legMat = new THREE.MeshStandardMaterial({ color: 0x1e3a5f, roughness: 0.7 })
 
-  const parts: THREE.Object3D[] = []
+  const group = new THREE.Group()
+  group.scale.y = params.heightNorm
 
-  // Head (octahedron = low-poly feel)
   const head = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), skinMat)
   head.position.y = 1.65
-  head.name = 'head'
-  parts.push(head)
+  group.add(head)
 
-  // Torso
   const torso = new THREE.Mesh(
     new THREE.BoxGeometry(0.55 * bodyScaleX * shoulderScale, 0.65, 0.28),
     mat
   )
   torso.position.y = 1.0
-  torso.name = 'torso'
-  parts.push(torso)
+  group.add(torso)
 
-  // Arms
   const armGeo = new THREE.BoxGeometry(0.12 * armScale, 0.36, 0.12 * armScale)
   const forearmGeo = new THREE.BoxGeometry(0.1 * armScale, 0.3, 0.1 * armScale)
   const armOffsetX = 0.28 * bodyScaleX * shoulderScale + 0.08
 
   const leftUpperArm = new THREE.Mesh(armGeo, mat)
   leftUpperArm.position.set(-armOffsetX, 1.05, 0)
-  leftUpperArm.name = 'leftUpperArm'
-  parts.push(leftUpperArm)
+  group.add(leftUpperArm)
 
   const rightUpperArm = new THREE.Mesh(armGeo, mat)
   rightUpperArm.position.set(armOffsetX, 1.05, 0)
-  rightUpperArm.name = 'rightUpperArm'
-  parts.push(rightUpperArm)
+  group.add(rightUpperArm)
 
   const leftForearm = new THREE.Mesh(forearmGeo, skinMat)
   leftForearm.position.set(-armOffsetX, 0.7, 0)
-  leftForearm.name = 'leftForearm'
-  parts.push(leftForearm)
+  group.add(leftForearm)
 
   const rightForearm = new THREE.Mesh(forearmGeo, skinMat)
   rightForearm.position.set(armOffsetX, 0.7, 0)
-  rightForearm.name = 'rightForearm'
-  parts.push(rightForearm)
+  group.add(rightForearm)
 
-  // Legs
   const thighGeo = new THREE.BoxGeometry(0.18 * bodyScaleX, 0.4, 0.18)
   const shinGeo = new THREE.BoxGeometry(0.14, 0.38, 0.14)
 
   const leftThigh = new THREE.Mesh(thighGeo, legMat)
   leftThigh.position.set(-0.16, 0.42, 0)
-  leftThigh.name = 'leftThigh'
-  parts.push(leftThigh)
+  group.add(leftThigh)
 
   const rightThigh = new THREE.Mesh(thighGeo, legMat)
   rightThigh.position.set(0.16, 0.42, 0)
-  rightThigh.name = 'rightThigh'
-  parts.push(rightThigh)
+  group.add(rightThigh)
 
   const leftShin = new THREE.Mesh(shinGeo, legMat)
   leftShin.position.set(-0.16, 0.04, 0)
-  leftShin.name = 'leftShin'
-  parts.push(leftShin)
+  group.add(leftShin)
 
   const rightShin = new THREE.Mesh(shinGeo, legMat)
   rightShin.position.set(0.16, 0.04, 0)
-  rightShin.name = 'rightShin'
-  parts.push(rightShin)
+  group.add(rightShin)
 
-  return parts
-}
-
-interface SceneProps {
-  morphParams: CharacterMorphParams
-  isActive: boolean
-}
-
-function CharacterScene({ morphParams, isActive }: SceneProps) {
-  const groupRef = useRef<THREE.Group>(null)
-
-  useEffect(() => {
-    const group = groupRef.current
-    if (!group) return
-    // Only run in a real Three.js context (not jsdom/test env)
-    if (typeof group.add !== 'function') return
-    // Clear previous
-    while (group.children.length) group.remove(group.children[0]!)
-    // Build new parts
-    const parts = buildCharacterParts(morphParams)
-    parts.forEach((p) => group.add(p))
-    // Height scale
-    group.scale.y = morphParams.heightNorm
-  }, [morphParams])
-
-  useFrame((_, delta) => {
-    if (!isActive && groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.3
-    }
-  })
-
-  return <group ref={groupRef} position={[0, -0.8, 0]} />
+  group.position.y = -0.8
+  return group
 }
 
 interface PTCharacter3DProps {
@@ -171,16 +127,90 @@ interface PTCharacter3DProps {
 }
 
 export function PTCharacter3D({ morphParams, isActive, className }: PTCharacter3DProps) {
-  return (
-    <Canvas
-      camera={{ position: [0, 1.0, 3.2], fov: 50 }}
-      style={{ background: 'transparent', width: '100%', height: '100%' }}
-      className={className}
-    >
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[3, 6, 4]} intensity={1.0} />
-      <pointLight position={[-2, 3, 2]} intensity={0.4} color="#10b981" />
-      <CharacterScene morphParams={morphParams} isActive={isActive} />
-    </Canvas>
-  )
+  const mountRef = useRef<HTMLDivElement>(null)
+  const isActiveRef = useRef(isActive)
+  useEffect(() => {
+    isActiveRef.current = isActive
+  }, [isActive])
+
+  const sceneRef = useRef<{
+    renderer: THREE.WebGLRenderer
+    scene: THREE.Scene
+    camera: THREE.PerspectiveCamera
+    group: THREE.Group
+    animId: number
+  } | null>(null)
+
+  useEffect(() => {
+    const mount = mountRef.current
+    if (!mount) return
+
+    // Setup
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    renderer.setPixelRatio(window.devicePixelRatio)
+    renderer.setSize(mount.clientWidth, mount.clientHeight)
+    renderer.setClearColor(0x000000, 0)
+    mount.appendChild(renderer.domElement)
+
+    const scene = new THREE.Scene()
+    const camera = new THREE.PerspectiveCamera(50, mount.clientWidth / mount.clientHeight, 0.1, 100)
+    camera.position.set(0, 1.0, 3.2)
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6)
+    scene.add(ambient)
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0)
+    dirLight.position.set(3, 6, 4)
+    scene.add(dirLight)
+    const pointLight = new THREE.PointLight(0x10b981, 0.4)
+    pointLight.position.set(-2, 3, 2)
+    scene.add(pointLight)
+
+    // Character
+    const group = buildCharacterGroup(morphParams)
+    scene.add(group)
+
+    // Animate
+    let animId: number
+    const clock = new THREE.Clock()
+    function animate() {
+      animId = requestAnimationFrame(animate)
+      const delta = clock.getDelta()
+      if (!isActiveRef.current) group.rotation.y += delta * 0.3
+      renderer.render(scene, camera)
+    }
+    animate()
+
+    // Resize observer
+    const ro = new ResizeObserver(() => {
+      if (!mount) return
+      const w = mount.clientWidth
+      const h = mount.clientHeight
+      renderer.setSize(w, h)
+      camera.aspect = w / h
+      camera.updateProjectionMatrix()
+    })
+    ro.observe(mount)
+
+    sceneRef.current = { renderer, scene, camera, group, animId }
+
+    return () => {
+      cancelAnimationFrame(animId)
+      ro.disconnect()
+      renderer.dispose()
+      if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Update character when morphParams change
+  useEffect(() => {
+    const ctx = sceneRef.current
+    if (!ctx) return
+    ctx.scene.remove(ctx.group)
+    const newGroup = buildCharacterGroup(morphParams)
+    ctx.scene.add(newGroup)
+    ctx.group = newGroup
+  }, [morphParams])
+
+  return <div ref={mountRef} className={className} style={{ width: '100%', height: '100%' }} />
 }
