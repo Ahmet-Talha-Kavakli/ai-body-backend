@@ -79,6 +79,7 @@ model User {
   userXP            UserXP?
   weightEntries     WeightEntry[]
   healthGoal        HealthGoal?
+  roadmap          Roadmap?
 
   @@index([clerkId])
   @@index([email])
@@ -960,4 +961,51 @@ model HealthGoal {
   waterMl        Float    @default(2500)
   targetWeightKg Float?
   updatedAt      DateTime @updatedAt
+}
+
+// ──────────────────────────────────────────
+// ROADMAP SYSTEM
+// ──────────────────────────────────────────
+
+model Roadmap {
+  id        String        @id @default(cuid())
+  userId    String        @unique
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String        @default("fitness") // fitness | diet | health
+  title     String        @default("Kişisel Yol Haritam")
+  weeks     RoadmapWeek[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model RoadmapWeek {
+  id          String       @id @default(cuid())
+  roadmapId   String
+  roadmap     Roadmap      @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  weekNumber  Int
+  title       String
+  description String?
+  tasks       RoadmapTask[]
+  isComplete  Boolean      @default(false)
+  isUnlocked  Boolean      @default(false)
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([roadmapId])
+  @@index([roadmapId, weekNumber])
+}
+
+model RoadmapTask {
+  id        String      @id @default(cuid())
+  weekId    String
+  week      RoadmapWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  title     String
+  isDone    Boolean     @default(false)
+  doneAt    DateTime?
+  order     Int         @default(0)
+  createdAt DateTime    @default(now())
+
+  @@index([weekId])
 }
