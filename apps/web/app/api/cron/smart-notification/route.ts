@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import webPush from 'web-push'
 
-webPush.setVapidDetails(
-  process.env.VAPID_EMAIL ?? 'mailto:admin@example.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '',
-  process.env.VAPID_PRIVATE_KEY ?? ''
-)
-
 export async function GET(req: NextRequest) {
+  const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const vapidPrivate = process.env.VAPID_PRIVATE_KEY
+  if (vapidPublic && vapidPrivate) {
+    webPush.setVapidDetails(
+      process.env.VAPID_EMAIL ?? 'mailto:admin@example.com',
+      vapidPublic,
+      vapidPrivate
+    )
+  }
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
