@@ -22,10 +22,12 @@ export function VoiceSessionRoom({ personaId }: VoiceSessionRoomProps) {
   const [isMuted, setIsMuted] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [transcript, setTranscript] = useState<string>('')
+  const [error, setError] = useState<string | null>(null)
   const vapiRef = useRef<Vapi | null>(null)
   const persona = PERSONAS[personaId]
 
   const startSession = useCallback(async () => {
+    setError(null)
     setStatus('connecting')
     try {
       const vapi = createVapiInstance()
@@ -47,13 +49,25 @@ export function VoiceSessionRoom({ personaId }: VoiceSessionRoomProps) {
 
       const assistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_FRIENDLY ?? ''
 
-      await vapi.start(assistantId, {
-        model: {
-          provider: 'openai',
-          model: 'gpt-4o',
-          messages: [{ role: 'system', content: systemPrompt }],
-        },
-      })
+      if (!assistantId) {
+        setError('Bu seans henüz yapılandırılmamış. VAPI assistant ID gerekli.')
+        setStatus('idle')
+        return
+      }
+
+      try {
+        await vapi.start(assistantId, {
+          model: {
+            provider: 'openai',
+            model: 'gpt-4o',
+            messages: [{ role: 'system', content: systemPrompt }],
+          },
+        })
+      } catch (err) {
+        console.error('VAPI start error:', err)
+        setError('Seans başlatılamadı. Lütfen tekrar deneyin.')
+        setStatus('idle')
+      }
     } catch (err) {
       console.error('VAPI session error:', err)
       setStatus('idle')
@@ -171,6 +185,14 @@ export function VoiceSessionRoom({ personaId }: VoiceSessionRoomProps) {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Error state */}
+      {error && (
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6 text-center">
+          <p className="mb-2 text-sm font-semibold text-red-400">Seans Başlatılamadı</p>
+          <p className="text-xs text-white/50">{error}</p>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="w-full max-w-sm space-y-4">
