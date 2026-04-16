@@ -66,15 +66,17 @@ export async function POST(req: NextRequest) {
     })
 
     // Streak güncelle
+    let alreadyCountedToday = false
+    let newCurrent = 0
     if (newAmountMl >= dailyGoalMl) {
       const streak = await db.waterStreak.findUnique({ where: { userId: user.id } })
       const lastGoal = streak?.lastGoalDate
       const yesterday = new Date(today)
       yesterday.setDate(yesterday.getDate() - 1)
       const isConsecutive = lastGoal && lastGoal.toDateString() === yesterday.toDateString()
-      const newCurrent = isConsecutive ? (streak?.currentStreak ?? 0) + 1 : 1
+      newCurrent = isConsecutive ? (streak?.currentStreak ?? 0) + 1 : 1
       const newLongest = Math.max(newCurrent, streak?.longestStreak ?? 0)
-      const alreadyCountedToday = lastGoal?.toDateString() === today.toDateString()
+      alreadyCountedToday = lastGoal?.toDateString() === today.toDateString()
       const newTotal = (streak?.totalDaysGoal ?? 0) + (alreadyCountedToday ? 0 : 1)
 
       await db.waterStreak.upsert({
