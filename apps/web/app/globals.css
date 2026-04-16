@@ -61,7 +61,7 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 5 8 22;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -504,6 +504,7 @@ section[id] {
 
 .mesh-bg-animated {
   background-color: #050816;
+  background-size: 200% 200%;
   background-image:
     radial-gradient(ellipse 80% 50% at 20% -10%, rgba(20, 184, 166, 0.15) 0%, transparent 60%),
     radial-gradient(ellipse 60% 40% at 80% 110%, rgba(99, 102, 241, 0.18) 0%, transparent 55%),
