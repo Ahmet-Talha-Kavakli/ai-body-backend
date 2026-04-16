@@ -43,7 +43,7 @@ body {
 
 @layer base {
   :root {
-    --background: #0a0a0a;
+    --background: 5 8 22;
     --foreground: #ededed;
     --color-primary: #6366f1;
     --color-dark: #131313;
