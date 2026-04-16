@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -41,10 +41,12 @@ function isTabActive(tab: Tab, pathname: string): boolean {
 export function BottomNav() {
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = useState(false)
+  const openMore = useCallback(() => setMoreOpen(true), [])
+  const closeMore = useCallback(() => setMoreOpen(false), [])
 
   return (
     <>
-      <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
+      <MoreSheet open={moreOpen} onClose={closeMore} />
       <motion.div
         className="fixed bottom-4 left-1/2 z-40 lg:hidden"
         style={{ x: '-50%' }}
@@ -104,8 +106,11 @@ export function BottomNav() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setMoreOpen(true)}
+                  onClick={openMore}
                   className="flex min-w-[48px] flex-col items-center"
+                  aria-label="Daha fazlasını göster"
+                  aria-expanded={moreOpen}
+                  aria-haspopup="dialog"
                 >
                   <motion.div
                     className="flex flex-col items-center gap-0.5 rounded-xl px-2 py-1"
@@ -146,6 +151,7 @@ export function BottomNav() {
                 key={tab.id}
                 href={tab.path}
                 className="flex min-w-[48px] flex-col items-center"
+                aria-current={active ? 'page' : undefined}
               >
                 <motion.div
                   className="flex flex-col items-center gap-0.5 rounded-xl px-2 py-1"

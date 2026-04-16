@@ -56,6 +56,7 @@ export function MoreSheet({ open, onClose }: MoreSheetProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
+            onKeyDown={(e) => e.key === 'Escape' && onClose()}
           />
           {/* Sheet */}
           <motion.div
@@ -64,13 +65,20 @@ export function MoreSheet({ open, onClose }: MoreSheetProps) {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Daha Fazlası"
           >
             {/* Handle */}
             <div className="mx-auto mb-6 h-1 w-12 rounded-full bg-white/20" />
 
             <div className="flex items-center justify-between px-6 pb-4">
               <h2 className="text-lg font-bold text-white">Daha Fazlası</h2>
-              <button onClick={onClose} className="rounded-xl p-2 hover:bg-white/5">
+              <button
+                onClick={onClose}
+                className="rounded-xl p-2 hover:bg-white/5"
+                aria-label="Kapat"
+              >
                 <X size={20} className="text-white/50" />
               </button>
             </div>
