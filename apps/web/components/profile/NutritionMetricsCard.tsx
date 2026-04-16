@@ -20,11 +20,24 @@ interface NutritionMetrics {
 }
 
 const DIET_LABELS: Record<string, string> = {
-  standard: 'Standart', vegetarian: 'Vejetaryen', vegan: 'Vegan',
-  keto: 'Keto', paleo: 'Paleo', intermittent_fasting: 'Aralıklı Oruç',
+  standard: 'Standart',
+  vegetarian: 'Vejetaryen',
+  vegan: 'Vegan',
+  keto: 'Keto',
+  paleo: 'Paleo',
+  intermittent_fasting: 'Aralıklı Oruç',
 }
 
-const SUPPLEMENT_OPTIONS = ['Whey Protein', 'Kreatin', 'BCAA', 'Omega-3', 'Vitamin D', 'Magnezyum', 'Pre-workout', 'Glutamin']
+const SUPPLEMENT_OPTIONS = [
+  'Whey Protein',
+  'Kreatin',
+  'BCAA',
+  'Omega-3',
+  'Vitamin D',
+  'Magnezyum',
+  'Pre-workout',
+  'Glutamin',
+]
 
 interface NutritionMetricsCardProps {
   metrics: NutritionMetrics | null
@@ -35,7 +48,7 @@ interface NutritionMetricsCardProps {
 function ProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = Math.min((value / max) * 100, 100)
   return (
-    <div className="h-2 bg-muted rounded-full overflow-hidden">
+    <div className="bg-muted h-2 overflow-hidden rounded-full">
       <motion.div
         initial={{ width: 0 }}
         animate={{ width: `${pct}%` }}
@@ -52,29 +65,42 @@ export function NutritionMetricsCard({ metrics, isLoading, onSave }: NutritionMe
   const [form, setForm] = useState<Partial<NutritionMetrics>>({})
 
   const startEdit = () => {
-    setForm(metrics ?? { supplementStack: [], avgSleepHours: 7, stressLevel: 5, waterIntakeTarget: 2500 })
+    setForm(
+      metrics ?? { supplementStack: [], avgSleepHours: 7, stressLevel: 5, waterIntakeTarget: 2500 }
+    )
     setEditing(true)
   }
-  const cancelEdit = () => { setForm({}); setEditing(false) }
+  const cancelEdit = () => {
+    setForm({})
+    setEditing(false)
+  }
   const handleSave = async () => {
     setSaving(true)
-    try { await onSave?.(form); setEditing(false) }
-    finally { setSaving(false) }
+    try {
+      await onSave?.(form)
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const toggleSup = (s: string) => {
-    setForm(p => {
+    setForm((p) => {
       const cur = p.supplementStack ?? []
-      return { ...p, supplementStack: cur.includes(s) ? cur.filter(x => x !== s) : [...cur, s] }
+      return { ...p, supplementStack: cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s] }
     })
   }
 
   if (isLoading) {
     return (
       <Card className="bg-card/50 border-border/30">
-        <CardHeader><div className="h-6 w-36 bg-muted animate-pulse rounded" /></CardHeader>
+        <CardHeader>
+          <div className="bg-muted h-6 w-36 animate-pulse rounded" />
+        </CardHeader>
         <CardContent className="space-y-3">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-10 bg-muted/50 animate-pulse rounded-lg" />)}
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-muted/50 h-10 animate-pulse rounded-lg" />
+          ))}
         </CardContent>
       </Card>
     )
@@ -85,7 +111,7 @@ export function NutritionMetricsCard({ metrics, isLoading, onSave }: NutritionMe
       <Card className="bg-card/50 border-border/30 backdrop-blur-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10">
               <Apple size={16} className="text-orange-400" />
             </div>
             <CardTitle className="text-lg">Beslenme Metrikleri</CardTitle>
@@ -96,7 +122,9 @@ export function NutritionMetricsCard({ metrics, isLoading, onSave }: NutritionMe
             </Button>
           ) : (
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={cancelEdit}><X size={13} /></Button>
+              <Button variant="ghost" size="sm" onClick={cancelEdit}>
+                <X size={13} />
+              </Button>
               <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
                 <Save size={13} /> {saving ? 'Kaydediliyor...' : 'Kaydet'}
               </Button>
@@ -109,27 +137,56 @@ export function NutritionMetricsCard({ metrics, isLoading, onSave }: NutritionMe
             <div className="space-y-5">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Protein Hedefi (g)</label>
-                  <Input type="number" placeholder="150" value={form.proteinTarget ?? ''} onChange={e => setForm(p => ({ ...p, proteinTarget: +e.target.value }))} />
+                  <label className="text-muted-foreground mb-1.5 block text-xs font-semibold">
+                    Protein Hedefi (g)
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="150"
+                    value={form.proteinTarget ?? ''}
+                    onChange={(e) => setForm((p) => ({ ...p, proteinTarget: +e.target.value }))}
+                  />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Kalori Hedefi</label>
-                  <Input type="number" placeholder="2200" value={form.calorieTarget ?? ''} onChange={e => setForm(p => ({ ...p, calorieTarget: +e.target.value }))} />
+                  <label className="text-muted-foreground mb-1.5 block text-xs font-semibold">
+                    Kalori Hedefi
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="2200"
+                    value={form.calorieTarget ?? ''}
+                    onChange={(e) => setForm((p) => ({ ...p, calorieTarget: +e.target.value }))}
+                  />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Su Hedefi (ml)</label>
-                  <Input type="number" placeholder="2500" value={form.waterIntakeTarget ?? ''} onChange={e => setForm(p => ({ ...p, waterIntakeTarget: +e.target.value }))} />
+                  <label className="text-muted-foreground mb-1.5 block text-xs font-semibold">
+                    Su Hedefi (ml)
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="2500"
+                    value={form.waterIntakeTarget ?? ''}
+                    onChange={(e) => setForm((p) => ({ ...p, waterIntakeTarget: +e.target.value }))}
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-2 block">Diyet Tipi</label>
+                <label className="text-muted-foreground mb-2 block text-xs font-semibold">
+                  Diyet Tipi
+                </label>
                 <div className="grid grid-cols-3 gap-2">
                   {Object.entries(DIET_LABELS).map(([v, l]) => (
-                    <button key={v} onClick={() => setForm(p => ({ ...p, dietType: v }))}
-                      className={cn('py-2 rounded-lg border text-xs font-semibold transition-all',
-                        form.dietType === v ? 'bg-primary/10 border-primary text-primary' : 'border-border text-muted-foreground'
-                      )}>
+                    <button
+                      key={v}
+                      onClick={() => setForm((p) => ({ ...p, dietType: v }))}
+                      className={cn(
+                        'rounded-lg border py-2 text-xs font-semibold transition-all',
+                        form.dietType === v
+                          ? 'bg-primary/10 border-primary text-primary'
+                          : 'border-border text-muted-foreground'
+                      )}
+                    >
                       {l}
                     </button>
                   ))}
@@ -137,35 +194,65 @@ export function NutritionMetricsCard({ metrics, isLoading, onSave }: NutritionMe
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-2 block">
-                  Uyku: <span className="text-primary font-bold">{form.avgSleepHours ?? 7} saat</span>
+                <label className="text-muted-foreground mb-2 block text-xs font-semibold">
+                  Uyku:{' '}
+                  <span className="text-primary font-bold">{form.avgSleepHours ?? 7} saat</span>
                 </label>
-                <input type="range" min={4} max={12} step={0.5}
+                <input
+                  type="range"
+                  min={4}
+                  max={12}
+                  step={0.5}
                   value={form.avgSleepHours ?? 7}
-                  onChange={e => setForm(p => ({ ...p, avgSleepHours: +e.target.value }))}
-                  className="w-full accent-primary cursor-pointer" />
+                  onChange={(e) => setForm((p) => ({ ...p, avgSleepHours: +e.target.value }))}
+                  className="accent-primary w-full cursor-pointer"
+                />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-2 block">
-                  Stres Seviyesi: <span className={cn('font-bold', (form.stressLevel ?? 5) > 7 ? 'text-red-400' : (form.stressLevel ?? 5) > 4 ? 'text-orange-400' : 'text-green-400')}>{form.stressLevel ?? 5}/10</span>
+                <label className="text-muted-foreground mb-2 block text-xs font-semibold">
+                  Stres Seviyesi:{' '}
+                  <span
+                    className={cn(
+                      'font-bold',
+                      (form.stressLevel ?? 5) > 7
+                        ? 'text-red-400'
+                        : (form.stressLevel ?? 5) > 4
+                          ? 'text-orange-400'
+                          : 'text-green-400'
+                    )}
+                  >
+                    {form.stressLevel ?? 5}/10
+                  </span>
                 </label>
-                <input type="range" min={1} max={10}
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
                   value={form.stressLevel ?? 5}
-                  onChange={e => setForm(p => ({ ...p, stressLevel: +e.target.value }))}
-                  className="w-full accent-primary cursor-pointer" />
+                  onChange={(e) => setForm((p) => ({ ...p, stressLevel: +e.target.value }))}
+                  className="accent-primary w-full cursor-pointer"
+                />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-2 block">Supleman Kullanımı</label>
+                <label className="text-muted-foreground mb-2 block text-xs font-semibold">
+                  Supleman Kullanımı
+                </label>
                 <div className="flex flex-wrap gap-1.5">
-                  {SUPPLEMENT_OPTIONS.map(s => {
+                  {SUPPLEMENT_OPTIONS.map((s) => {
                     const sel = (form.supplementStack ?? []).includes(s)
                     return (
-                      <button key={s} onClick={() => toggleSup(s)}
-                        className={cn('px-3 py-1.5 rounded-full border text-xs font-semibold transition-all',
-                          sel ? 'bg-blue-500/10 border-blue-500 text-blue-400' : 'border-border text-muted-foreground'
-                        )}>
+                      <button
+                        key={s}
+                        onClick={() => toggleSup(s)}
+                        className={cn(
+                          'rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
+                          sel
+                            ? 'border-blue-500 bg-blue-500/10 text-blue-400'
+                            : 'border-border text-muted-foreground'
+                        )}
+                      >
                         {s}
                       </button>
                     )
@@ -174,20 +261,42 @@ export function NutritionMetricsCard({ metrics, isLoading, onSave }: NutritionMe
               </div>
             </div>
           ) : !metrics ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Henüz beslenme bilgisi eklenmemiş.</p>
+            <p className="text-muted-foreground py-4 text-center text-sm">
+              Henüz beslenme bilgisi eklenmemiş.
+            </p>
           ) : (
             <div className="space-y-4">
               {/* Targets */}
               <div className="space-y-3">
                 {[
-                  { label: 'Protein', value: metrics.proteinTarget, max: 250, unit: 'g', color: 'bg-blue-500' },
-                  { label: 'Kalori', value: metrics.calorieTarget ?? 0, max: 4000, unit: 'kcal', color: 'bg-orange-500' },
-                  { label: 'Su', value: metrics.waterIntakeTarget, max: 5000, unit: 'ml', color: 'bg-cyan-500' },
-                ].map(item => (
+                  {
+                    label: 'Protein',
+                    value: metrics.proteinTarget ?? 0,
+                    max: 250,
+                    unit: 'g',
+                    color: 'bg-blue-500',
+                  },
+                  {
+                    label: 'Kalori',
+                    value: metrics.calorieTarget ?? 0,
+                    max: 4000,
+                    unit: 'kcal',
+                    color: 'bg-orange-500',
+                  },
+                  {
+                    label: 'Su',
+                    value: metrics.waterIntakeTarget ?? 0,
+                    max: 5000,
+                    unit: 'ml',
+                    color: 'bg-cyan-500',
+                  },
+                ].map((item) => (
                   <div key={item.label}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="font-semibold text-muted-foreground">{item.label}</span>
-                      <span className="font-bold">{item.value.toLocaleString('tr-TR')} {item.unit}</span>
+                    <div className="mb-1 flex justify-between text-xs">
+                      <span className="text-muted-foreground font-semibold">{item.label}</span>
+                      <span className="font-bold">
+                        {item.value.toLocaleString('tr-TR')} {item.unit}
+                      </span>
                     </div>
                     <ProgressBar value={item.value} max={item.max} color={item.color} />
                   </div>
@@ -197,25 +306,40 @@ export function NutritionMetricsCard({ metrics, isLoading, onSave }: NutritionMe
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-muted/30 rounded-xl p-3 text-center">
                   <p className="text-lg font-black">{metrics.avgSleepHours}h</p>
-                  <p className="text-xs text-muted-foreground">Uyku</p>
+                  <p className="text-muted-foreground text-xs">Uyku</p>
                 </div>
                 <div className="bg-muted/30 rounded-xl p-3 text-center">
-                  <p className={cn('text-lg font-black', metrics.stressLevel > 7 ? 'text-red-400' : metrics.stressLevel > 4 ? 'text-orange-400' : 'text-green-400')}>
+                  <p
+                    className={cn(
+                      'text-lg font-black',
+                      metrics.stressLevel > 7
+                        ? 'text-red-400'
+                        : metrics.stressLevel > 4
+                          ? 'text-orange-400'
+                          : 'text-green-400'
+                    )}
+                  >
                     {metrics.stressLevel}/10
                   </p>
-                  <p className="text-xs text-muted-foreground">Stres</p>
+                  <p className="text-muted-foreground text-xs">Stres</p>
                 </div>
                 <div className="bg-muted/30 rounded-xl p-3 text-center">
-                  <p className="text-sm font-bold">{DIET_LABELS[metrics.dietType] ?? metrics.dietType}</p>
-                  <p className="text-xs text-muted-foreground">Diyet</p>
+                  <p className="text-sm font-bold">
+                    {DIET_LABELS[metrics.dietType] ?? metrics.dietType}
+                  </p>
+                  <p className="text-muted-foreground text-xs">Diyet</p>
                 </div>
               </div>
 
               {metrics.supplementStack?.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground mb-2">Suplemanlar</p>
+                  <p className="text-muted-foreground mb-2 text-xs font-semibold">Suplemanlar</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {metrics.supplementStack.map(s => <Badge key={s} variant="secondary">{s}</Badge>)}
+                    {metrics.supplementStack.map((s) => (
+                      <Badge key={s} variant="secondary">
+                        {s}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
               )}
