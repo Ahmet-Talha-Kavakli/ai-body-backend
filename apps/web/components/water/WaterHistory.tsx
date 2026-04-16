@@ -104,7 +104,7 @@ export function WaterHistory({ history, dailyGoalMl, period, onPeriodChange }: W
             <Bar dataKey="liters" radius={[6, 6, 0, 0]}>
               {data.map((entry, index) => (
                 <Cell
-                  key={index}
+                  key={`cell-${index}`}
                   fill={entry.goalMet ? '#10B981' : '#3B82F6'}
                   fillOpacity={entry.goalMet ? 0.9 : 0.6}
                 />
