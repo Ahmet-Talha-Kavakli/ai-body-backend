@@ -171,7 +171,7 @@ export function PTCharacter3D({ morphParams, isActive, className }: PTCharacter3
     scene.add(group)
 
     // Animate
-    let animId: number
+    let animId = 0
     const clock = new THREE.Clock()
     function animate() {
       animId = requestAnimationFrame(animate)
