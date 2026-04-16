@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Droplets, Flame, Plus, X } from 'lucide-react'
 import { CircularProgress } from './components/CircularProgress'
@@ -27,11 +27,16 @@ export default function WaterPage() {
   const [showCustom, setShowCustom] = useState(false)
   const [customMl, setCustomMl] = useState('')
   const [coachMessage, setCoachMessage] = useState<string | null>(null)
+  const coachTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch('/api/water/dashboard')
-      if (res.ok) setData(await res.json())
+      if (!res.ok) {
+        console.error('[water] dashboard fetch failed:', res.status)
+        return
+      }
+      setData(await res.json())
     } finally {
       setLoading(false)
     }
@@ -64,10 +69,27 @@ export default function WaterPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ml }),
         })
+        if (!res.ok) {
+          // revert optimistic update
+          setData((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  todayMl: Math.max(0, prev.todayMl - ml),
+                  weeklyData: prev.weeklyData.map((d, i) => {
+                    const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
+                    return i === todayIdx ? { ...d, ml: Math.max(0, d.ml - ml) } : d
+                  }),
+                }
+              : prev
+          )
+          return
+        }
         const json = await res.json()
         if (json.coachMessage) {
           setCoachMessage(json.coachMessage)
-          setTimeout(() => setCoachMessage(null), 5000)
+          if (coachTimerRef.current) clearTimeout(coachTimerRef.current)
+          coachTimerRef.current = setTimeout(() => setCoachMessage(null), 5000)
         }
       } catch {
         // Revert optimistic on error
@@ -200,7 +222,7 @@ export default function WaterPage() {
                 <button
                   onClick={() => {
                     const ml = parseInt(customMl)
-                    if (ml > 0) addWater(ml)
+                    if (ml > 0 && ml <= 5000) addWater(ml)
                     setCustomMl('')
                     setShowCustom(false)
                   }}

@@ -15,6 +15,7 @@ export function CircularProgress({ current, goal, size = 200 }: CircularProgress
   const offset = circ * (1 - pct)
   const liters = (current / 1000).toFixed(1)
   const goalL = (goal / 1000).toFixed(1)
+  const gradId = `tealGrad-${size}`
 
   return (
     <div
@@ -23,7 +24,7 @@ export function CircularProgress({ current, goal, size = 200 }: CircularProgress
     >
       <svg width={size} height={size} className="-rotate-90">
         <defs>
-          <linearGradient id="tealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#14b8a6" />
             <stop offset="100%" stopColor="#6366f1" />
           </linearGradient>
@@ -41,7 +42,7 @@ export function CircularProgress({ current, goal, size = 200 }: CircularProgress
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="url(#tealGrad)"
+          stroke={`url(#${gradId})`}
           strokeWidth={12}
           strokeLinecap="round"
           strokeDasharray={circ}
