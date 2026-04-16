@@ -13,7 +13,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="bg-background flex h-screen overflow-hidden">
+    <div className="mesh-bg-animated flex h-screen overflow-hidden">
       {/* Sidebar */}
       <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
