@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Cat, User, Bell, Trophy, X } from 'lucide-react'
 
 const ITEMS = [
@@ -45,6 +46,7 @@ interface MoreSheetProps {
 }
 
 export function MoreSheet({ open, onClose }: MoreSheetProps) {
+  const pathname = usePathname()
   return (
     <AnimatePresence>
       {open && (
@@ -91,7 +93,11 @@ export function MoreSheet({ open, onClose }: MoreSheetProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.06 }}
                 >
-                  <Link href={item.href} onClick={onClose}>
+                  <Link
+                    href={item.href}
+                    onClick={onClose}
+                    aria-current={pathname.startsWith(item.href) ? 'page' : undefined}
+                  >
                     <div
                       className={`flex flex-col items-center gap-3 rounded-2xl border p-5 ${item.bg} ${item.border}`}
                     >
