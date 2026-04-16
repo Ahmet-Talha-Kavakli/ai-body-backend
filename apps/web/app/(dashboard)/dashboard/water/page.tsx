@@ -1,287 +1,254 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { motion } from 'framer-motion'
-import { Droplets } from 'lucide-react'
-import { WaterWave } from '@/components/water/WaterWave'
-import { WaterActions } from '@/components/water/WaterActions'
-import { WaterSettingsPanel } from '@/components/water/WaterSettingsPanel'
-import { WaterHistory } from '@/components/water/WaterHistory'
-import { WaterStreakCard } from '@/components/water/WaterStreakCard'
-import { WaterAchievements } from '@/components/water/WaterAchievements'
-import { DrinkTracker } from '@/components/water/DrinkTracker'
-import { NotificationSettings } from '@/components/settings/NotificationSettings'
-import { CoachToast } from '@/components/water/CoachToast'
-import type { ReminderSettings } from '@/lib/water/types'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Droplets, Flame, Plus, X } from 'lucide-react'
+import { CircularProgress } from './components/CircularProgress'
+import { WeeklyChart } from './components/WeeklyChart'
 
-interface WaterState {
-  amountMl: number
-  glasses: number
-  dailyGoalMl: number
-  cupSizeMl: number
-  reminderMode: 'interval' | 'manual'
-  reminderIntervalHours: number
-  reminderTimes: string[]
-  city?: string
-  isManualGoal?: boolean
-  tempBonusMl?: number
-}
+const QUICK_AMOUNTS = [
+  { ml: 200, label: 'Bardak', emoji: '🥛' },
+  { ml: 350, label: 'Büyük', emoji: '🫗' },
+  { ml: 500, label: 'Şişe', emoji: '🍶' },
+  { ml: 750, label: 'Sport', emoji: '🧴' },
+]
 
-interface StreakState {
-  currentStreak: number
-  longestStreak: number
-  totalDaysGoal: number
-  totalMlEver: number
-  freezeCharges: number
-}
-
-interface HistoryItem {
-  date: string
-  amountMl: number
-  goalMet: boolean
+interface WaterData {
+  todayMl: number
+  goalMl: number
+  streak: number
+  weeklyData: { day: string; ml: number; goal: number }[]
 }
 
 export default function WaterPage() {
-  const [water, setWater] = useState<WaterState>({
-    amountMl: 0,
-    glasses: 0,
-    dailyGoalMl: 2500,
-    cupSizeMl: 200,
-    reminderMode: 'interval',
-    reminderIntervalHours: 2,
-    reminderTimes: [],
-    city: '',
-    isManualGoal: false,
-    tempBonusMl: 0,
-  })
-  const [streak, setStreak] = useState<StreakState>({
-    currentStreak: 0,
-    longestStreak: 0,
-    totalDaysGoal: 0,
-    totalMlEver: 0,
-    freezeCharges: 0,
-  })
-  const [history, setHistory] = useState<HistoryItem[]>([])
-  const [period, setPeriod] = useState<'week' | 'month'>('week')
+  const [data, setData] = useState<WaterData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [adding, setAdding] = useState(false)
+  const [showCustom, setShowCustom] = useState(false)
+  const [customMl, setCustomMl] = useState('')
   const [coachMessage, setCoachMessage] = useState<string | null>(null)
 
-  const fetchAll = useCallback(
-    async (p: 'week' | 'month' = period) => {
-      const [waterRes, streakRes, historyRes, settingsRes, autoGoalRes] = await Promise.all([
-        fetch('/api/nutrition/water').then((r) => r.json()),
-        fetch('/api/nutrition/water/streak').then((r) => r.json()),
-        fetch(`/api/nutrition/water/history?period=${p}`).then((r) => r.json()),
-        fetch('/api/nutrition/water/settings').then((r) => r.json()),
-        fetch('/api/nutrition/water/auto-goal', { method: 'POST' }).then((r) => r.json()),
-      ])
-      setWater({
-        amountMl: waterRes.amountMl ?? 0,
-        glasses: waterRes.glasses ?? 0,
-        dailyGoalMl: autoGoalRes.dailyGoalMl ?? settingsRes.settings?.dailyGoalMl ?? 2500,
-        cupSizeMl: waterRes.cupSizeMl ?? 200,
-        reminderMode: settingsRes.settings?.reminderMode ?? 'interval',
-        reminderIntervalHours: settingsRes.settings?.reminderIntervalHours ?? 2,
-        reminderTimes: settingsRes.settings?.reminderTimes ?? [],
-        city: settingsRes.settings?.city ?? '',
-        isManualGoal: settingsRes.settings?.isManualGoal ?? false,
-        tempBonusMl: settingsRes.settings?.tempBonusMl ?? 0,
-      })
-      const totalMlEver = (historyRes.history ?? []).reduce(
-        (s: number, d: HistoryItem) => s + d.amountMl,
-        0
-      )
-      setStreak({
-        currentStreak: streakRes.streak?.currentStreak ?? 0,
-        longestStreak: streakRes.streak?.longestStreak ?? 0,
-        totalDaysGoal: streakRes.streak?.totalDaysGoal ?? 0,
-        totalMlEver,
-        freezeCharges: streakRes.streak?.freezeCharges ?? 0,
-      })
-      setHistory(historyRes.history ?? [])
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/water/dashboard')
+      if (res.ok) setData(await res.json())
+    } finally {
       setLoading(false)
-    },
-    [period]
-  )
+    }
+  }, [])
 
   useEffect(() => {
-    fetchAll()
-  }, [fetchAll])
+    fetchData()
+  }, [fetchData])
 
-  const handleAdd = async (ml: number) => {
-    const res = await fetch('/api/nutrition/water', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ml }),
-    }).then((r) => r.json())
-    setWater((prev) => ({ ...prev, amountMl: res.amountMl, glasses: res.glasses }))
-    if (res.coachMessage) {
-      setCoachMessage(res.coachMessage)
-      setTimeout(() => setCoachMessage(null), 5000)
-    }
-    fetch('/api/nutrition/water/streak')
-      .then((r) => r.json())
-      .then((d) => setStreak((prev) => ({ ...prev, ...d.streak })))
-  }
+  const addWater = useCallback(
+    async (ml: number) => {
+      if (adding || ml <= 0) return
+      setAdding(true)
+      // Optimistic update
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              todayMl: prev.todayMl + ml,
+              weeklyData: prev.weeklyData.map((d, i) => {
+                const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
+                return i === todayIdx ? { ...d, ml: d.ml + ml } : d
+              }),
+            }
+          : prev
+      )
+      try {
+        const res = await fetch('/api/nutrition/water', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ml }),
+        })
+        const json = await res.json()
+        if (json.coachMessage) {
+          setCoachMessage(json.coachMessage)
+          setTimeout(() => setCoachMessage(null), 5000)
+        }
+      } catch {
+        // Revert optimistic on error
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                todayMl: prev.todayMl - ml,
+                weeklyData: prev.weeklyData.map((d, i) => {
+                  const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
+                  return i === todayIdx ? { ...d, ml: Math.max(0, d.ml - ml) } : d
+                }),
+              }
+            : prev
+        )
+      } finally {
+        await fetchData()
+        setAdding(false)
+      }
+    },
+    [adding, fetchData]
+  )
 
-  const handleRemove = async (ml: number) => {
-    const res = await fetch('/api/nutrition/water', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ml }),
-    }).then((r) => r.json())
-    setWater((prev) => ({ ...prev, amountMl: res.amountMl, glasses: res.glasses }))
-  }
-
-  const handleSaveSettings = async (
-    dailyGoalMl: number,
-    cupSizeMl: number,
-    reminder: ReminderSettings,
-    city: string,
-    isManualGoal: boolean
-  ) => {
-    await fetch('/api/nutrition/water/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dailyGoalMl, cupSizeMl, ...reminder, city, isManualGoal }),
-    })
-    setWater((prev) => ({ ...prev, dailyGoalMl, cupSizeMl, ...reminder }))
-  }
-
-  const handlePeriodChange = (p: 'week' | 'month') => {
-    setPeriod(p)
-  }
-
-  const effectiveGoal = water.dailyGoalMl + (water.tempBonusMl ?? 0)
-  const percentage = effectiveGoal > 0 ? (water.amountMl / effectiveGoal) * 100 : 0
-
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#3B82F6] border-t-transparent" />
-      </div>
-    )
-  }
+  const todayMl = data?.todayMl ?? 0
+  const goalMl = data?.goalMl ?? 2500
+  const remaining = goalMl - todayMl
 
   return (
-    <div className="mx-auto max-w-lg space-y-5 pb-10">
-      {/* Başlık */}
+    <div className="mx-auto max-w-2xl space-y-4 pb-24">
+      {/* Header */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
+        className="flex items-center gap-3"
       >
-        <div className="flex items-center gap-2">
-          <Droplets size={24} className="text-[#3B82F6]" />
-          <h1 className="text-2xl font-black text-white">Su Takibi</h1>
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-500/20">
+          <Droplets size={20} className="text-teal-400" />
         </div>
-        <WaterSettingsPanel
-          dailyGoalMl={water.dailyGoalMl}
-          cupSizeMl={water.cupSizeMl}
-          reminderMode={water.reminderMode}
-          reminderIntervalHours={water.reminderIntervalHours}
-          reminderTimes={water.reminderTimes}
-          city={water.city ?? ''}
-          isManualGoal={water.isManualGoal ?? false}
-          onSave={handleSaveSettings}
-        />
+        <div>
+          <h1 className="text-xl font-black text-white">Su Takibi</h1>
+          <p className="text-xs text-white/40">Günlük hidrasyon hedefin</p>
+        </div>
       </motion.div>
 
-      {/* Su Dalgası */}
+      {/* Hero: Circular progress */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1 }}
-        className="flex justify-center"
+        transition={{ duration: 0.4 }}
+        className="glass-card-teal flex flex-col items-center gap-4 rounded-3xl p-6"
       >
-        <WaterWave percentage={percentage} amountMl={water.amountMl} goalMl={effectiveGoal} />
+        <CircularProgress current={loading ? 0 : todayMl} goal={goalMl} size={200} />
+
+        {/* Stats row */}
+        <div className="flex w-full gap-3">
+          <div className="flex-1 rounded-2xl border border-teal-500/20 bg-teal-500/10 p-3 text-center">
+            <p className="text-lg font-black text-white">
+              {remaining > 0 ? `${(remaining / 1000).toFixed(1)}L` : '✓'}
+            </p>
+            <p className="text-xs text-white/40">{remaining > 0 ? 'kalan' : 'tamamlandı'}</p>
+          </div>
+          <div className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-orange-500/20 bg-orange-500/10 p-3">
+            <Flame size={16} className="text-orange-400" />
+            <div className="text-center">
+              <p className="text-lg font-black text-orange-300">{data?.streak ?? 0}</p>
+              <p className="text-xs text-white/40">günlük seri</p>
+            </div>
+          </div>
+        </div>
       </motion.div>
 
-      {/* Hava Sıcaklığı Bonusu */}
-      {(water.tempBonusMl ?? 0) > 0 && (
+      {/* AI Coach Toast */}
+      <AnimatePresence>
+        {coachMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-start gap-3 rounded-2xl border border-teal-500/20 bg-teal-500/10 px-4 py-3"
+          >
+            <span className="text-lg">🤖</span>
+            <p className="text-sm text-teal-200">{coachMessage}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Quick add */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="glass-card rounded-3xl p-4"
+      >
+        <p className="mb-3 text-sm font-semibold text-white/50">Hızlı Ekle</p>
+        <div className="grid grid-cols-4 gap-2">
+          {QUICK_AMOUNTS.map(({ ml, label, emoji }) => (
+            <motion.button
+              key={ml}
+              whileTap={{ scale: 0.92 }}
+              whileHover={{ scale: 1.04 }}
+              disabled={adding}
+              onClick={() => addWater(ml)}
+              className="flex flex-col items-center gap-1 rounded-2xl border border-teal-500/20 bg-teal-500/10 px-2 py-3 text-teal-300 transition-colors hover:bg-teal-500/20 disabled:opacity-50"
+            >
+              <span className="text-xl">{emoji}</span>
+              <span className="text-sm font-black">+{ml}</span>
+              <span className="text-[10px] text-teal-400/60">{label}</span>
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Custom amount */}
+        <div className="mt-3">
+          <AnimatePresence>
+            {showCustom ? (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex gap-2 overflow-hidden"
+              >
+                <input
+                  type="number"
+                  value={customMl}
+                  onChange={(e) => setCustomMl(e.target.value)}
+                  placeholder="Miktar (ml)"
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-teal-500/50"
+                  autoFocus
+                />
+                <button
+                  onClick={() => {
+                    const ml = parseInt(customMl)
+                    if (ml > 0) addWater(ml)
+                    setCustomMl('')
+                    setShowCustom(false)
+                  }}
+                  className="rounded-xl bg-teal-500 px-4 py-2 text-sm font-bold text-white"
+                >
+                  Ekle
+                </button>
+                <button
+                  onClick={() => setShowCustom(false)}
+                  className="rounded-xl border border-white/10 px-3 py-2 text-white/40"
+                >
+                  <X size={16} />
+                </button>
+              </motion.div>
+            ) : (
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={() => setShowCustom(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 py-2 text-sm text-white/40 hover:text-white/60"
+              >
+                <Plus size={14} /> Özel miktar
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+
+      {/* Weekly chart */}
+      {!loading && data?.weeklyData && data.weeklyData.length > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 rounded-2xl border border-orange-500/20 bg-orange-500/10 px-4 py-2.5"
+          transition={{ delay: 0.15 }}
+          className="glass-card rounded-3xl p-4"
         >
-          <span className="text-base">🌡</span>
-          <div>
-            <p className="text-xs font-semibold text-orange-400">Sıcak Hava Bonusu</p>
-            <p className="text-[10px] text-[#64748B]">
-              Bugün +{water.tempBonusMl}ml eklendi ({water.city} için)
-            </p>
-          </div>
+          <p className="mb-4 text-sm font-semibold text-white/50">Bu Hafta</p>
+          <WeeklyChart data={data.weeklyData} />
         </motion.div>
       )}
 
-      {/* AI Koç Yorumu */}
-      <CoachToast message={coachMessage} />
-
-      {/* Hızlı Ekleme */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-      >
-        <WaterActions cupSizeMl={water.cupSizeMl} onAdd={handleAdd} onRemove={handleRemove} />
-      </motion.div>
-
-      {/* Streak */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <WaterStreakCard
-          currentStreak={streak.currentStreak}
-          longestStreak={streak.longestStreak}
-          totalDaysGoal={streak.totalDaysGoal}
-          freezeCharges={streak.freezeCharges}
-        />
-      </motion.div>
-
-      {/* Geçmiş */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-      >
-        <WaterHistory
-          history={history}
-          dailyGoalMl={effectiveGoal}
-          period={period}
-          onPeriodChange={handlePeriodChange}
-        />
-      </motion.div>
-
-      {/* Başarımlar */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <WaterAchievements stats={streak} />
-      </motion.div>
-
-      {/* Diğer İçecekler */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.32 }}
-      >
-        <DrinkTracker />
-      </motion.div>
-
-      {/* Bildirimler */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
-        className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4"
-      >
-        <h3 className="mb-3 text-sm font-semibold text-white">Su Bildirimleri</h3>
-        <NotificationSettings />
-      </motion.div>
+      {/* Loading skeleton */}
+      {loading && (
+        <div className="space-y-4">
+          <div className="h-72 animate-pulse rounded-3xl bg-white/5" />
+          <div className="h-36 animate-pulse rounded-3xl bg-white/5" />
+        </div>
+      )}
     </div>
   )
 }
