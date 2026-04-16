@@ -1,7 +1,7 @@
 'use client'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { Droplets, Utensils, Pill, Moon, Dumbbell, ChevronRight } from 'lucide-react'
+import { Droplets, Utensils, Pill, Moon, Dumbbell, Heart, ChevronRight } from 'lucide-react'
 
 const MODULES = [
   {
@@ -48,6 +48,15 @@ const MODULES = [
     gradient: 'from-purple-500 to-violet-500',
     bg: 'bg-purple-500/10',
     border: 'border-purple-500/20',
+  },
+  {
+    href: '/dashboard/health-metrics',
+    icon: Heart,
+    label: 'Sağlık Takibi',
+    desc: 'Tansiyon, nabız, kan şekeri ve daha fazlası',
+    gradient: 'from-red-500 to-pink-500',
+    bg: 'bg-red-500/10',
+    border: 'border-red-500/20',
   },
 ]
 
