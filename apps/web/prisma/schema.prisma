@@ -88,6 +88,7 @@ model User {
 
   pet              Pet?
   petInteractions  PetInteraction[]
+  healthMetricLogs HealthMetricLog[] @relation("UserHealthMetricLogs")
 
   @@index([clerkId])
   @@index([email])
@@ -1121,6 +1122,25 @@ model PetInteraction {
 
   @@index([userId])
   @@index([petId])
+}
+
+model HealthMetricLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation("UserHealthMetricLogs", fields: [userId], references: [id], onDelete: Cascade)
+
+  type       String   // "blood_pressure" | "heart_rate" | "blood_glucose" | "temperature" | "body_fat" | "mood" | "energy"
+  value      Float
+  value2     Float?   // secondary value (e.g. diastolic for blood pressure)
+  unit       String   // "mmHg" | "bpm" | "mg/dL" | "°C" | "%" | "/10"
+  note       String?
+
+  recordedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, type])
+  @@index([recordedAt])
 }
 
 model CosmeticItem {
