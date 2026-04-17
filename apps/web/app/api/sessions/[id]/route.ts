@@ -6,6 +6,7 @@ import { checkAndAwardAchievements } from '@/lib/achievements/checker'
 import { writeSessionMemory } from '@/lib/memory/memory-writer'
 import type { SessionMemoryInput } from '@/lib/memory/types'
 import { logger } from '@/lib/logger'
+import { createNotification } from '@/lib/notifications/create-notification'
 
 // Seansı bitir ve kaydet
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -86,8 +87,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return updatedSession
     })
 
-    // Achievement checker — fire-and-forget, response'u bloklamaz
-    checkAndAwardAchievements(user.id, 'workout_completed').catch(() => {})
+    // Workout completion notification — fire-and-forget
+    createNotification(user.id, {
+      type: 'workout',
+      title: 'Antrenman Tamamlandı! 💪',
+      body: 'Harika iş! Antrenmanını başarıyla bitirdin.',
+      link: '/dashboard/workouts',
+    }).catch(console.error)
+
+    // Achievement checker — fire-and-forget, sends notification if badges awarded
+    checkAndAwardAchievements(user.id, 'workout_completed')
+      .then(({ newAchievements }) => {
+        if (newAchievements.length > 0) {
+          createNotification(user.id, {
+            type: 'achievement',
+            title: 'Yeni Başarım Kazandın! 🏆',
+            body: `${newAchievements.length} yeni rozet kazandın!`,
+            link: '/dashboard/progress',
+          }).catch(console.error)
+        }
+      })
+      .catch(() => {})
 
     // Hafıza katmanına yaz — fire-and-forget, response'u bloklamaz
     if (completedSets && completedSets.length > 0) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { db } from '@/lib/db/client'
+import { createNotification } from '@/lib/notifications/create-notification'
 
 interface RouteContext {
   params: Promise<{ weekId: string }>
@@ -41,6 +42,13 @@ export const PATCH = withAuth(
         if (nextWeek) {
           await db.roadmapWeek.update({ where: { id: nextWeek.id }, data: { isUnlocked: true } })
         }
+        // Roadmap update notification — fire-and-forget
+        createNotification(user.id, {
+          type: 'roadmap',
+          title: 'Yol Haritası Güncellendi! 🗺️',
+          body: 'Haftalık görevin tamamlandı, yeni görev hazır.',
+          link: '/dashboard/workouts',
+        }).catch(console.error)
       }
       return NextResponse.json({ success: true })
     }
