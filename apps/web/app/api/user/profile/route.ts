@@ -62,7 +62,9 @@ export async function PATCH(req: NextRequest) {
           ...(healthProfile.gender !== undefined && { gender: healthProfile.gender }),
           ...(healthProfile.heightCm !== undefined && { heightCm: healthProfile.heightCm }),
           ...(healthProfile.weightKg !== undefined && { weightKg: healthProfile.weightKg }),
-          ...(healthProfile.fitnessLevel !== undefined && { fitnessLevel: healthProfile.fitnessLevel }),
+          ...(healthProfile.fitnessLevel !== undefined && {
+            fitnessLevel: healthProfile.fitnessLevel,
+          }),
           ...(healthProfile.goals !== undefined && { goals: healthProfile.goals }),
         },
       })
