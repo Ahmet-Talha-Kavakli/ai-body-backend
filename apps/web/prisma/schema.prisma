@@ -57,6 +57,12 @@ model User {
   bio             String?
   profilePublic   Boolean         @default(false)
 
+  // Settings fields
+  timezone        String?
+  country         String?
+  locale          String?          // "tr" | "en"
+  privacySettings UserPrivacySettings?
+
   // Phase 2: New relations for wearables, sleep, readiness
   wearables       Wearable[]      @relation("UserWearables")
   sleepRecords    SleepRecord[]   @relation("UserSleepRecords")
@@ -1152,4 +1158,18 @@ model CosmeticItem {
   imageKey    String   // identifier for rendering
   isAvailable Boolean  @default(true)
   createdAt   DateTime @default(now())
+}
+
+model UserPrivacySettings {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collectWorkout   Boolean  @default(true)
+  collectNutrition Boolean  @default(true)
+  analytics        Boolean  @default(true)
+  marketingEmails  Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
 }
