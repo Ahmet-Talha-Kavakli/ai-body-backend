@@ -81,6 +81,7 @@ model User {
   dietProfile      DietProfile?
   mealTemplates    MealTemplate[]
   notificationPrefs NotificationPreference?
+  notifications     Notification[]
   userAchievements  UserAchievement[]
   userXP            UserXP?
   weightEntries     WeightEntry[]
@@ -845,6 +846,34 @@ enum FitnessGoal {
   ENDURANCE
   FLEXIBILITY
   GENERAL_FITNESS
+}
+
+enum NotificationType {
+  water
+  meal
+  medication
+  sleep
+  workout
+  pet
+  streak
+  achievement
+  roadmap
+  system
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }
 
 // ──────────────────────────────────────────
