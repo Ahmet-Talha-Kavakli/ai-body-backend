@@ -24,17 +24,25 @@ export async function PATCH(req: NextRequest) {
     if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
-    const { name, healthProfile } = body
+    const { name, bio, country, timezone, locale, profilePublic, healthProfile } = body
 
     const user = await db.user.findUnique({ where: { clerkId } })
     if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+    const userUpdateData: Record<string, unknown> = {}
+    if (name !== undefined) userUpdateData.name = name
+    if (bio !== undefined) userUpdateData.bio = bio
+    if (country !== undefined) userUpdateData.country = country
+    if (timezone !== undefined) userUpdateData.timezone = timezone
+    if (locale !== undefined) userUpdateData.locale = locale
+    if (profilePublic !== undefined) userUpdateData.profilePublic = profilePublic
+
     const updated = await db.user.update({
       where: { clerkId },
-      data: { ...(name && { name }) },
+      data: userUpdateData,
     })
 
-    if (healthProfile && user) {
+    if (healthProfile) {
       await db.healthProfile.upsert({
         where: { userId: user.id },
         create: {
@@ -49,7 +57,14 @@ export async function PATCH(req: NextRequest) {
           sessionDurationMinutes: healthProfile.sessionDurationMinutes ?? 45,
           availableEquipment: healthProfile.availableEquipment ?? [],
         },
-        update: healthProfile,
+        update: {
+          ...(healthProfile.age !== undefined && { age: healthProfile.age }),
+          ...(healthProfile.gender !== undefined && { gender: healthProfile.gender }),
+          ...(healthProfile.heightCm !== undefined && { heightCm: healthProfile.heightCm }),
+          ...(healthProfile.weightKg !== undefined && { weightKg: healthProfile.weightKg }),
+          ...(healthProfile.fitnessLevel !== undefined && { fitnessLevel: healthProfile.fitnessLevel }),
+          ...(healthProfile.goals !== undefined && { goals: healthProfile.goals }),
+        },
       })
     }
 
