@@ -1,8 +1,9 @@
 'use client'
 
 import { useUser } from '@clerk/nextjs'
-import { Bell, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import Image from 'next/image'
+import { NotificationPopover } from '@/components/notifications/NotificationPopover'
 
 interface DashboardHeaderProps {
   onMenuClick: () => void
@@ -42,12 +43,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
           </span>
 
           {/* Sağ: Bildirim */}
-          <button className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/5">
-            <Bell size={20} className="text-white/70" />
-            <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[9px] font-bold text-white">
-              3
-            </span>
-          </button>
+          <NotificationPopover />
         </div>
 
         {/* DESKTOP */}
@@ -62,12 +58,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
 
           {/* Sağ: Bildirim + Avatar */}
           <div className="flex items-center gap-4">
-            <button className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/5">
-              <Bell size={20} className="text-white/70" />
-              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[9px] font-bold text-white">
-                3
-              </span>
-            </button>
+            <NotificationPopover />
 
             <div className="h-8 w-8 overflow-hidden rounded-full ring-2 ring-indigo-500/30">
               {avatarUrl ? (
