@@ -11,8 +11,8 @@ export async function GET() {
       where: { clerkId },
       include: {
         healthProfile: true,
-        sessions: { take: 100, orderBy: { createdAt: 'desc' } },
-        mealLogs: { take: 100, orderBy: { createdAt: 'desc' } },
+        sessions: { take: 100, orderBy: { startedAt: 'desc' } },
+        mealLogs: { take: 100, orderBy: { loggedAt: 'desc' } },
         userAchievements: true,
       },
     })
