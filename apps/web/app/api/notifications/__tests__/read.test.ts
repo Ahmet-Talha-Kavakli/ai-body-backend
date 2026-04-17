@@ -43,7 +43,7 @@ describe('POST /api/notifications/read-all', () => {
   it('marks all notifications as read', async () => {
     const { POST } = await import('../read-all/route')
     const req = new NextRequest('http://localhost/api/notifications/read-all', { method: 'POST' })
-    const res = await POST(req)
+    const res = await POST(req, {})
     const json = await res.json()
 
     expect(res.status).toBe(200)

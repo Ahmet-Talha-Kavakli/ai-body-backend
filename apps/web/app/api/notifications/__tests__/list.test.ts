@@ -41,7 +41,7 @@ describe('GET /api/notifications', () => {
     vi.mocked(db.notification.count).mockResolvedValue(1)
 
     const req = new NextRequest('http://localhost/api/notifications')
-    const res = await GET(req)
+    const res = await GET(req, {})
     const json = await res.json()
 
     expect(res.status).toBe(200)
@@ -58,7 +58,7 @@ describe('GET /api/notifications', () => {
     vi.mocked(auth).mockResolvedValueOnce({ userId: null } as any)
 
     const req = new NextRequest('http://localhost/api/notifications')
-    const res = await GET(req)
+    const res = await GET(req, {})
     expect(res.status).toBe(401)
   })
 })
