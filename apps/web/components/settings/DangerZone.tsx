@@ -12,25 +12,40 @@ export function DangerZone() {
   const { signOut } = useClerk()
   const [deleteDataOpen, setDeleteDataOpen] = useState(false)
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [dataLoading, setDataLoading] = useState(false)
+  const [accountLoading, setAccountLoading] = useState(false)
+  const [toast, setToast] = useState('')
+
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(''), 3000)
+  }
 
   const handleDeleteData = async () => {
-    setLoading(true)
+    setDataLoading(true)
     try {
-      await fetch('/api/user/data', { method: 'DELETE' })
+      const res = await fetch('/api/user/data', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Delete failed')
       setDeleteDataOpen(false)
+    } catch (err) {
+      console.error('Delete data error:', err)
+      showToast('Veriler silinemedi, tekrar dene')
     } finally {
-      setLoading(false)
+      setDataLoading(false)
     }
   }
 
   const handleDeleteAccount = async () => {
-    setLoading(true)
+    setAccountLoading(true)
     try {
-      await fetch('/api/user/account', { method: 'DELETE' })
+      const res = await fetch('/api/user/account', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Account delete failed')
       await signOut({ redirectUrl: '/' })
+    } catch (err) {
+      console.error('Delete account error:', err)
+      showToast('Hesap silinemedi, tekrar dene')
     } finally {
-      setLoading(false)
+      setAccountLoading(false)
     }
   }
 
@@ -43,6 +58,8 @@ export function DangerZone() {
         delay={0.3}
         variant="danger"
       >
+        {toast && <p className="mb-3 text-xs text-red-400">{toast}</p>}
+
         <div className="flex items-center justify-between border-b border-red-500/20 py-3">
           <div>
             <p className="text-sm font-semibold">Tüm Verilerimi Sil</p>
@@ -99,7 +116,7 @@ export function DangerZone() {
         description="Antrenman geçmişi, beslenme günlüğü ve sağlık verilerin kalıcı olarak silinir. Hesabın korunur."
         confirmText="SİL"
         confirmLabel="Verileri Sil"
-        loading={loading}
+        loading={dataLoading}
       />
 
       <ConfirmDialog
@@ -110,7 +127,7 @@ export function DangerZone() {
         description="FitAI hesabın ve tüm verilerin kalıcı olarak silinir. Bu işlem geri alınamaz."
         confirmText="HESABIMI SİL"
         confirmLabel="Hesabı Sil"
-        loading={loading}
+        loading={accountLoading}
       />
     </>
   )

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useClerk } from '@clerk/nextjs'
+import { useClerk, useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { THIINGS } from '@/lib/thiings'
@@ -15,8 +15,15 @@ interface Props {
 
 export function PrivacySection({ profilePublic, onProfilePublicChange }: Props) {
   const { openUserProfile } = useClerk()
+  const { user: clerkUser } = useUser()
   const router = useRouter()
   const [toggling, setToggling] = useState(false)
+  const [toast, setToast] = useState('')
+
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(''), 2500)
+  }
 
   const handleProfilePublic = async () => {
     const newVal = !profilePublic
@@ -29,7 +36,7 @@ export function PrivacySection({ profilePublic, onProfilePublicChange }: Props) 
       })
       onProfilePublicChange(newVal)
     } catch {
-      // revert on error — parent state unchanged
+      showToast('Kaydedilemedi, tekrar dene')
     } finally {
       setToggling(false)
     }
@@ -39,6 +46,10 @@ export function PrivacySection({ profilePublic, onProfilePublicChange }: Props) 
     window.location.href = '/api/user/export'
   }
 
+  const lastSignIn = clerkUser?.lastSignInAt
+    ? new Date(clerkUser.lastSignInAt).toLocaleString('tr-TR')
+    : 'Bilinmiyor'
+
   return (
     <SettingsSectionCard
       icon={THIINGS.settings}
@@ -46,6 +57,7 @@ export function PrivacySection({ profilePublic, onProfilePublicChange }: Props) 
       description="Hesap güvenliğini yönet"
       delay={0.2}
     >
+      {toast && <p className="mb-2 text-xs text-red-400">{toast}</p>}
       <SettingsRow
         label="İki Faktörlü Doğrulama"
         value="Hesap güvenliği"
@@ -66,7 +78,7 @@ export function PrivacySection({ profilePublic, onProfilePublicChange }: Props) 
       />
       <SettingsRow
         label="Hesap Aktivite Logu"
-        value="Son giriş bilgileri"
+        value={`Son giriş: ${lastSignIn}`}
         action="Görüntüle"
         onAction={() => openUserProfile()}
       />
