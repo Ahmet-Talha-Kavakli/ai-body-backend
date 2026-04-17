@@ -56,22 +56,45 @@ createNotification(userId: string, payload: {
 
 ### NotificationType → Toggle mapping
 
-| type        | preference field       |
-| ----------- | ---------------------- |
-| water       | waterReminder          |
-| meal        | mealReminder           |
-| medication  | medicationReminder     |
-| sleep       | sleepReminder          |
-| workout     | workoutReminder        |
-| pet         | petNotification        |
-| streak      | streakWarning          |
-| achievement | achievementAlert       |
-| roadmap     | roadmapUpdate          |
-| system      | (her zaman gönderilir) |
+| type        | preference field                   |
+| ----------- | ---------------------------------- |
+| water       | waterReminder                      |
+| meal        | mealReminder                       |
+| medication  | medicationReminder                 |
+| sleep       | sleepReminder                      |
+| workout     | workoutReminder                    |
+| pet         | petNotification                    |
+| streak      | streakWarning                      |
+| achievement | achievementAlert                   |
+| roadmap     | roadmapUpdate                      |
+| system      | (her zaman gönderilir, toggle yok) |
+
+`NotificationType` Prisma enum olarak tanımlanır:
+
+```prisma
+enum NotificationType {
+  water
+  meal
+  medication
+  sleep
+  workout
+  pet
+  streak
+  achievement
+  roadmap
+  system
+}
+```
+
+`Notification.type` alanı `NotificationType` enum kullanır (`String` değil).
 
 ---
 
 ## API Endpoints
+
+### `GET /api/notifications` — `apps/web/app/api/notifications/route.ts`
+
+Next.js App Router'da `route.ts` aynı dizindeki subdirectory route'larla (`preferences/`, `register/`, `settings/`) çakışmaz. Bu dosya `app/api/notifications/route.ts` olarak oluşturulur.
 
 ### `GET /api/notifications`
 
@@ -147,18 +170,38 @@ Mevcut endpointler (`/api/notifications/preferences`, `/api/notifications/regist
 | Seri güncellendi (kırılmak üzere) | Streak update logic                                 | `streak`      | `/dashboard/progress` |
 | Yol haritası güncellendi          | Roadmap update endpoint                             | `roadmap`     | `/dashboard/workouts` |
 
-### Cron bazlı (`/api/cron/notifications`)
+### Cron bazlı (3 ayrı route)
 
-`apps/web/app/api/cron/notifications/route.ts`
+Her Vercel Cron entry'si tek bir `path`'e map olduğundan 3 ayrı route oluşturulur. Hepsi `Authorization: Bearer ${CRON_SECRET}` header kontrolü yapar (mevcut cron route'larla aynı pattern).
 
-- Vercel Cron: `0 * * * *` (saatlik) — su hatırlatması (her 2 saatte bir gönderir, son bildirim zamanına göre)
-- `0 8 * * *` (günlük 08:00) — ilaç, uyku, antrenman hatırlatmaları
-- `0 20 * * *` (günlük 20:00) — streak uyarısı (gün bitmeden, henüz aktivite yoksa)
+**`/api/cron/notifications-water`** — `schedule: "0 * * * *"` (saatlik)
 
-Her cron çalıştığında:
+- `waterReminder: true` olan tüm kullanıcıları çeker
+- Her kullanıcı için: son `water` type Notification kaydının `createdAt` zamanına bakar
+- Eğer son bildirimden bu yana ≥ 2 saat geçmişse `createNotification()` çağırır
+- Hiç `water` bildirimi yoksa (yeni kullanıcı) her zaman gönderir
+- Her user için try/catch — bir hata diğer kullanıcıları etkilemez
 
-1. İlgili tercihi açık olan tüm kullanıcıları çeker
-2. Her biri için `createNotification()` çağırır
+**`/api/cron/notifications-daily`** — `schedule: "0 8 * * *"` (günlük 08:00)
+
+- `medicationReminder: true` → medication bildirimi
+- `sleepReminder: true` → sleep bildirimi
+- `workoutReminder: true` → workout bildirimi
+- İlgili toggle'ı açık olan kullanıcılara `createNotification()` çağırır
+
+**`/api/cron/notifications-streak`** — `schedule: "0 20 * * *"` (günlük 20:00)
+
+- `streakWarning: true` olan kullanıcıları çeker
+- Bugün hiç `WorkoutSession` kaydı yoksa streak uyarısı gönderir
+- Her user için try/catch
+
+**`vercel.json` güncellemesi:** Mevcut 4 cron entry korunur, 3 yeni entry eklenir:
+
+```json
+{ "path": "/api/cron/notifications-water", "schedule": "0 * * * *" },
+{ "path": "/api/cron/notifications-daily", "schedule": "0 8 * * *" },
+{ "path": "/api/cron/notifications-streak", "schedule": "0 20 * * *" }
+```
 
 ---
 
@@ -194,7 +237,9 @@ apps/web/
       [id]/read/route.ts      ← POST mark read
       read-all/route.ts       ← POST mark all read
     cron/
-      notifications/route.ts  ← cron triggers
+      notifications-water/route.ts   ← saatlik su hatırlatması
+      notifications-daily/route.ts   ← günlük ilaç/uyku/antrenman
+      notifications-streak/route.ts  ← akşam streak uyarısı
   prisma/schema.prisma        ← Notification model eklenir
 ```
 
