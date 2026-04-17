@@ -1,90 +1,98 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { ContainerScroll } from '@/components/ui/container-scroll-animation'
-import { SectionAnimations } from '@/components/landing/section-animations'
+import { motion, useInView } from 'framer-motion'
+import { useRef } from 'react'
 
 const steps = [
   {
-    number: '01',
-    title: 'Onboard in minutes',
-    description: 'Tell us your goals, fitness level, and available equipment. No gym required.',
-    icon: '→',
+    step: '01',
+    title: 'Create Your Profile',
+    description:
+      'Tell us your goals, fitness level, and schedule. Takes 2 minutes. AI builds your baseline.',
   },
   {
-    number: '02',
-    title: 'Get your AI program',
+    step: '02',
+    title: 'Get Your Program',
     description:
-      'Your personalized workout and nutrition plan is ready in seconds. Fully explained, fully yours.',
-    icon: '⚡',
+      'AI generates a fully personalized training plan — workouts, rest days, and nutrition targets.',
   },
   {
-    number: '03',
-    title: 'Track & improve',
+    step: '03',
+    title: 'Train With AI',
     description:
-      'Log sessions, measure progress, and watch your AI coach adapt the plan as you grow stronger.',
-    icon: '↑',
+      'Open your camera, start your workout. AI tracks your form, counts reps, and coaches in real time.',
+  },
+  {
+    step: '04',
+    title: 'Adapt & Improve',
+    description:
+      "After every session, AI analyzes performance and adjusts next week's plan automatically.",
   },
 ]
 
 export function HowItWorksSection() {
-  return (
-    <SectionAnimations>
-      <section id="how-it-works" className="py-24 lg:py-32 bg-[#080808]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <ContainerScroll
-          titleComponent={
-            <div className="mb-16 text-center">
-              <motion.p
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                className="text-primary text-sm font-medium uppercase tracking-widest mb-3"
-              >
-                How It Works
-              </motion.p>
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-                className="text-4xl lg:text-5xl font-black text-white"
-              >
-                From zero to training
-                <br />
-                <span className="text-primary">in three steps</span>
-              </motion.h2>
-            </div>
-          }
-        >
-          <div className="bg-zinc-900 rounded-2xl p-8 lg:p-12 w-full h-full flex items-center">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-0 relative w-full">
-              {/* Connecting line (desktop only) */}
-              <div className="hidden lg:block absolute top-10 left-[16.66%] right-[16.66%] h-px bg-gradient-to-r from-primary/30 via-primary/60 to-primary/30" />
+  const ref = useRef<HTMLElement>(null)
+  const isInView = useInView(ref, { once: true, margin: '-60px 0px' })
 
-              {steps.map((step, i) => (
-                <motion.div
-                  key={step.number}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.15 }}
-                  className="relative flex flex-col items-center text-center px-4"
-                  data-animate="true"
-                >
-                  <div className="relative z-10 w-20 h-20 rounded-full bg-[#080808] border-2 border-primary/50 flex items-center justify-center mb-6">
-                    <span className="text-2xl font-black text-primary">{step.icon}</span>
-                  </div>
-                  <span className="text-xs text-zinc-600 font-mono mb-2">{step.number}</span>
-                  <h3 className="text-xl font-bold text-white mb-3">{step.title}</h3>
-                  <p className="text-zinc-400 text-sm leading-relaxed">{step.description}</p>
-                </motion.div>
-              ))}
-            </div>
+  return (
+    <section id="how-it-works" ref={ref} className="border-t border-white/[0.06] bg-[#080808]">
+      {/* Header */}
+      <div className="flex flex-col gap-4 border-b border-white/[0.06] px-5 pb-10 pt-12 sm:flex-row sm:items-end sm:justify-between sm:px-10 sm:pb-12 sm:pt-16 lg:px-16">
+        <div>
+          <div className="mb-4 flex items-center gap-3">
+            <span className="block h-[2px] w-6 bg-[#C8FF00]" />
+            <span className="font-barlow text-[10px] uppercase tracking-[0.22em] text-[#C8FF00] sm:text-xs">
+              The Process
+            </span>
           </div>
-        </ContainerScroll>
+          <h2
+            className="font-bebas leading-[0.9] text-white"
+            style={{ fontSize: 'clamp(3rem, 8vw, 7rem)' }}
+          >
+            HOW IT
+            <br />
+            WORKS
+          </h2>
         </div>
-      </section>
-    </SectionAnimations>
+        <p className="max-w-xs text-sm leading-relaxed text-zinc-500 sm:pb-2">
+          From zero to optimized in minutes. No gym needed.
+        </p>
+      </div>
+
+      {/* Steps */}
+      <div className="divide-y divide-white/[0.06]">
+        {steps.map((s, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: -20 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.5, delay: 0.1 + i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+            className="group flex items-start gap-6 px-5 py-7 transition-colors duration-300 hover:bg-white/[0.015] sm:gap-12 sm:px-10 sm:py-10 lg:px-16"
+          >
+            {/* Step number */}
+            <span
+              className="font-bebas flex-shrink-0 leading-none text-zinc-800 transition-colors duration-300 group-hover:text-[#C8FF00]/40"
+              style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
+            >
+              {s.step}
+            </span>
+
+            {/* Content */}
+            <div className="flex-1 pt-1">
+              <h3 className="font-barlow text-base font-bold uppercase tracking-wide text-white sm:text-lg">
+                {s.title}
+              </h3>
+              <p className="mt-2 max-w-lg text-sm leading-relaxed text-zinc-400">{s.description}</p>
+            </div>
+
+            {/* Progress indicator */}
+            <div className="hidden flex-shrink-0 flex-col items-center gap-1 pt-2 sm:flex">
+              <div className="h-1.5 w-1.5 rounded-full bg-zinc-700 transition-colors duration-300 group-hover:bg-[#C8FF00]" />
+              {i < steps.length - 1 && <div className="h-8 w-px bg-zinc-800" />}
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </section>
   )
 }

@@ -1,184 +1,152 @@
 'use client'
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, useInView } from 'framer-motion'
+import { useRef } from 'react'
 import Link from 'next/link'
-import { GlowCard } from '@/components/ui/spotlight-card'
-import { GradientHoverButton } from '@/components/ui/gradient-hover-button'
-import { SectionAnimations } from '@/components/landing/section-animations'
 
 const plans = [
   {
-    name: 'Free',
-    monthly: 0,
-    annual: 0,
-    description: 'For curious beginners',
-    features: ['3 AI workouts / month', 'Basic nutrition logging', 'Progress tracking', 'Mobile app access'],
-    cta: 'Get started free',
+    name: 'STARTER',
+    price: 'Free',
+    period: 'forever',
+    description: 'Get started and feel the difference.',
+    features: [
+      '3 AI-generated workouts / week',
+      'Basic form feedback',
+      'Nutrition photo logging',
+      'Progress tracking',
+    ],
+    cta: 'Start Free',
     href: '/sign-up',
     highlight: false,
   },
   {
-    name: 'Pro',
-    monthly: 19,
-    annual: 15,
-    description: 'For serious progress',
+    name: 'PRO',
+    price: '$19',
+    period: '/ month',
+    description: 'Unlock your full potential.',
     features: [
       'Unlimited AI workouts',
-      'Real-time form analysis',
-      'Full nutrition AI coach',
-      'Advanced analytics',
+      'Real-time form correction',
+      '3D body movement analysis',
+      'Adaptive weekly reprogramming',
+      'Voice AI coaching (VAPI)',
+      'Injury risk prediction',
+      'Leaderboards & social',
       'Priority support',
     ],
-    cta: 'Start Pro trial',
+    cta: 'Go Pro',
     href: '/sign-up?plan=pro',
     highlight: true,
   },
-  {
-    name: 'Elite',
-    monthly: 49,
-    annual: 39,
-    description: 'For peak performance',
-    features: [
-      'Everything in Pro',
-      '1-on-1 AI coaching sessions',
-      'Custom meal plans',
-      'Wearable device sync',
-      'Team challenges',
-    ],
-    cta: 'Go Elite',
-    href: '/sign-up?plan=elite',
-    highlight: false,
-  },
 ]
 
-function PricingCardContent({
-  plan,
-  annual,
-}: {
-  plan: (typeof plans)[0]
-  annual: boolean
-}) {
-  const price = annual ? plan.annual : plan.monthly
-
-  return (
-    <>
-      {plan.highlight && (
-        <div className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-primary/20 text-primary border border-primary/30 mb-4">
-          Most Popular
-        </div>
-      )}
-      <h3 className="text-2xl font-black text-white mb-1">{plan.name}</h3>
-      <p className="text-zinc-500 text-sm mb-6">{plan.description}</p>
-
-      {/* Price */}
-      <div className="flex items-end gap-1 mb-8">
-        <motion.span
-          key={price}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-5xl font-black text-white"
-        >
-          {price === 0 ? 'Free' : `$${price}`}
-        </motion.span>
-        {price > 0 && <span className="text-zinc-500 text-sm mb-2">/mo</span>}
-      </div>
-
-      {/* Features */}
-      <ul className="space-y-3 mb-8">
-        {plan.features.map((feature) => (
-          <li key={feature} className="flex items-start gap-2.5 text-sm text-zinc-400">
-            <span className="text-primary mt-0.5 flex-shrink-0">✓</span>
-            {feature}
-          </li>
-        ))}
-      </ul>
-
-      {/* CTA */}
-      {plan.highlight ? (
-        <GradientHoverButton href={plan.href} className="!w-full !justify-center">
-          {plan.cta}
-        </GradientHoverButton>
-      ) : (
-        <Link
-          href={plan.href}
-          className="block w-full text-center py-3 px-6 rounded-full border border-zinc-700 text-zinc-300 text-sm font-medium hover:border-zinc-500 hover:text-white transition-colors"
-        >
-          {plan.cta}
-        </Link>
-      )}
-    </>
-  )
-}
-
 export function PricingSection() {
-  const [annual, setAnnual] = useState(false)
+  const ref = useRef<HTMLElement>(null)
+  const isInView = useInView(ref, { once: true, margin: '-60px 0px' })
 
   return (
-    <SectionAnimations>
-      <section id="pricing" className="py-24 lg:py-32 bg-[#080808]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-12"
-        >
-          <p className="text-primary text-sm font-medium uppercase tracking-widest mb-3">Pricing</p>
-          <h2 className="text-4xl lg:text-5xl font-black text-white mb-6">Simple, honest pricing</h2>
-
-          {/* Billing toggle */}
-          <div className="inline-flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-full px-4 py-2">
-            <span className={`text-sm transition-colors ${!annual ? 'text-white' : 'text-zinc-500'}`}>
-              Monthly
-            </span>
-            <button
-              onClick={() => setAnnual(!annual)}
-              className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${
-                annual ? 'bg-primary' : 'bg-zinc-700'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-300 ${
-                  annual ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-            <span className={`text-sm transition-colors ${annual ? 'text-white' : 'text-zinc-500'}`}>
-              Annual
-              <span className="ml-1.5 text-xs text-primary font-medium">Save 20%</span>
+    <section id="pricing" ref={ref} className="border-t border-white/[0.06] bg-[#080808]">
+      {/* Header */}
+      <div className="flex flex-col gap-4 border-b border-white/[0.06] px-5 py-12 sm:flex-row sm:items-end sm:justify-between sm:px-10 sm:py-16 lg:px-16">
+        <div>
+          <div className="mb-4 flex items-center gap-3">
+            <span className="block h-[2px] w-6 bg-[#C8FF00]" />
+            <span className="font-barlow text-[10px] uppercase tracking-[0.22em] text-[#C8FF00] sm:text-xs">
+              Pricing
             </span>
           </div>
-        </motion.div>
-
-        {/* Pricing cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          {plans.map((plan, i) => (
-            <motion.div
-              key={plan.name}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className={plan.highlight ? 'md:-mt-4 md:mb-4' : ''}
-              data-animate="true"
-            >
-              {plan.highlight ? (
-                <GlowCard glowColor="green" customSize className="w-full !h-auto p-8">
-                  <PricingCardContent plan={plan} annual={annual} />
-                </GlowCard>
-              ) : (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 hover:border-zinc-700 transition-colors">
-                  <PricingCardContent plan={plan} annual={annual} />
-                </div>
-              )}
-            </motion.div>
-          ))}
+          <h2
+            className="font-bebas leading-[0.9] text-white"
+            style={{ fontSize: 'clamp(3rem, 8vw, 7rem)' }}
+          >
+            SIMPLE.
+            <br />
+            TRANSPARENT.
+          </h2>
         </div>
+        <p className="max-w-xs text-sm leading-relaxed text-zinc-500 sm:pb-2">
+          No hidden fees. Cancel anytime.
+          <br />
+          Start free, upgrade when ready.
+        </p>
+      </div>
+
+      {/* Plans */}
+      <div className="grid grid-cols-1 divide-y divide-white/[0.06] sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+        {plans.map((plan, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 24 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.55, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className={`relative flex flex-col px-5 py-10 sm:px-10 sm:py-14 lg:px-16 ${
+              plan.highlight ? 'bg-[#C8FF00]/[0.03]' : ''
+            }`}
+          >
+            {/* Popular badge */}
+            {plan.highlight && (
+              <div className="absolute right-0 top-0">
+                <div className="font-barlow bg-[#C8FF00] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-black">
+                  Most Popular
+                </div>
+              </div>
+            )}
+
+            {/* Plan name */}
+            <div className="font-bebas mb-4 text-lg tracking-widest text-zinc-500">{plan.name}</div>
+
+            {/* Price */}
+            <div className="mb-2 flex items-end gap-1">
+              <span
+                className="font-bebas leading-none text-white"
+                style={{ fontSize: 'clamp(3.5rem, 8vw, 5.5rem)' }}
+              >
+                {plan.price}
+              </span>
+              <span className="font-barlow mb-3 text-sm text-zinc-500">{plan.period}</span>
+            </div>
+
+            <p className="mb-8 text-sm text-zinc-400">{plan.description}</p>
+
+            {/* Features */}
+            <ul className="mb-10 flex-1 space-y-3">
+              {plan.features.map((f, j) => (
+                <li key={j} className="flex items-start gap-3 text-sm text-zinc-300">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    className="mt-0.5 shrink-0"
+                  >
+                    <path
+                      d="M2 7l4 4 6-6"
+                      stroke={plan.highlight ? '#C8FF00' : '#555'}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            {/* CTA */}
+            <Link
+              href={plan.href}
+              className={`font-barlow inline-flex items-center justify-center gap-2 px-6 py-4 text-xs font-bold uppercase tracking-[0.18em] transition-all duration-200 active:scale-[0.98] ${
+                plan.highlight
+                  ? 'bg-[#C8FF00] text-black hover:bg-white'
+                  : 'border border-zinc-700 text-white hover:border-white hover:bg-white/[0.05]'
+              }`}
+            >
+              {plan.cta}
+            </Link>
+          </motion.div>
+        ))}
       </div>
     </section>
-    </SectionAnimations>
   )
 }

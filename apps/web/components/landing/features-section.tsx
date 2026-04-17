@@ -1,138 +1,128 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { GlowCard } from '@/components/ui/spotlight-card'
-import { BackgroundPaths } from '@/components/ui/background-paths'
-import { SectionAnimations } from '@/components/landing/section-animations'
+import { motion, useInView } from 'framer-motion'
+import { useRef } from 'react'
 
 const features = [
   {
     number: '01',
-    title: 'AI Program Generation',
+    title: 'REAL-TIME\nAI COACHING',
     description:
-      'Answer a few questions and get a fully personalized workout program in seconds. Adapts weekly based on your progress and feedback.',
-    tag: 'Core',
-    featured: false,
+      'Your AI coach watches every rep. It detects form errors, counts reps automatically, and gives you instant verbal feedback — like having a pro trainer in your pocket.',
+    tag: 'Computer Vision',
   },
   {
     number: '02',
-    title: 'Real-time Form Analysis',
+    title: 'ADAPTIVE\nPROGRAMS',
     description:
-      'Your phone camera becomes your coach. Get instant feedback on your form during workouts to maximize gains and prevent injury.',
-    tag: 'Pro',
-    featured: true,
+      'No two workouts are the same. Your program evolves daily based on your performance, recovery score, sleep, and goals. AI adjusts load, volume, and intensity in real time.',
+    tag: 'Machine Learning',
   },
   {
     number: '03',
-    title: 'Nutrition Tracking',
+    title: '3D MOVEMENT\nANALYSIS',
     description:
-      'Log meals with a photo, get macro breakdowns, and receive AI-powered nutrition advice aligned with your fitness goals.',
-    tag: 'Core',
-    featured: false,
+      'Full skeletal tracking maps 33 body landmarks in real time. Visualize muscle engagement, detect imbalances, and predict injury risk before it happens.',
+    tag: 'Body Tracking',
   },
   {
     number: '04',
-    title: 'Progress Analytics',
+    title: 'NUTRITION\nINTELLIGENCE',
     description:
-      'Visualize your transformation over time. Track strength gains, body composition, and habit consistency with beautiful charts.',
-    tag: 'Core',
-    featured: false,
+      'Snap a photo of your meal and get instant macros. AI estimates calories, protein, carbs, and fat — then syncs nutrition with your training plan automatically.',
+    tag: 'Vision AI',
   },
 ]
 
 export function FeaturesSection() {
+  const ref = useRef<HTMLElement>(null)
+
   return (
-    <SectionAnimations>
-      <section id="features" className="relative py-24 lg:py-32 bg-[#080808] overflow-hidden">
-        {/* Background paths texture */}
-        <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <BackgroundPaths title="" />
+    <section id="features" ref={ref} className="border-t border-white/[0.06] bg-[#080808]">
+      {/* Header row */}
+      <div className="flex flex-col gap-4 border-b border-white/[0.06] px-5 py-12 sm:flex-row sm:items-end sm:justify-between sm:px-10 sm:py-16 lg:px-16">
+        <div className="flex items-center gap-3">
+          <span className="block h-[2px] w-6 bg-[#C8FF00]" />
+          <span className="font-barlow text-[10px] uppercase tracking-[0.22em] text-[#C8FF00] sm:text-xs">
+            Core Features
+          </span>
         </div>
+        <p className="max-w-xs text-sm leading-relaxed text-zinc-500">
+          Everything your training needs,
+          <br className="hidden sm:block" /> powered by AI.
+        </p>
+      </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="mb-20"
-        >
-          <p className="text-primary text-sm font-medium uppercase tracking-widest mb-3">Features</p>
-          <h2 className="text-4xl lg:text-5xl font-black text-white max-w-lg leading-tight">
-            Everything you need to transform your body
-          </h2>
-        </motion.div>
-
-        {/* Features list */}
-        <div className="space-y-16 lg:space-y-24">
-          {features.map((feature, i) => (
-            <motion.div
-              key={feature.number}
-              initial={{ opacity: 0, x: i % 2 === 0 ? -40 : 40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: '-80px' }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              data-animate="true"
-            >
-              {feature.featured ? (
-                <GlowCard
-                  glowColor="green"
-                  customSize
-                  className="w-full !h-auto p-10 lg:p-14"
-                >
-                  <div className="flex flex-col lg:flex-row lg:items-end gap-8">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-4">
-                        <span className="text-6xl lg:text-8xl font-black text-white/10 leading-none select-none">
-                          {feature.number}
-                        </span>
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-primary/20 text-primary border border-primary/30">
-                          {feature.tag}
-                        </span>
-                      </div>
-                      <h3 className="text-3xl lg:text-4xl font-black text-white mb-4">
-                        {feature.title}
-                      </h3>
-                      <p className="text-zinc-400 text-lg leading-relaxed max-w-xl">
-                        {feature.description}
-                      </p>
-                    </div>
-                    <div className="text-primary/30 text-[120px] font-black leading-none select-none hidden lg:block">
-                      ↗
-                    </div>
-                  </div>
-                </GlowCard>
-              ) : (
-                <div
-                  className={`flex flex-col ${
-                    i % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'
-                  } items-start gap-8 lg:gap-16`}
-                >
-                  <div className="flex-shrink-0">
-                    <span className="text-7xl lg:text-9xl font-black text-white/5 leading-none select-none">
-                      {feature.number}
-                    </span>
-                  </div>
-                  <div className="flex-1 pt-2">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-2xl lg:text-3xl font-black text-white">{feature.title}</h3>
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">
-                        {feature.tag}
-                      </span>
-                    </div>
-                    <p className="text-zinc-400 text-lg leading-relaxed max-w-lg">
-                      {feature.description}
-                    </p>
-                    <div className="mt-6 h-px w-24 bg-gradient-to-r from-primary/50 to-transparent" />
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </div>
+      {/* Feature rows */}
+      <div className="divide-y divide-white/[0.06]">
+        {features.map((f, i) => (
+          <FeatureRow key={i} feature={f} index={i} />
+        ))}
       </div>
     </section>
-    </SectionAnimations>
+  )
+}
+
+function FeatureRow({ feature, index }: { feature: (typeof features)[0]; index: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const isInView = useInView(ref, { once: true, margin: '-80px 0px' })
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 24 }}
+      animate={isInView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.55, delay: index * 0.06, ease: [0.16, 1, 0.3, 1] }}
+      className="group flex flex-col gap-6 px-5 py-8 transition-colors duration-300 hover:bg-white/[0.015] sm:flex-row sm:items-start sm:gap-10 sm:px-10 sm:py-12 lg:px-16"
+    >
+      {/* Number */}
+      <div className="flex-shrink-0">
+        <span
+          className="font-bebas text-zinc-700 transition-colors duration-300 group-hover:text-[#C8FF00]"
+          style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)' }}
+        >
+          {feature.number}
+        </span>
+      </div>
+
+      {/* Title */}
+      <div className="flex-shrink-0 sm:w-56 lg:w-72">
+        <h3
+          className="font-bebas whitespace-pre-line leading-[0.9] text-white"
+          style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)' }}
+        >
+          {feature.title}
+        </h3>
+        <span className="font-barlow mt-3 inline-block border border-zinc-800 px-2.5 py-1 text-[10px] uppercase tracking-widest text-zinc-600">
+          {feature.tag}
+        </span>
+      </div>
+
+      {/* Description */}
+      <div className="flex-1 sm:pt-1">
+        <p className="max-w-lg text-sm leading-relaxed text-zinc-400 sm:text-base">
+          {feature.description}
+        </p>
+      </div>
+
+      {/* Arrow */}
+      <div className="hidden flex-shrink-0 items-start pt-2 sm:flex">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="none"
+          className="text-zinc-700 transition-all duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-[#C8FF00]"
+        >
+          <path
+            d="M4 16L16 4M16 4H8M16 4v8"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    </motion.div>
   )
 }
