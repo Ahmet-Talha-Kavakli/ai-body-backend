@@ -55,6 +55,8 @@ class MockDatabase {
   private challengesData: Map<string, any> = new Map()
   private challengeProgressData: Map<string, any> = new Map()
   private leaderboardsData: Map<string, any> = new Map()
+  private badgesData: Map<string, any> = new Map()
+  private userBadgesData: Map<string, any> = new Map()
 
   clear() {
     this.waterData.clear()
@@ -69,6 +71,8 @@ class MockDatabase {
     this.challengesData.clear()
     this.challengeProgressData.clear()
     this.leaderboardsData.clear()
+    this.badgesData.clear()
+    this.userBadgesData.clear()
   }
 
   async execAsync(sql: string): Promise<void> {
@@ -303,6 +307,36 @@ class MockDatabase {
     else if (sql.includes('DELETE FROM leaderboard_snapshots')) {
       this.leaderboardsData.clear()
     }
+    // Badges: save badge definitions
+    else if (sql.includes('INSERT OR IGNORE INTO badges')) {
+      const [id, name, description, icon, category, criteriaType, criteriaTarget, rarity, createdAt] = params || []
+      this.badgesData.set(id, { id, name, description, icon, category, criteria_type: criteriaType, criteria_target: criteriaTarget, rarity, created_at: createdAt })
+    }
+    // User badges: unlock badge
+    else if (sql.includes('INSERT OR IGNORE INTO user_badges')) {
+      const [id, badgeId, userId, unlockedAt, progress] = params || []
+      const key = `${userId}:${badgeId}`
+      this.userBadgesData.set(key, { id, badge_id: badgeId, user_id: userId, unlocked_at: unlockedAt, progress })
+    }
+    // User badges: update progress
+    else if (sql.includes('UPDATE user_badges SET progress')) {
+      const progress = params?.[0]
+      const userId = params?.[1]
+      const badgeId = params?.[2]
+      const key = `${userId}:${badgeId}`
+      const badge = this.userBadgesData.get(key)
+      if (badge) {
+        badge.progress = progress
+      }
+    }
+    // Delete badges
+    else if (sql.includes('DELETE FROM badges')) {
+      this.badgesData.clear()
+    }
+    // Delete user badges
+    else if (sql.includes('DELETE FROM user_badges')) {
+      this.userBadgesData.clear()
+    }
   }
 
   async getFirstAsync<T>(sql: string, params?: any[]): Promise<T | undefined> {
@@ -391,6 +425,14 @@ class MockDatabase {
       const leaderboard = this.leaderboardsData.get(key)
       return (leaderboard as T) ?? (undefined as T | undefined)
     }
+    // User badges: check if unlocked
+    if (sql.includes('SELECT id FROM user_badges WHERE user_id')) {
+      const userId = params?.[0]
+      const badgeId = params?.[1]
+      const key = `${userId}:${badgeId}`
+      const badge = this.userBadgesData.get(key)
+      return (badge as T) ?? (undefined as T | undefined)
+    }
     return undefined
   }
 
@@ -475,6 +517,36 @@ class MockDatabase {
         }
       }
       return results
+    }
+    // Badges: get all badges
+    if (sql.includes('SELECT id, name, description, icon, category, criteria_type, criteria_target, rarity FROM badges')) {
+      const results: T[] = []
+      for (const [, value] of this.badgesData) {
+        results.push(value as T)
+      }
+      return results.sort((a: any, b: any) => `${a.category}${a.name}`.localeCompare(`${b.category}${b.name}`))
+    }
+    // Badges: get badges by category
+    if (sql.includes('FROM badges WHERE category')) {
+      const category = params?.[0]
+      const results: T[] = []
+      for (const [, value] of this.badgesData) {
+        if (value.category === category) {
+          results.push(value as T)
+        }
+      }
+      return results.sort((a: any, b: any) => a.name.localeCompare(b.name))
+    }
+    // User badges: get user's badges
+    if (sql.includes('SELECT badge_id, user_id, unlocked_at, progress FROM user_badges WHERE user_id')) {
+      const userId = params?.[0]
+      const results: T[] = []
+      for (const [, value] of this.userBadgesData) {
+        if (value.user_id === userId) {
+          results.push(value as T)
+        }
+      }
+      return results.sort((a: any, b: any) => b.unlocked_at.localeCompare(a.unlocked_at))
     }
     return []
   }
