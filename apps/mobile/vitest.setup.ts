@@ -18,6 +18,17 @@ vi.mock('react-native-svg', () => ({
   Circle: 'Circle',
 }))
 
+// Mock react-native-community/netinfo
+vi.mock('@react-native-community/netinfo', () => ({
+  default: {
+    addEventListener: vi.fn(() => vi.fn()),
+  },
+  useNetInfo: vi.fn(() => ({
+    isConnected: true,
+    isInternetReachable: true,
+  })),
+}))
+
 // In-memory database for testing
 class MockDatabase {
   private waterData: Map<string, { date: string; totalMl: number; goalMl: number }> = new Map()
