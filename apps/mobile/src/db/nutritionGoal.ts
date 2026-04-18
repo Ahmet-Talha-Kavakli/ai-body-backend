@@ -1,98 +1,77 @@
-import { getDatabase } from './sqlite'
-import type { NutritionGoal } from '@fitai/shared-types'
+import { openDatabaseSync } from 'expo-sqlite'
+import type { NutritionGoal } from '../types/nutrition'
 
-/**
- * Create nutrition_goals table if it doesn't exist
- */
-export async function createNutritionGoalTable(): Promise<void> {
-  const db = getDatabase()
-  try {
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS nutrition_goals (
-        id TEXT PRIMARY KEY,
-        userId TEXT NOT NULL UNIQUE,
-        dailyCalories INTEGER,
-        proteinG REAL,
-        carbsG REAL,
-        fatG REAL,
-        waterMl INTEGER,
-        generatedByAi INTEGER DEFAULT 0,
-        updatedAt INTEGER,
-        UNIQUE(userId)
-      )
-    `)
-  } catch (error) {
-    console.error('Error creating nutrition goal table:', error)
-    throw error
+const db = openDatabaseSync('nutrition.db')
+
+export async function createGoalTable(): Promise<void> {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS nutrition_goals (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL UNIQUE,
+      dailyCalories REAL NOT NULL,
+      proteinG REAL NOT NULL,
+      carbsG REAL NOT NULL,
+      fatG REAL NOT NULL,
+      fiberG REAL NOT NULL,
+      waterGoalMl REAL NOT NULL,
+      generatedByAi INTEGER NOT NULL,
+      dietType TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_nutrition_goals_userId ON nutrition_goals(userId);
+  `)
+}
+
+export async function saveGoal(goal: NutritionGoal): Promise<void> {
+  await db.runAsync(
+    `INSERT OR REPLACE INTO nutrition_goals
+     (id, userId, dailyCalories, proteinG, carbsG, fatG, fiberG, waterGoalMl, generatedByAi, dietType, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      goal.id,
+      goal.userId,
+      goal.dailyCalories,
+      goal.proteinG,
+      goal.carbsG,
+      goal.fatG,
+      goal.fiberG,
+      goal.waterGoalMl,
+      goal.generatedByAi ? 1 : 0,
+      goal.dietType,
+      goal.createdAt,
+      goal.updatedAt,
+    ]
+  )
+}
+
+export async function getGoal(userId: string): Promise<NutritionGoal | null> {
+  const result = await db.getFirstAsync(
+    `SELECT * FROM nutrition_goals WHERE userId = ? ORDER BY createdAt DESC LIMIT 1`,
+    [userId]
+  )
+
+  if (!result) return null
+
+  const row = result as any
+  return {
+    id: row.id,
+    userId: row.userId,
+    dailyCalories: row.dailyCalories,
+    proteinG: row.proteinG,
+    carbsG: row.carbsG,
+    fatG: row.fatG,
+    fiberG: row.fiberG,
+    waterGoalMl: row.waterGoalMl,
+    generatedByAi: row.generatedByAi === 1,
+    dietType: row.dietType,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   }
 }
 
-/**
- * Save or update nutrition goal
- */
-export async function saveNutritionGoal(goal: NutritionGoal): Promise<void> {
-  const db = getDatabase()
-  try {
-    await db.runAsync(
-      `INSERT OR REPLACE INTO nutrition_goals
-       (id, userId, dailyCalories, proteinG, carbsG, fatG, waterMl, generatedByAi, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        goal.id,
-        goal.userId,
-        Math.round(goal.dailyCalories),
-        goal.proteinG,
-        goal.carbsG,
-        goal.fatG,
-        goal.waterMl,
-        goal.generatedByAi ? 1 : 0,
-        goal.updatedAt instanceof Date ? goal.updatedAt.getTime() : goal.updatedAt,
-      ]
-    )
-  } catch (error) {
-    console.error('Error saving nutrition goal:', error)
-    throw error
-  }
-}
-
-/**
- * Get nutrition goal for user
- */
-export async function getNutritionGoal(userId: string): Promise<NutritionGoal | null> {
-  const db = getDatabase()
-  try {
-    const result = await db.getFirstAsync<any>(`SELECT * FROM nutrition_goals WHERE userId = ?`, [
-      userId,
-    ])
-
-    if (!result) return null
-
-    return {
-      id: result.id,
-      userId: result.userId,
-      dailyCalories: result.dailyCalories,
-      proteinG: result.proteinG,
-      carbsG: result.carbsG,
-      fatG: result.fatG,
-      waterMl: result.waterMl,
-      generatedByAi: result.generatedByAi === 1,
-      updatedAt: new Date(result.updatedAt),
-    }
-  } catch (error) {
-    console.error('Error fetching nutrition goal:', error)
-    throw error
-  }
-}
-
-/**
- * Delete nutrition goal
- */
-export async function deleteNutritionGoal(userId: string): Promise<void> {
-  const db = getDatabase()
-  try {
-    await db.runAsync(`DELETE FROM nutrition_goals WHERE userId = ?`, [userId])
-  } catch (error) {
-    console.error('Error deleting nutrition goal:', error)
-    throw error
-  }
-}
+// Legacy aliases for compatibility
+export const createNutritionGoalTable = createGoalTable
+export const saveNutritionGoal = saveGoal
+export const getNutritionGoal = getGoal

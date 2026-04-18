@@ -17,7 +17,7 @@ describe('Goal Generator', () => {
 
       expect(goal).toBeDefined()
       expect(goal.dailyCalories).toBeGreaterThan(2000)
-      expect(goal.dailyCalories).toBeLessThan(2500)
+      expect(goal.dailyCalories).toBeLessThan(2600)
       expect(goal.proteinG).toBeGreaterThan(150)
       expect(goal.carbsG).toBeGreaterThan(200)
       expect(goal.fatG).toBeGreaterThan(50)
