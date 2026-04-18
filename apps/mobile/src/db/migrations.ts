@@ -43,6 +43,57 @@ const MIGRATIONS = [
       );
     `,
   },
+  {
+    version: 4,
+    sql: `
+      CREATE TABLE IF NOT EXISTS meal_photos (
+        id TEXT PRIMARY KEY,
+        mealLogId TEXT NOT NULL,
+        filePath TEXT NOT NULL,
+        uploadStatus TEXT NOT NULL DEFAULT 'pending',
+        remoteUrl TEXT,
+        createdAt INTEGER,
+        UNIQUE(mealLogId, filePath)
+      );
+    `,
+  },
+  {
+    version: 5,
+    sql: `
+      CREATE TABLE IF NOT EXISTS nutrition_goals (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL UNIQUE,
+        dailyCalories INTEGER,
+        proteinG REAL,
+        carbsG REAL,
+        fatG REAL,
+        waterMl INTEGER,
+        generatedByAi INTEGER DEFAULT 0,
+        updatedAt INTEGER,
+        UNIQUE(userId)
+      );
+    `,
+  },
+  {
+    version: 6,
+    sql: `
+      CREATE TABLE IF NOT EXISTS meal_logs (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        loggedAt INTEGER,
+        mealType TEXT,
+        photoUrl TEXT,
+        aiAnalyzed INTEGER DEFAULT 0,
+        totalCalories INTEGER,
+        totalProteinG REAL,
+        totalCarbsG REAL,
+        totalFatG REAL,
+        notes TEXT,
+        syncedAt INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_meal_logs_userId_loggedAt ON meal_logs(userId, loggedAt);
+    `,
+  },
 ]
 
 export async function executeMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
