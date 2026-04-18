@@ -35,12 +35,22 @@ class MockDatabase {
   private syncQueueData: Map<string, any> = new Map()
   private coachQuestionsData: Map<string, any> = new Map()
   private coachResponsesData: Map<string, any> = new Map()
+  private heartRateData: Map<string, any> = new Map()
+  private sleepSessionData: Map<string, any> = new Map()
+  private stepDataMap: Map<string, any> = new Map()
+  private energyData: Map<string, any> = new Map()
+  private dailySummaryData: Map<string, any> = new Map()
 
   clear() {
     this.waterData.clear()
     this.syncQueueData.clear()
     this.coachQuestionsData.clear()
     this.coachResponsesData.clear()
+    this.heartRateData.clear()
+    this.sleepSessionData.clear()
+    this.stepDataMap.clear()
+    this.energyData.clear()
+    this.dailySummaryData.clear()
   }
 
   async execAsync(sql: string): Promise<void> {
@@ -139,6 +149,113 @@ class MockDatabase {
         item.lastAttempt = lastAttempt
       }
     }
+    // Health: heart rate
+    else if (sql.includes('INSERT OR REPLACE INTO heart_rate_readings')) {
+      const [id, userId, bpm, timestamp, sourceDevice, context] = params || []
+      this.heartRateData.set(id, { id, userId, bpm, timestamp, sourceDevice, context })
+    } else if (sql.includes('DELETE FROM heart_rate_readings')) {
+      const userId = params?.[0]
+      const cutoff = params?.[1]
+      for (const [key, value] of this.heartRateData) {
+        if (value.userId === userId && value.timestamp.slice(0, 10) < cutoff) {
+          this.heartRateData.delete(key)
+        }
+      }
+    }
+    // Health: sleep
+    else if (sql.includes('INSERT OR REPLACE INTO sleep_sessions')) {
+      const [
+        id,
+        userId,
+        startTime,
+        endTime,
+        durationMinutes,
+        remMinutes,
+        deepMinutes,
+        lightMinutes,
+        awakeMinutes,
+      ] = params || []
+      this.sleepSessionData.set(id, {
+        id,
+        userId,
+        startTime,
+        endTime,
+        durationMinutes,
+        remMinutes,
+        deepMinutes,
+        lightMinutes,
+        awakeMinutes,
+      })
+    } else if (sql.includes('DELETE FROM sleep_sessions')) {
+      const userId = params?.[0]
+      const cutoff = params?.[1]
+      for (const [key, value] of this.sleepSessionData) {
+        if (value.userId === userId && value.endTime.slice(0, 10) < cutoff) {
+          this.sleepSessionData.delete(key)
+        }
+      }
+    }
+    // Health: steps
+    else if (sql.includes('INSERT OR REPLACE INTO step_data')) {
+      const [date, userId, count, goalCount, distance] = params || []
+      this.stepDataMap.set(`${userId}:${date}`, { date, userId, count, goalCount, distance })
+    } else if (sql.includes('DELETE FROM step_data')) {
+      const userId = params?.[0]
+      const cutoff = params?.[1]
+      for (const [key, value] of this.stepDataMap) {
+        if (value.userId === userId && value.date < cutoff) {
+          this.stepDataMap.delete(key)
+        }
+      }
+    }
+    // Health: energy
+    else if (sql.includes('INSERT OR REPLACE INTO energy_burned')) {
+      const [date, userId, activeCalories, basalCalories, totalCalories] = params || []
+      this.energyData.set(`${userId}:${date}`, {
+        date,
+        userId,
+        activeCalories,
+        basalCalories,
+        totalCalories,
+      })
+    } else if (sql.includes('DELETE FROM energy_burned')) {
+      const userId = params?.[0]
+      const cutoff = params?.[1]
+      for (const [key, value] of this.energyData) {
+        if (value.userId === userId && value.date < cutoff) {
+          this.energyData.delete(key)
+        }
+      }
+    }
+    // Health: daily summary
+    else if (sql.includes('INSERT OR REPLACE INTO daily_health_summary')) {
+      const [
+        date,
+        userId,
+        heartRateAvg,
+        heartRateResting,
+        sleepDurationMinutes,
+        stepCount,
+        activeCalories,
+      ] = params || []
+      this.dailySummaryData.set(`${userId}:${date}`, {
+        date,
+        userId,
+        heartRateAvg,
+        heartRateResting,
+        sleepDurationMinutes,
+        stepCount,
+        activeCalories,
+      })
+    } else if (sql.includes('DELETE FROM daily_health_summary')) {
+      const userId = params?.[0]
+      const cutoff = params?.[1]
+      for (const [key, value] of this.dailySummaryData) {
+        if (value.userId === userId && value.date < cutoff) {
+          this.dailySummaryData.delete(key)
+        }
+      }
+    }
   }
 
   async getFirstAsync<T>(sql: string, params?: any[]): Promise<T | undefined> {
@@ -176,6 +293,27 @@ class MockDatabase {
       const id = params?.[0] || ''
       const item = this.syncQueueData.get(id)
       return item as T
+    }
+    // Health: steps
+    if (sql.includes('FROM step_data')) {
+      const userId = params?.[0]
+      const date = params?.[1]
+      const row = this.stepDataMap.get(`${userId}:${date}`)
+      return (row as T) ?? (undefined as T | undefined)
+    }
+    // Health: energy
+    if (sql.includes('FROM energy_burned')) {
+      const userId = params?.[0]
+      const date = params?.[1]
+      const row = this.energyData.get(`${userId}:${date}`)
+      return (row as T) ?? (undefined as T | undefined)
+    }
+    // Health: daily summary
+    if (sql.includes('FROM daily_health_summary')) {
+      const userId = params?.[0]
+      const date = params?.[1]
+      const row = this.dailySummaryData.get(`${userId}:${date}`)
+      return (row as T) ?? (undefined as T | undefined)
     }
     return undefined
   }
@@ -215,6 +353,30 @@ class MockDatabase {
         }
       }
       return results
+    }
+    // Health: heart rate for date
+    if (sql.includes('FROM heart_rate_readings')) {
+      const userId = params?.[0]
+      const date = params?.[1]
+      const results: T[] = []
+      for (const [, value] of this.heartRateData) {
+        if (value.userId === userId && value.timestamp.slice(0, 10) === date) {
+          results.push(value as T)
+        }
+      }
+      return results.sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp))
+    }
+    // Health: sleep sessions for date
+    if (sql.includes('FROM sleep_sessions')) {
+      const userId = params?.[0]
+      const date = params?.[1]
+      const results: T[] = []
+      for (const [, value] of this.sleepSessionData) {
+        if (value.userId === userId && value.endTime.slice(0, 10) === date) {
+          results.push(value as T)
+        }
+      }
+      return results.sort((a: any, b: any) => a.endTime.localeCompare(b.endTime))
     }
     return []
   }
