@@ -48,6 +48,7 @@ export function AppearanceSection() {
             typeof window !== 'undefined' ? (localStorage.getItem('locale') ?? 'tr') : 'tr'
           }
           onChange={(e) => handleLocale(e.target.value)}
+          onWheel={(e) => e.currentTarget.blur()}
           className="bg-muted/30 border-border/30 rounded-lg border px-3 py-1.5 text-sm focus:outline-none"
         >
           <option value="tr">Türkçe</option>

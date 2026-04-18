@@ -224,6 +224,7 @@ export function ProfileSection() {
             type="number"
             value={data.healthProfile?.age ?? ''}
             onChange={(e) => updateHealth({ age: Number(e.target.value) })}
+            onWheel={(e) => e.currentTarget.blur()}
             className="w-16 bg-transparent text-right text-sm font-semibold outline-none"
           />
         </SettingsRow>
@@ -231,6 +232,7 @@ export function ProfileSection() {
           <select
             value={data.healthProfile?.gender ?? ''}
             onChange={(e) => updateHealth({ gender: e.target.value })}
+            onWheel={(e) => e.currentTarget.blur()}
             className="bg-transparent text-right text-sm font-semibold outline-none"
           >
             {GENDER_OPTIONS.map((o) => (
@@ -245,6 +247,7 @@ export function ProfileSection() {
             type="number"
             value={data.healthProfile?.heightCm ?? ''}
             onChange={(e) => updateHealth({ heightCm: Number(e.target.value) })}
+            onWheel={(e) => e.currentTarget.blur()}
             className="w-16 bg-transparent text-right text-sm font-semibold outline-none"
           />
         </SettingsRow>
@@ -253,6 +256,7 @@ export function ProfileSection() {
             type="number"
             value={data.healthProfile?.weightKg ?? ''}
             onChange={(e) => updateHealth({ weightKg: Number(e.target.value) })}
+            onWheel={(e) => e.currentTarget.blur()}
             className="w-16 bg-transparent text-right text-sm font-semibold outline-none"
           />
         </SettingsRow>
@@ -265,6 +269,7 @@ export function ProfileSection() {
           <select
             value={data.healthProfile?.fitnessLevel ?? ''}
             onChange={(e) => updateHealth({ fitnessLevel: e.target.value })}
+            onWheel={(e) => e.currentTarget.blur()}
             className="bg-transparent text-right text-sm font-semibold outline-none"
           >
             {FITNESS_LEVELS.map((o) => (

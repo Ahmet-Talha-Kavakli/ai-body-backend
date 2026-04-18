@@ -147,7 +147,7 @@ const config: Config = {
         sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
         mono: ['var(--font-geist-mono)', 'monospace'],
         bebas: ['var(--font-bebas)', 'cursive'],
-        barlow: ['var(--font-barlow-condensed)', 'sans-serif'],
+        barlow: ['var(--font-barlow)', 'sans-serif'],
       },
     },
   },

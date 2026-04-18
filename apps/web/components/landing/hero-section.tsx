@@ -1,108 +1,111 @@
 'use client'
 
+import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import Link from 'next/link'
-import { useRef } from 'react'
 
-const stats = [
-  { value: '10K+', label: 'Athletes' },
-  { value: '98%', label: 'Accuracy' },
-  { value: '500+', label: 'Exercises' },
-  { value: '2.4×', label: 'Faster' },
+const MARQUEE_ITEMS = [
+  'AI COACHING',
+  'REAL-TIME FORM',
+  'ADAPTIVE PROGRAMS',
+  '3D ANALYSIS',
+  'NUTRITION AI',
+  'VOICE COACH',
+  'INJURY PREVENTION',
+  'PERSONAL RECORDS',
 ]
 
 export function HeroSection() {
   const ref = useRef<HTMLElement>(null)
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] })
-  const y = useTransform(scrollYProgress, [0, 1], ['0%', '18%'])
+  const y = useTransform(scrollYProgress, [0, 1], ['0%', '30%'])
   const opacity = useTransform(scrollYProgress, [0, 0.6], [1, 0])
 
   return (
     <section
       ref={ref}
-      className="relative flex min-h-[100svh] flex-col overflow-hidden bg-[#080808]"
+      className="relative flex min-h-[100svh] flex-col overflow-hidden bg-[#0a0a0a]"
     >
-      {/* Grain overlay */}
-      <div
-        className="pointer-events-none absolute inset-0 z-10 opacity-[0.035]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-          backgroundSize: '180px 180px',
-        }}
-      />
+      {/* Thin horizontal rule at top */}
+      <div className="absolute left-0 right-0 top-0 h-px bg-[#C8FF00]/30" aria-hidden="true" />
 
-      {/* Vertical lime accent line — right edge */}
-      <div className="pointer-events-none absolute right-0 top-0 hidden h-full w-px bg-gradient-to-b from-transparent via-[#C8FF00]/25 to-transparent sm:block" />
-
-      {/* Main content */}
+      {/* Main headline block */}
       <motion.div
         style={{ y, opacity }}
-        className="relative z-10 flex flex-1 flex-col justify-center"
+        className="relative z-10 flex flex-1 flex-col justify-center px-6 pb-8 pt-24 sm:px-10 lg:px-16"
       >
-        <div className="w-full px-5 pb-6 pt-24 sm:px-10 lg:px-16">
-          {/* Eyebrow */}
+        {/* Eyebrow */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="mb-8 flex items-center gap-4"
+        >
+          <div className="h-px w-10 bg-[#C8FF00]" aria-hidden="true" />
+          <span className="font-barlow text-[11px] font-semibold uppercase tracking-[0.3em] text-[#C8FF00]">
+            AI-Powered Personal Training
+          </span>
+        </motion.div>
+
+        {/* Giant headline — 2 lines, staggered reveal */}
+        <div className="overflow-hidden">
           <motion.div
-            initial={{ opacity: 0, x: -16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.45, delay: 0.1 }}
-            className="mb-5 flex items-center gap-3 sm:mb-7"
+            initial={{ y: '100%' }}
+            animate={{ y: '0%' }}
+            transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
           >
-            <span className="block h-[2px] w-6 bg-[#C8FF00] sm:w-8" />
-            <span className="font-barlow text-[10px] uppercase tracking-[0.22em] text-[#C8FF00] sm:text-xs">
-              AI-Powered Personal Training
-            </span>
+            <h1
+              className="font-bebas leading-[0.82] tracking-tight text-white"
+              style={{ fontSize: 'clamp(5.5rem, 22vw, 18rem)' }}
+            >
+              TRAIN
+            </h1>
           </motion.div>
+        </div>
 
-          {/* Headline */}
-          <motion.h1
-            initial={{ opacity: 0, y: 36 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.65, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="font-bebas select-none leading-[0.88] tracking-tight text-white"
-            style={{ fontSize: 'clamp(4.5rem, 18vw, 14rem)' }}
-          >
-            TRAIN
-          </motion.h1>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 36 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.65, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="font-bebas select-none leading-[0.88] tracking-tight text-[#C8FF00]"
-            style={{ fontSize: 'clamp(4.5rem, 18vw, 14rem)' }}
-          >
-            SMARTER.
-          </motion.h1>
-
-          {/* Description */}
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.48 }}
-            className="mt-5 max-w-xs text-sm leading-relaxed text-zinc-400 sm:mt-7 sm:max-w-sm sm:text-base"
-          >
-            Real-time AI coaching, personalized programs, and 3D movement analysis — all in one
-            place.
-          </motion.p>
-
-          {/* CTAs */}
+        <div className="overflow-hidden">
           <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.62 }}
-            className="mt-7 flex flex-col items-start gap-3 sm:mt-9 sm:flex-row sm:items-center sm:gap-5"
+            initial={{ y: '100%' }}
+            animate={{ y: '0%' }}
+            transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
+            <h1
+              className="font-bebas leading-[0.82] tracking-tight"
+              style={{
+                fontSize: 'clamp(5.5rem, 22vw, 18rem)',
+                WebkitTextStroke: '2px #C8FF00',
+                color: 'transparent',
+              }}
+            >
+              SMARTER.
+            </h1>
+          </motion.div>
+        </div>
+
+        {/* Bottom row — description left, CTA right */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.45 }}
+          className="mt-10 flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between"
+        >
+          <p className="font-barlow max-w-sm text-sm leading-relaxed text-zinc-400 sm:text-base">
+            Real-time AI coaching, personalized programs, and 3D movement analysis. No gym needed.
+          </p>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
               href="/sign-up"
-              className="font-barlow group inline-flex w-full items-center justify-center gap-2.5 bg-[#C8FF00] px-7 py-4 text-xs font-bold uppercase tracking-[0.18em] text-black transition-all duration-200 hover:bg-white active:scale-[0.98] sm:w-auto sm:justify-start"
+              className="font-barlow group inline-flex cursor-pointer items-center gap-3 bg-[#C8FF00] px-8 py-4 text-[11px] font-bold uppercase tracking-[0.22em] text-black transition-colors duration-200 hover:bg-white"
             >
               Start Free
               <svg
-                width="13"
-                height="13"
+                width="12"
+                height="12"
                 viewBox="0 0 14 14"
                 fill="none"
-                className="shrink-0 transition-transform group-hover:translate-x-1"
+                aria-hidden="true"
+                className="transition-transform duration-200 group-hover:translate-x-1"
               >
                 <path
                   d="M1 7h12M7 1l6 6-6 6"
@@ -115,41 +118,54 @@ export function HeroSection() {
             </Link>
             <Link
               href="#how-it-works"
-              className="font-barlow inline-flex items-center gap-2 py-2 text-xs uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:text-white"
+              className="font-barlow inline-flex cursor-pointer items-center gap-2.5 border border-zinc-700 px-8 py-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:border-zinc-500 hover:bg-white/5"
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-zinc-700">
-                <svg width="8" height="9" viewBox="0 0 8 9" fill="currentColor">
-                  <path d="M7 4.5L1.5 1.5v6L7 4.5z" />
-                </svg>
-              </span>
-              Watch Demo
+              See How It Works
             </Link>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </motion.div>
 
-      {/* Stats bar */}
+      {/* Marquee strip */}
+      <div
+        className="relative z-10 overflow-hidden border-b border-t border-white/10 bg-[#C8FF00]/5 py-4"
+        aria-hidden="true"
+      >
+        <div className="animate-marquee flex whitespace-nowrap">
+          {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
+            <span key={i} className="font-bebas mx-8 text-sm tracking-[0.2em] text-zinc-500">
+              {item}
+              <span className="ml-8 text-[#C8FF00]/40">✦</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats row */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.85 }}
-        className="relative z-10 mt-auto border-t border-white/[0.07]"
+        transition={{ duration: 0.5, delay: 0.7 }}
+        className="relative z-10 grid grid-cols-2 border-t border-white/10 sm:grid-cols-4"
       >
-        <div className="grid grid-cols-4 divide-x divide-white/[0.07]">
-          {stats.map((s, i) => (
-            <div
-              key={i}
-              className="flex flex-col items-center py-4 sm:items-start sm:px-10 sm:py-6 lg:px-16"
-            >
-              <div className="font-bebas text-2xl leading-none text-white sm:text-4xl">
-                {s.value}
-              </div>
-              <div className="mt-0.5 text-[9px] uppercase tracking-widest text-zinc-500 sm:text-xs">
-                {s.label}
-              </div>
-            </div>
-          ))}
-        </div>
+        {[
+          { value: '10K+', label: 'Athletes' },
+          { value: '98%', label: 'Form Accuracy' },
+          { value: '500+', label: 'Exercises' },
+          { value: '2.4×', label: 'Faster Results' },
+        ].map((stat, i) => (
+          <div
+            key={i}
+            className={`flex flex-col gap-1 px-6 py-6 sm:px-10 lg:px-16 ${i < 3 ? 'border-r border-white/10' : ''}`}
+          >
+            <span className="font-bebas text-3xl leading-none text-white sm:text-5xl">
+              {stat.value}
+            </span>
+            <span className="font-barlow text-[10px] uppercase tracking-widest text-zinc-600">
+              {stat.label}
+            </span>
+          </div>
+        ))}
       </motion.div>
     </section>
   )

@@ -23,7 +23,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <DashboardHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto pb-24 lg:pb-0">
+        <main className="flex-1 overflow-y-auto pb-24 lg:pb-0" tabIndex={-1}>
           <div className="px-4 py-8 sm:px-6 lg:px-8">{children}</div>
         </main>
       </div>

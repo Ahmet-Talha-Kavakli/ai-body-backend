@@ -1,12 +1,15 @@
 import type { Metadata, Viewport } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
-import { Barlow_Condensed, Bebas_Neue } from 'next/font/google'
+import { Barlow, Bebas_Neue } from 'next/font/google'
+import { ClerkProvider } from '@clerk/nextjs'
+import { Providers } from '@/components/shared/providers'
+import './globals.css'
 
-const barlowCondensed = Barlow_Condensed({
+const barlow = Barlow({
   subsets: ['latin'],
-  weight: ['400', '600', '700'],
-  variable: '--font-barlow-condensed',
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-barlow',
 })
 
 const bebasNeue = Bebas_Neue({
@@ -14,9 +17,6 @@ const bebasNeue = Bebas_Neue({
   weight: ['400'],
   variable: '--font-bebas',
 })
-import { ClerkProvider } from '@clerk/nextjs'
-import { Providers } from '@/components/shared/providers'
-import './globals.css'
 
 export const metadata: Metadata = {
   title: {
@@ -46,8 +46,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
+    { media: '(prefers-color-scheme: light)', color: '#080808' },
+    { media: '(prefers-color-scheme: dark)', color: '#080808' },
   ],
   width: 'device-width',
   initialScale: 1,
@@ -57,21 +57,14 @@ interface RootLayoutProps {
   children: React.ReactNode
 }
 
-import { PillBase } from '@/components/ui/3d-adaptive-navigation-bar'
-
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body
-          className={`${GeistSans.variable} ${GeistMono.variable} ${barlowCondensed.variable} ${bebasNeue.variable} font-sans antialiased`}
+          className={`${GeistSans.variable} ${GeistMono.variable} ${barlow.variable} ${bebasNeue.variable} font-sans antialiased`}
         >
-          <Providers>
-            <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2">
-              <PillBase />
-            </div>
-            {children}
-          </Providers>
+          <Providers>{children}</Providers>
         </body>
       </html>
     </ClerkProvider>

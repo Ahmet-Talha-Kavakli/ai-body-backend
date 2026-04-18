@@ -1,0 +1,101 @@
+<h2>Beslenme Sayfası — Layout Yapısı</h2>
+<p class="subtitle">Hangi genel yapı sana daha doğal geliyor?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#0f0f0f;border-radius:8px;font-family:monospace;font-size:11px;line-height:1.8;color:#888">
+      <div style="color:#fff;font-weight:bold;margin-bottom:8px">── Bugün ──────────────────</div>
+      <div style="background:#1a1a1a;border-radius:6px;padding:8px;margin-bottom:6px">
+        <div style="color:#f97316;font-size:13px;font-weight:bold">🔥 1840 / 2200 kcal</div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <span style="background:#1e3a5f;color:#60a5fa;padding:2px 6px;border-radius:4px;font-size:10px">P 120g</span>
+          <span style="background:#3b2a1a;color:#fbbf24;padding:2px 6px;border-radius:4px;font-size:10px">K 210g</span>
+          <span style="background:#2a1a2e;color:#e879f9;padding:2px 6px;border-radius:4px;font-size:10px">Y 55g</span>
+          <span style="background:#1a2e2e;color:#34d399;padding:2px 6px;border-radius:4px;font-size:10px">💧 1.8L</span>
+        </div>
+      </div>
+      <div style="background:#1a1a1a;border-radius:6px;padding:8px;margin-bottom:6px">
+        <div style="color:#aaa;font-size:10px;margin-bottom:4px">BUGÜNKÜ ÖĞÜNLER</div>
+        <div style="color:#ddd;font-size:10px">☀️ Kahvaltı · 450 kcal</div>
+        <div style="color:#ddd;font-size:10px">🌤 Öğle · 620 kcal</div>
+        <div style="color:#ddd;font-size:10px">⚡ Antrenman öncesi · 180 kcal</div>
+      </div>
+      <div style="background:#1a1a1a;border-radius:6px;padding:8px">
+        <div style="color:#aaa;font-size:10px;margin-bottom:4px">HIZLI EKLE</div>
+        <div style="display:flex;gap:4px">
+          <span style="background:#222;padding:3px 6px;border-radius:4px;font-size:9px">📷 Foto</span>
+          <span style="background:#222;padding:3px 6px;border-radius:4px;font-size:9px">+ Manuel</span>
+          <span style="background:#222;padding:3px 6px;border-radius:4px;font-size:9px">💧 Su</span>
+          <span style="background:#222;padding:3px 6px;border-radius:4px;font-size:9px">⭐ Şablon</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Tek Sayfa (Scroll)</h3>
+      <p>Her şey tek sayfada aşağı akıyor. Özet üstte, öğünler ortada, hızlı ekle altta. Basit ve hızlı.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#0f0f0f;border-radius:8px;font-family:monospace;font-size:11px;line-height:1.8;color:#888">
+      <div style="display:flex;gap:4px;margin-bottom:8px">
+        <span style="background:#1e3a5f;color:#60a5fa;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:bold">Bugün</span>
+        <span style="background:#1a1a1a;color:#888;padding:3px 10px;border-radius:6px;font-size:10px">Hafta</span>
+        <span style="background:#1a1a1a;color:#888;padding:3px 10px;border-radius:6px;font-size:10px">Ay</span>
+        <span style="background:#1a1a1a;color:#888;padding:3px 10px;border-radius:6px;font-size:10px">AI Öneri</span>
+      </div>
+      <div style="background:#1a1a1a;border-radius:6px;padding:8px;margin-bottom:6px">
+        <div style="color:#f97316;font-size:13px;font-weight:bold">🔥 1840 / 2200 kcal</div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <span style="background:#1e3a5f;color:#60a5fa;padding:2px 6px;border-radius:4px;font-size:10px">P 120g</span>
+          <span style="background:#3b2a1a;color:#fbbf24;padding:2px 6px;border-radius:4px;font-size:10px">K 210g</span>
+          <span style="background:#2a1a2e;color:#e879f9;padding:2px 6px;border-radius:4px;font-size:10px">Y 55g</span>
+        </div>
+      </div>
+      <div style="background:#1a1a1a;border-radius:6px;padding:8px">
+        <div style="color:#aaa;font-size:10px;margin-bottom:4px">BUGÜNKÜ ÖĞÜNLER</div>
+        <div style="color:#ddd;font-size:10px">☀️ Kahvaltı · 450 kcal</div>
+        <div style="color:#ddd;font-size:10px">🌤 Öğle · 620 kcal</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Tab'lı Yapı</h3>
+      <p>Bugün / Hafta / Ay / AI Öneri sekmeleri. Her sekme kendi içeriğini gösteriyor. Temiz ama geçişler fazla.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#0f0f0f;border-radius:8px;font-family:monospace;font-size:11px;line-height:1.8;color:#888">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div style="grid-column:1/-1;background:#1a1a1a;border-radius:6px;padding:8px">
+          <div style="color:#f97316;font-size:13px;font-weight:bold">🔥 1840 / 2200 kcal</div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <span style="background:#1e3a5f;color:#60a5fa;padding:2px 6px;border-radius:4px;font-size:10px">P 120g</span>
+            <span style="background:#3b2a1a;color:#fbbf24;padding:2px 6px;border-radius:4px;font-size:10px">K 210g</span>
+            <span style="background:#2a1a2e;color:#e879f9;padding:2px 6px;border-radius:4px;font-size:10px">Y 55g</span>
+          </div>
+        </div>
+        <div style="background:#1a1a1a;border-radius:6px;padding:8px">
+          <div style="color:#aaa;font-size:9px;margin-bottom:4px">BU HAFTA</div>
+          <div style="color:#ddd;font-size:10px">Ort: 2050 kcal</div>
+          <div style="color:#34d399;font-size:9px">↑ Hedefe yakın</div>
+        </div>
+        <div style="background:#1a1a1a;border-radius:6px;padding:8px">
+          <div style="color:#aaa;font-size:9px;margin-bottom:4px">AI ÖNERİ</div>
+          <div style="color:#a78bfa;font-size:9px">Bugün protein düşük, akşam yemekte et ekle</div>
+        </div>
+        <div style="grid-column:1/-1;background:#1a1a1a;border-radius:6px;padding:8px">
+          <div style="color:#aaa;font-size:9px;margin-bottom:4px">BUGÜNKÜ ÖĞÜNLER</div>
+          <div style="color:#ddd;font-size:10px">☀️ Kahvaltı · 450 kcal</div>
+          <div style="color:#ddd;font-size:10px">🌤 Öğle · 620 kcal</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Dashboard Grid</h3>
+      <p>Üstte büyük kalori özeti, yanında haftalık özet + AI öneri kartı, altında öğün listesi. Her şey tek bakışta görünür.</p>
+    </div>
+  </div>
+
+</div>
