@@ -1,32 +1,26 @@
 import { create } from 'zustand'
-import { AuthState, User } from '../types/auth'
+import { AuthState } from '../types'
 
-type Store = AuthState & {
-  setSignedIn(v: boolean): void
-  setUser(u: User | null): void
-  setToken(t: string | null): void
-  setLoading(l: boolean): void
-  setError(e: string | null): void
-  reset(): void
+interface AuthStore extends AuthState {
+  setSignedIn: (isSignedIn: boolean) => void
+  setInitializing: (isInitializing: boolean) => void
+  setUserEmail: (email: string) => void
+  setError: (error?: string) => void
+  reset: () => void
 }
 
-export const useAuthStore = create<Store>((set) => ({
+const initialState: AuthState = {
   isSignedIn: false,
-  user: null,
-  token: null,
-  isLoading: false,
-  error: null,
-  setSignedIn: (v) => set({ isSignedIn: v }),
-  setUser: (u) => set({ user: u }),
-  setToken: (t) => set({ token: t }),
-  setLoading: (l) => set({ isLoading: l }),
-  setError: (e) => set({ error: e }),
-  reset: () =>
-    set({
-      isSignedIn: false,
-      user: null,
-      token: null,
-      isLoading: false,
-      error: null,
-    }),
+  isInitializing: true,
+  userEmail: undefined,
+  error: undefined,
+}
+
+export const useAuthStore = create<AuthStore>((set) => ({
+  ...initialState,
+  setSignedIn: (isSignedIn) => set({ isSignedIn }),
+  setInitializing: (isInitializing) => set({ isInitializing }),
+  setUserEmail: (userEmail) => set({ userEmail }),
+  setError: (error) => set({ error }),
+  reset: () => set(initialState),
 }))

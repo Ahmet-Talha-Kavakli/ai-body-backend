@@ -1,15 +1,18 @@
 import { create } from 'zustand'
+import { DashboardStats } from '../types'
 
-interface DashboardState {
-  stats: any | null
+interface DashboardStore {
+  stats: DashboardStats | null
   isLoading: boolean
-  setStats(s: any | null): void
-  reset(): void
+  setStats: (stats: DashboardStats) => void
+  setLoading: (isLoading: boolean) => void
+  reset: () => void
 }
 
-export const useDashboardStore = create<DashboardState>((set) => ({
+export const useDashboardStore = create<DashboardStore>((set) => ({
   stats: null,
   isLoading: false,
-  setStats: (s) => set({ stats: s }),
+  setStats: (stats) => set({ stats }),
+  setLoading: (isLoading) => set({ isLoading }),
   reset: () => set({ stats: null, isLoading: false }),
 }))

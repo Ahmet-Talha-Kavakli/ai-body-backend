@@ -1,39 +1,46 @@
 import axios, { AxiosInstance } from 'axios'
 import * as SecureStore from 'expo-secure-store'
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api'
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public code: string,
-    message: string
-  ) {
-    super(message)
-    this.name = 'ApiError'
-  }
-}
+let client: AxiosInstance | null = null
 
-export function createApiClient(token: string): AxiosInstance {
-  const client = axios.create({
-    baseURL: API_URL,
-    headers: { Authorization: `Bearer ${token}` },
+export async function getAuthenticatedClient(): Promise<AxiosInstance> {
+  if (client) return client
+
+  const token = await SecureStore.getItemAsync('auth_token')
+
+  client = axios.create({
+    baseURL: API_BASE_URL,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    timeout: 10000,
   })
 
+  // Add response interceptor for token refresh if needed
   client.interceptors.response.use(
-    (res) => res,
-    (error) => {
-      const status = error.response?.status ?? 500
-      const message = error.response?.data?.message ?? error.message
-      throw new ApiError(status, 'API_ERROR', message)
+    (response) => response,
+    async (error) => {
+      if (error.response?.status === 401) {
+        // Token expired, clear it
+        await SecureStore.deleteItemAsync('auth_token')
+        client = null
+      }
+      return Promise.reject(error)
     }
   )
 
   return client
 }
 
-export async function getAuthenticatedClient(): Promise<AxiosInstance> {
-  const token = await SecureStore.getItemAsync('auth_token')
-  if (!token) throw new Error('No token')
-  return createApiClient(token)
+export async function setAuthToken(token: string): Promise<void> {
+  await SecureStore.setItemAsync('auth_token', token)
+  client = null // Reset client to pick up new token
+}
+
+export async function clearAuthToken(): Promise<void> {
+  await SecureStore.deleteItemAsync('auth_token')
+  client = null
 }

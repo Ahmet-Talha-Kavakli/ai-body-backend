@@ -1,15 +1,23 @@
 import { create } from 'zustand'
+import { UserProfile } from '../types'
 
-interface UserState {
-  profile: any | null
+interface UserStore {
+  profile: UserProfile | null
   isLoading: boolean
-  setProfile(p: any | null): void
-  reset(): void
+  setProfile: (profile: UserProfile) => void
+  setLoading: (isLoading: boolean) => void
+  updateProfile: (updates: Partial<UserProfile>) => void
+  reset: () => void
 }
 
-export const useUserStore = create<UserState>((set) => ({
+export const useUserStore = create<UserStore>((set) => ({
   profile: null,
   isLoading: false,
-  setProfile: (p) => set({ profile: p }),
+  setProfile: (profile) => set({ profile }),
+  setLoading: (isLoading) => set({ isLoading }),
+  updateProfile: (updates) =>
+    set((state) => ({
+      profile: state.profile ? { ...state.profile, ...updates } : null,
+    })),
   reset: () => set({ profile: null, isLoading: false }),
 }))
