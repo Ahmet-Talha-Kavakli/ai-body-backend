@@ -16,7 +16,11 @@
       "checkOnLaunch": "ALWAYS",
       "fallbackToCacheTimeout": 30000
     },
-    "plugins": [],
+    "plugins": [
+      "expo-secure-store",
+      "@react-native-async-storage/async-storage",
+      "@react-native-community/netinfo"
+    ],
     "ios": {
       "bundleIdentifier": "com.fitai.app",
       "buildNumber": "1",
