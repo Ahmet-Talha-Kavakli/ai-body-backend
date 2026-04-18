@@ -33,10 +33,14 @@ vi.mock('@react-native-community/netinfo', () => ({
 class MockDatabase {
   private waterData: Map<string, { date: string; totalMl: number; goalMl: number }> = new Map()
   private syncQueueData: Map<string, any> = new Map()
+  private coachQuestionsData: Map<string, any> = new Map()
+  private coachResponsesData: Map<string, any> = new Map()
 
   clear() {
     this.waterData.clear()
     this.syncQueueData.clear()
+    this.coachQuestionsData.clear()
+    this.coachResponsesData.clear()
   }
 
   async execAsync(sql: string): Promise<void> {
@@ -45,8 +49,26 @@ class MockDatabase {
   }
 
   async runAsync(sql: string, params?: any[]): Promise<void> {
+    // Coach questions operations
+    if (sql.includes('INSERT OR REPLACE INTO coach_questions')) {
+      const id = params?.[0] || ''
+      const userId = params?.[1] || ''
+      const question = params?.[2] || ''
+      const inputType = params?.[3] || 'text'
+      const createdAt = params?.[4] || ''
+      const synced = params?.[5] || 0
+      this.coachQuestionsData.set(id, { id, userId, question, inputType, createdAt, synced })
+    }
+    // Coach responses operations
+    else if (sql.includes('INSERT OR REPLACE INTO coach_responses')) {
+      const id = params?.[0] || ''
+      const questionId = params?.[1] || ''
+      const response = params?.[2] || ''
+      const context = params?.[3] || '{}'
+      this.coachResponsesData.set(id, { id, questionId, response, context })
+    }
     // Water intake operations
-    if (sql.includes('UPDATE water_intake SET totalMl = totalMl + ?')) {
+    else if (sql.includes('UPDATE water_intake SET totalMl = totalMl + ?')) {
       const ml = params?.[0] || 0
       const date = params?.[1] || ''
       const existing = this.waterData.get(date)
@@ -120,6 +142,24 @@ class MockDatabase {
   }
 
   async getFirstAsync<T>(sql: string, params?: any[]): Promise<T | undefined> {
+    // Coach questions operations
+    if (
+      sql.includes('SELECT id, userId, question, inputType, createdAt, synced FROM coach_questions')
+    ) {
+      const id = params?.[0] || ''
+      const data = this.coachQuestionsData.get(id)
+      return data as T
+    }
+    // Coach responses operations
+    if (sql.includes('SELECT id, questionId, response, context FROM coach_responses')) {
+      const questionId = params?.[0] || ''
+      for (const [, value] of this.coachResponsesData) {
+        if (value.questionId === questionId) {
+          return value as T
+        }
+      }
+      return undefined
+    }
     // Water intake operations
     if (sql.includes('changes()')) {
       const date = params?.[1] || ''
@@ -141,6 +181,19 @@ class MockDatabase {
   }
 
   async getAllAsync<T>(sql: string, params?: any[]): Promise<T[]> {
+    // Coach questions operations
+    if (
+      sql.includes('SELECT id, userId, question, inputType, createdAt, synced FROM coach_questions')
+    ) {
+      const userId = params?.[0] || ''
+      const results: T[] = []
+      for (const [, value] of this.coachQuestionsData) {
+        if (value.userId === userId) {
+          results.push(value as T)
+        }
+      }
+      return results.reverse() // DESC order (most recent first)
+    }
     // Water intake operations
     if (sql.includes('SELECT date, totalMl, goalMl FROM water_intake')) {
       const startDate = params?.[0] || ''
