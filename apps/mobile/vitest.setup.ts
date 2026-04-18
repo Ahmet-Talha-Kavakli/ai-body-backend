@@ -1,5 +1,8 @@
 import { vi, beforeEach } from 'vitest'
 
+// Define global __DEV__
+global.__DEV__ = true
+
 // Mock react-native first
 vi.mock('react-native', () => ({
   View: 'View',
@@ -8,6 +11,9 @@ vi.mock('react-native', () => ({
   TextInput: 'TextInput',
   StyleSheet: {
     create: (styles: any) => styles,
+  },
+  Platform: {
+    OS: 'ios',
   },
 }))
 
@@ -396,4 +402,11 @@ beforeEach(() => {
 // Mock expo-sqlite
 vi.mock('expo-sqlite', () => ({
   openDatabaseSync: vi.fn(() => mockDb),
+}))
+
+// Mock expo-secure-store
+vi.mock('expo-secure-store', () => ({
+  getItemAsync: vi.fn().mockResolvedValue('mock-token'),
+  setItemAsync: vi.fn().mockResolvedValue(undefined),
+  deleteItemAsync: vi.fn().mockResolvedValue(undefined),
 }))
