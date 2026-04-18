@@ -4,7 +4,7 @@ import path from 'path'
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'jsdom',
     exclude: ['node_modules/**', 'e2e/**', '.next/**'],
     setupFiles: ['./vitest.setup.ts'],
     server: {

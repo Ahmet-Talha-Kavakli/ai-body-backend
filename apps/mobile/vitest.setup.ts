@@ -1,7 +1,13 @@
 import { vi, beforeEach } from 'vitest'
+import React from 'react'
 
 // Define global __DEV__
 global.__DEV__ = true
+
+// Polyfill React for Zustand
+if (typeof global.React === 'undefined') {
+  global.React = React
+}
 
 // Mock react-native first
 vi.mock('react-native', () => ({
@@ -46,6 +52,9 @@ class MockDatabase {
   private stepDataMap: Map<string, any> = new Map()
   private energyData: Map<string, any> = new Map()
   private dailySummaryData: Map<string, any> = new Map()
+  private challengesData: Map<string, any> = new Map()
+  private challengeProgressData: Map<string, any> = new Map()
+  private leaderboardsData: Map<string, any> = new Map()
 
   clear() {
     this.waterData.clear()
@@ -57,6 +66,9 @@ class MockDatabase {
     this.stepDataMap.clear()
     this.energyData.clear()
     this.dailySummaryData.clear()
+    this.challengesData.clear()
+    this.challengeProgressData.clear()
+    this.leaderboardsData.clear()
   }
 
   async execAsync(sql: string): Promise<void> {
@@ -262,6 +274,35 @@ class MockDatabase {
         }
       }
     }
+    // Challenges
+    else if (sql.includes('INSERT INTO challenges')) {
+      const [id, createdBy, title, description, type, target, duration, startDate, endDate, status, createdAt] = params || []
+      this.challengesData.set(id, { id, created_by: createdBy, title, description, type, target, duration, start_date: startDate, end_date: endDate, status, created_at: createdAt })
+    }
+    // Challenge progress
+    else if (sql.includes('INSERT OR REPLACE INTO challenge_progress')) {
+      const [id, challengeId, userId, currentValue, completed, completedAt] = params || []
+      const key = `${challengeId}:${userId}`
+      this.challengeProgressData.set(key, { id, challenge_id: challengeId, user_id: userId, current_value: currentValue, completed, completed_at: completedAt })
+    }
+    // Delete challenge progress
+    else if (sql.includes('DELETE FROM challenge_progress')) {
+      this.challengeProgressData.clear()
+    }
+    // Delete challenges
+    else if (sql.includes('DELETE FROM challenges')) {
+      this.challengesData.clear()
+    }
+    // Leaderboards
+    else if (sql.includes('INSERT OR REPLACE INTO leaderboard_snapshots')) {
+      const [id, type, referenceId, period, entries, lastUpdated] = params || []
+      const key = `${type}:${period}:${referenceId || 'null'}`
+      this.leaderboardsData.set(key, { id, type, reference_id: referenceId, period, entries, last_updated: lastUpdated })
+    }
+    // Delete leaderboards
+    else if (sql.includes('DELETE FROM leaderboard_snapshots')) {
+      this.leaderboardsData.clear()
+    }
   }
 
   async getFirstAsync<T>(sql: string, params?: any[]): Promise<T | undefined> {
@@ -320,6 +361,35 @@ class MockDatabase {
       const date = params?.[1]
       const row = this.dailySummaryData.get(`${userId}:${date}`)
       return (row as T) ?? (undefined as T | undefined)
+    }
+    // Challenges
+    if (sql.includes('FROM challenges') && sql.includes('WHERE id =')) {
+      const id = params?.[0]
+      const challenge = this.challengesData.get(id)
+      return (challenge as T) ?? (undefined as T | undefined)
+    }
+    // Challenge target lookup
+    if (sql.includes('SELECT target FROM challenges')) {
+      const id = params?.[0]
+      const challenge = this.challengesData.get(id)
+      return challenge ? ({ target: challenge.target } as T) : (undefined as T | undefined)
+    }
+    // Challenge progress
+    if (sql.includes('FROM challenge_progress') && sql.includes('WHERE challenge_id') && sql.includes('user_id')) {
+      const challengeId = params?.[0]
+      const userId = params?.[1]
+      const key = `${challengeId}:${userId}`
+      const progress = this.challengeProgressData.get(key)
+      return (progress as T) ?? (undefined as T | undefined)
+    }
+    // Leaderboards
+    if (sql.includes('FROM leaderboard_snapshots')) {
+      const type = params?.[0]
+      const period = params?.[1]
+      const referenceId = params?.[2]
+      const key = `${type}:${period}:${referenceId || 'null'}`
+      const leaderboard = this.leaderboardsData.get(key)
+      return (leaderboard as T) ?? (undefined as T | undefined)
     }
     return undefined
   }
@@ -383,6 +453,28 @@ class MockDatabase {
         }
       }
       return results.sort((a: any, b: any) => a.endTime.localeCompare(b.endTime))
+    }
+    // Challenges
+    if (sql.includes('FROM challenges') && sql.includes('WHERE status')) {
+      const status = params?.[0]
+      const results: T[] = []
+      for (const [, value] of this.challengesData) {
+        if (value.status === status) {
+          results.push(value as T)
+        }
+      }
+      return results
+    }
+    // Challenge participants
+    if (sql.includes('SELECT DISTINCT user_id FROM challenge_progress')) {
+      const challengeId = params?.[0]
+      const results: T[] = []
+      for (const [, value] of this.challengeProgressData) {
+        if (value.challenge_id === challengeId) {
+          results.push({ user_id: value.user_id } as T)
+        }
+      }
+      return results
     }
     return []
   }
