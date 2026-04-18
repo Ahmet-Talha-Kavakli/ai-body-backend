@@ -52,18 +52,19 @@ export async function syncSessionToBackend(record: SessionRecord): Promise<void>
   let item = syncQueue.get(sessionId)
 
   if (!item) {
-    // New item - create it
+    // New item - create it with correct initial state
     item = {
       sessionId,
       record,
       syncStatus: 'pending',
       retryCount: 0,
-      nextRetryAt: Date.now(),
+      nextRetryAt: 0, // Can retry immediately (epoch time is in the past)
     }
     syncQueue.set(sessionId, item)
   } else {
-    // Update the record
+    // Update the record and allow immediate retry (reset backoff timer)
     item.record = record
+    item.nextRetryAt = 0
   }
 
   // Fire-and-forget: attempt sync without awaiting
@@ -79,6 +80,9 @@ export async function syncSessionToBackend(record: SessionRecord): Promise<void>
 async function attemptSync(item: SyncItem): Promise<void> {
   // Check if it's time to retry
   if (item.nextRetryAt > Date.now()) {
+    console.log(
+      `Skipping retry for ${item.sessionId} (retry at ${new Date(item.nextRetryAt).toISOString()})`
+    )
     return
   }
 
@@ -92,7 +96,7 @@ async function attemptSync(item: SyncItem): Promise<void> {
     })
 
     if (response.ok) {
-      // Success
+      // Success - mark as synced and keep in queue
       item.syncStatus = 'synced'
       console.log(`Session synced successfully: ${item.sessionId}`)
       return
@@ -103,14 +107,16 @@ async function attemptSync(item: SyncItem): Promise<void> {
 
     if (status >= 400 && status < 500) {
       // 4xx errors - don't retry (bad request, not found, etc.)
+      // Mark as failed but keep in queue for audit trail
       item.syncStatus = 'failed'
-      console.warn(`Cannot retry 4xx error for session ${item.sessionId}:`, status)
+      item.retryCount = 0 // No retries for 4xx
+      console.warn(`Cannot retry 4xx error for session ${item.sessionId}: ${status}`)
       return
     }
 
     if (status >= 500) {
       // 5xx errors - queue for retry
-      console.warn(`Server error syncing session ${item.sessionId}:`, status)
+      console.warn(`Server error syncing session ${item.sessionId}: ${status}`)
       queueForRetry(item)
       return
     }

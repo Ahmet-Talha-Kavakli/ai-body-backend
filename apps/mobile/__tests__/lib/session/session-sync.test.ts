@@ -16,6 +16,8 @@ describe('Session Sync Module', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    // Reset fetch mock explicitly to ensure clean state
+    global.fetch = vi.fn()
     await clearSyncQueue()
     await initSyncQueue()
 
