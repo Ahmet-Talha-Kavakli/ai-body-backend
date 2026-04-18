@@ -1,8 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { SyncQueueItem } from '../types'
-import { v4 as uuid } from 'react-native-uuid'
 
 const QUEUE_KEY_PREFIX = 'sync_queue_'
+
+// Simple UUID v4 generator
+function generateId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
 
 export async function queueSync(
   userId: string,
@@ -11,7 +19,7 @@ export async function queueSync(
   payload?: any
 ): Promise<string> {
   try {
-    const id = uuid.v4() as string
+    const id = generateId()
     const key = `${QUEUE_KEY_PREFIX}${userId}`
 
     const item: SyncQueueItem = {
