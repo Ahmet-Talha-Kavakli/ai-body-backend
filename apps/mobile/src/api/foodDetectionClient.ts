@@ -6,7 +6,7 @@ export const foodDetectionClient = {
   async detectFood(imageData: Uint8Array): Promise<FoodDetectionResult[]> {
     return this._retryWithBackoff(async () => {
       const formData = new FormData()
-      const blob = new Blob([imageData], { type: 'image/jpeg' })
+      const blob = new Blob([imageData.buffer.slice(imageData.byteOffset, imageData.byteOffset + imageData.byteLength)], { type: 'image/jpeg' })
       formData.append('image', blob, 'detection.jpg')
 
       const response = await fetch(`${API_BASE_URL}/api/ar/detect`, {

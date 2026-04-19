@@ -18,7 +18,8 @@ export const arDatabase = {
 
   async getFoodModel(foodName: string): Promise<ARFoodModel | null> {
     // Search by food name (case-insensitive)
-    for (const model of foodModelsStore.values()) {
+    const models = Array.from(foodModelsStore.values())
+    for (const model of models) {
       if (model.foodName.toLowerCase() === foodName.toLowerCase()) {
         return model
       }
@@ -67,7 +68,8 @@ export const arDatabase = {
   async getQueuedItemsByStatus(
     status: ARSyncQueueItem['status']
   ): Promise<ARSyncQueueItem[]> {
-    return Array.from(syncQueueStore.values()).filter((item) => item.status === status)
+    const items = Array.from(syncQueueStore.values())
+    return items.filter((item) => item.status === status)
   },
 
   async updateQueueStatus(
