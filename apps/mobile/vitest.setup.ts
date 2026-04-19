@@ -62,6 +62,11 @@ class MockDatabase {
   private conversationsData: Map<string, any> = new Map()
   private groupsData: Map<string, any> = new Map()
   private messageSyncQueueData: Map<string, any> = new Map()
+  // Coaching data
+  private coachesData: Map<string, any> = new Map()
+  private coachingSessionsData: Map<string, any> = new Map()
+  private coachingProgramsData: Map<string, any> = new Map()
+  private coachRatingsData: Map<string, any> = new Map()
 
   clear() {
     this.waterData.clear()
@@ -82,6 +87,10 @@ class MockDatabase {
     this.conversationsData.clear()
     this.groupsData.clear()
     this.messageSyncQueueData.clear()
+    this.coachesData.clear()
+    this.coachingSessionsData.clear()
+    this.coachingProgramsData.clear()
+    this.coachRatingsData.clear()
   }
 
   async execAsync(sql: string): Promise<void> {
@@ -89,7 +98,7 @@ class MockDatabase {
     return
   }
 
-  async runAsync(sql: string, params?: any[]): Promise<void> {
+  async runAsync(sql: string, params?: any[]): Promise<{ changes?: number } | void> {
     // Coach questions operations
     if (sql.includes('INSERT OR REPLACE INTO coach_questions')) {
       const id = params?.[0] || ''
@@ -99,6 +108,7 @@ class MockDatabase {
       const createdAt = params?.[4] || ''
       const synced = params?.[5] || 0
       this.coachQuestionsData.set(id, { id, userId, question, inputType, createdAt, synced })
+      return
     }
     // Coach responses operations
     else if (sql.includes('INSERT OR REPLACE INTO coach_responses')) {
@@ -415,6 +425,93 @@ class MockDatabase {
         expiresAt,
       })
     }
+    // Coaching: coaches
+    else if (sql.includes('INSERT OR REPLACE INTO coaches')) {
+      const [id, name, avatar, bio, verified, specializations, certifications, rating, reviewCount, hourlyRate, availability] = params || []
+      this.coachesData.set(id, {
+        id,
+        name,
+        avatar,
+        bio,
+        verified,
+        specializations,
+        certifications,
+        rating,
+        reviewCount,
+        hourlyRate,
+        availability,
+      })
+    }
+    // Coaching: sessions
+    else if (sql.includes('INSERT INTO coaching_sessions')) {
+      const [id, userId, coachId, coach, type, scheduledAt, startedAt, endedAt, status, agoraChannel, agoraUserToken, agoraCoachToken, coachNotes, formScores, recordingUrl, recordingConsent, createdAt] = params || []
+      this.coachingSessionsData.set(id, {
+        id,
+        userId,
+        coachId,
+        coach,
+        type,
+        scheduledAt,
+        startedAt,
+        endedAt,
+        status,
+        agoraChannel,
+        agoraUserToken,
+        agoraCoachToken,
+        coachNotes,
+        formScores,
+        recordingUrl,
+        recordingConsent,
+        createdAt,
+      })
+    } else if (sql.includes('UPDATE coaching_sessions SET status = ?')) {
+      const status = params?.[0]
+      const sessionId = params?.[1]
+      const session = this.coachingSessionsData.get(sessionId)
+      if (session) {
+        session.status = status
+        return { changes: 1 }
+      }
+      return { changes: 0 }
+    } else if (sql.includes('DELETE FROM coaching_sessions')) {
+      const cutoff = params?.[0]
+      let count = 0
+      for (const [key, value] of this.coachingSessionsData) {
+        if (value.createdAt < cutoff) {
+          this.coachingSessionsData.delete(key)
+          count++
+        }
+      }
+      return { changes: count }
+    }
+    // Coaching: programs
+    else if (sql.includes('INSERT INTO coaching_programs')) {
+      const [id, userId, coachId, sessionId, exercises, nutritionNotes, recoveryTips, nextSessionRecommendation, createdAt] = params || []
+      this.coachingProgramsData.set(id, {
+        id,
+        userId,
+        coachId,
+        sessionId,
+        exercises,
+        nutritionNotes,
+        recoveryTips,
+        nextSessionRecommendation,
+        createdAt,
+      })
+    }
+    // Coaching: ratings
+    else if (sql.includes('INSERT INTO coach_ratings')) {
+      const [id, userId, coachId, rating, review, sessionId, createdAt] = params || []
+      this.coachRatingsData.set(id, {
+        id,
+        userId,
+        coachId,
+        rating,
+        review,
+        sessionId,
+        createdAt,
+      })
+    }
   }
 
   async getFirstAsync<T>(sql: string, params?: any[]): Promise<T | undefined> {
@@ -522,6 +619,24 @@ class MockDatabase {
       const itemId = params?.[0]
       const item = this.messageSyncQueueData.get(itemId)
       return (item as T) ?? (undefined as T | undefined)
+    }
+    // Coaching: get coach
+    if (sql.includes('FROM coaches WHERE id =')) {
+      const coachId = params?.[0]
+      const coach = this.coachesData.get(coachId)
+      return (coach as T) ?? (undefined as T | undefined)
+    }
+    // Coaching: get session
+    if (sql.includes('FROM coaching_sessions WHERE id =')) {
+      const sessionId = params?.[0]
+      const session = this.coachingSessionsData.get(sessionId)
+      return (session as T) ?? (undefined as T | undefined)
+    }
+    // Coaching: get program
+    if (sql.includes('FROM coaching_programs WHERE id =')) {
+      const programId = params?.[0]
+      const program = this.coachingProgramsData.get(programId)
+      return (program as T) ?? (undefined as T | undefined)
     }
     return undefined
   }
@@ -684,6 +799,48 @@ class MockDatabase {
         }
       }
       return results.sort((a: any, b: any) => a.createdAt.localeCompare(b.createdAt))
+    }
+    // Coaching: get all coaches
+    if (sql.includes('SELECT * FROM coaches')) {
+      const results: T[] = []
+      for (const [, value] of this.coachesData) {
+        results.push(value as T)
+      }
+      return results.sort((a: any, b: any) => b.rating - a.rating)
+    }
+    // Coaching: get single session by id
+    if (sql.includes('SELECT * FROM coaching_sessions WHERE id =')) {
+      const sessionId = params?.[0]
+      const session = this.coachingSessionsData.get(sessionId)
+      return session ? [session] as T[] : []
+    }
+    // Coaching: get user sessions
+    if (sql.includes('SELECT * FROM coaching_sessions WHERE userId =')) {
+      const userId = params?.[0]
+      const results: T[] = []
+      for (const [, value] of this.coachingSessionsData) {
+        if (value.userId === userId) {
+          results.push(value as T)
+        }
+      }
+      return results.sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt))
+    }
+    // Coaching: get single program by id
+    if (sql.includes('SELECT * FROM coaching_programs WHERE id =')) {
+      const programId = params?.[0]
+      const program = this.coachingProgramsData.get(programId)
+      return program ? [program] as T[] : []
+    }
+    // Coaching: get coach ratings
+    if (sql.includes('SELECT * FROM coach_ratings WHERE coachId =')) {
+      const coachId = params?.[0]
+      const results: T[] = []
+      for (const [, value] of this.coachRatingsData) {
+        if (value.coachId === coachId) {
+          results.push(value as T)
+        }
+      }
+      return results.sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt))
     }
     return []
   }
