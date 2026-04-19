@@ -30,6 +30,22 @@ vi.mock('react-native-svg', () => ({
   Circle: 'Circle',
 }))
 
+// Mock expo-modules-core
+vi.mock('expo-modules-core', () => ({
+  EventEmitter: class EventEmitter {
+    addListener() {
+      return { remove: () => {} }
+    }
+    removeListener() {}
+    emit() {}
+  },
+  NativeModulesProxy: {},
+  Platform: {
+    OS: 'ios',
+  },
+  requireNativeModule: vi.fn(),
+}))
+
 // Mock react-native-community/netinfo
 vi.mock('@react-native-community/netinfo', () => ({
   default: {
@@ -67,6 +83,11 @@ class MockDatabase {
   private coachingSessionsData: Map<string, any> = new Map()
   private coachingProgramsData: Map<string, any> = new Map()
   private coachRatingsData: Map<string, any> = new Map()
+  // Nutrition goals
+  private nutritionGoalsData: Map<string, any> = new Map()
+  // Nutrition meal logs
+  private mealLogsData: Map<string, any> = new Map()
+  private mealItemsData: Map<string, any> = new Map()
 
   clear() {
     this.waterData.clear()
@@ -91,6 +112,9 @@ class MockDatabase {
     this.coachingSessionsData.clear()
     this.coachingProgramsData.clear()
     this.coachRatingsData.clear()
+    this.nutritionGoalsData.clear()
+    this.mealLogsData.clear()
+    this.mealItemsData.clear()
   }
 
   async execAsync(sql: string): Promise<void> {
@@ -512,6 +536,60 @@ class MockDatabase {
         createdAt,
       })
     }
+    // Nutrition goals
+    else if (sql.includes('INSERT OR REPLACE INTO nutrition_goals')) {
+      const [id, userId, dailyCalories, proteinG, carbsG, fatG, fiberG, waterGoalMl, generatedByAi, dietType, createdAt, updatedAt] = params || []
+      this.nutritionGoalsData.set(userId, {
+        id,
+        userId,
+        dailyCalories,
+        proteinG,
+        carbsG,
+        fatG,
+        fiberG,
+        waterGoalMl,
+        generatedByAi,
+        dietType,
+        createdAt,
+        updatedAt,
+      })
+    }
+    // Nutrition meal logs
+    else if (sql.includes('INSERT OR REPLACE INTO meal_logs')) {
+      const [id, userId, mealType, totalCalories, totalProteinG, totalCarbsG, totalFatG, totalFiberG, loggedAt, aiAnalyzed] = params || []
+      this.mealLogsData.set(id, {
+        id,
+        userId,
+        mealType,
+        totalCalories,
+        totalProteinG,
+        totalCarbsG,
+        totalFatG,
+        totalFiberG,
+        loggedAt,
+        aiAnalyzed,
+        photoUrl: null,
+        photoPath: null,
+        notes: null,
+        synced: 0,
+        createdAt: new Date().toISOString(),
+      })
+    }
+    // Nutrition meal items
+    else if (sql.includes('INSERT INTO meal_items')) {
+      const [mealLogId, name, calories, proteinG, carbsG, fatG, fiberG] = params || []
+      const id = `${mealLogId}:${Math.random()}`
+      this.mealItemsData.set(id, {
+        id,
+        mealLogId,
+        name,
+        calories,
+        proteinG,
+        carbsG,
+        fatG,
+        fiberG,
+      })
+    }
   }
 
   async getFirstAsync<T>(sql: string, params?: any[]): Promise<T | undefined> {
@@ -637,6 +715,12 @@ class MockDatabase {
       const programId = params?.[0]
       const program = this.coachingProgramsData.get(programId)
       return (program as T) ?? (undefined as T | undefined)
+    }
+    // Nutrition goals: get goal by userId
+    if (sql.includes('SELECT * FROM nutrition_goals WHERE userId =')) {
+      const userId = params?.[0]
+      const goal = this.nutritionGoalsData.get(userId)
+      return (goal as T) ?? (undefined as T | undefined)
     }
     return undefined
   }
@@ -841,6 +925,29 @@ class MockDatabase {
         }
       }
       return results.sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt))
+    }
+    // Nutrition: get meal logs for date
+    if (sql.includes('SELECT * FROM meal_logs WHERE date(loggedAt) =')) {
+      const date = params?.[0]
+      const results: T[] = []
+      for (const [, value] of this.mealLogsData) {
+        // Simple date check: if loggedAt starts with the date
+        if (value.loggedAt.startsWith(date)) {
+          results.push(value as T)
+        }
+      }
+      return results.sort((a: any, b: any) => b.loggedAt.localeCompare(a.loggedAt))
+    }
+    // Nutrition: get meal items for meal log
+    if (sql.includes('SELECT * FROM meal_items WHERE mealLogId =')) {
+      const mealLogId = params?.[0]
+      const results: T[] = []
+      for (const [, value] of this.mealItemsData) {
+        if (value.mealLogId === mealLogId) {
+          results.push(value as T)
+        }
+      }
+      return results
     }
     return []
   }

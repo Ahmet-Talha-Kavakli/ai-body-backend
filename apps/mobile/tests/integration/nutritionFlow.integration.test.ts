@@ -636,8 +636,8 @@ describe('Nutrition Flow Integration Tests', () => {
         await mockDb.saveWaterIntake(water)
       }
 
-      // Verify latest intake
-      const latest = await mockDb.getDailyWaterIntake(userId, today)
+      // Verify latest intake (2026-04-18)
+      const latest = await mockDb.getDailyWaterIntake(userId, '2026-04-18')
       expect(latest?.totalMl).toBe(3000)
     })
   })

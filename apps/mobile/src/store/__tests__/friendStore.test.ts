@@ -183,11 +183,8 @@ describe('friendStore', () => {
     })
 
     it('should set loading true during search', async () => {
-      useFriendStore.getState().searchFriends('test')
-      // Initially should be loading
-      const state = useFriendStore.getState()
+      await useFriendStore.getState().searchFriends('test')
       // After async completes, loading should be false
-      await new Promise((resolve) => setTimeout(resolve, 50))
       const finalState = useFriendStore.getState()
       expect(finalState.loading).toBe(false)
     })
