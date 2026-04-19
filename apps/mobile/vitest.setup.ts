@@ -88,6 +88,8 @@ class MockDatabase {
   // Nutrition meal logs
   private mealLogsData: Map<string, any> = new Map()
   private mealItemsData: Map<string, any> = new Map()
+  // Phase 10: Portion estimations
+  private portionEstimationsData: Map<string, any> = new Map()
 
   clear() {
     this.waterData.clear()
@@ -115,6 +117,7 @@ class MockDatabase {
     this.nutritionGoalsData.clear()
     this.mealLogsData.clear()
     this.mealItemsData.clear()
+    this.portionEstimationsData.clear()
   }
 
   async execAsync(sql: string): Promise<void> {
@@ -590,6 +593,37 @@ class MockDatabase {
         fiberG,
       })
     }
+    // Phase 10: Portion estimations
+    else if (sql.includes('INSERT INTO portion_estimations')) {
+      const [
+        id,
+        photoPath,
+        foodName,
+        estimatedPortionG,
+        estimatedPortionDescription,
+        confidence,
+        createdAt,
+      ] = params || []
+      this.portionEstimationsData.set(id, {
+        id,
+        photoPath,
+        foodName,
+        estimatedPortionG,
+        estimatedPortionDescription,
+        confidence,
+        userAdjustedPortionG: null,
+        createdAt,
+      })
+    } else if (sql.includes('UPDATE portion_estimations SET userAdjustedPortionG')) {
+      const [userAdjustedPortionG, id] = params || []
+      const item = this.portionEstimationsData.get(id)
+      if (item) {
+        item.userAdjustedPortionG = userAdjustedPortionG
+      }
+    } else if (sql.includes('DELETE FROM portion_estimations')) {
+      const id = params?.[0]
+      this.portionEstimationsData.delete(id)
+    }
   }
 
   async getFirstAsync<T>(sql: string, params?: any[]): Promise<T | undefined> {
@@ -721,6 +755,12 @@ class MockDatabase {
       const userId = params?.[0]
       const goal = this.nutritionGoalsData.get(userId)
       return (goal as T) ?? (undefined as T | undefined)
+    }
+    // Phase 10: Portion estimations - get by ID
+    if (sql.includes('SELECT * FROM portion_estimations WHERE id =')) {
+      const id = params?.[0]
+      const estimation = this.portionEstimationsData.get(id)
+      return (estimation as T) ?? (undefined as T | undefined)
     }
     return undefined
   }
@@ -948,6 +988,15 @@ class MockDatabase {
         }
       }
       return results
+    }
+    // Phase 10: Portion estimations - get recent
+    if (sql.includes('SELECT * FROM portion_estimations ORDER BY createdAt DESC')) {
+      const limit = params?.[0] || 10
+      const results: T[] = []
+      for (const [, value] of this.portionEstimationsData) {
+        results.push(value as T)
+      }
+      return results.sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit)
     }
     return []
   }
