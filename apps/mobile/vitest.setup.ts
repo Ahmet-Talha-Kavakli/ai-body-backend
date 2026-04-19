@@ -57,6 +57,11 @@ class MockDatabase {
   private leaderboardsData: Map<string, any> = new Map()
   private badgesData: Map<string, any> = new Map()
   private userBadgesData: Map<string, any> = new Map()
+  // Messaging data
+  private messagesData: Map<string, any> = new Map()
+  private conversationsData: Map<string, any> = new Map()
+  private groupsData: Map<string, any> = new Map()
+  private messageSyncQueueData: Map<string, any> = new Map()
 
   clear() {
     this.waterData.clear()
@@ -73,6 +78,10 @@ class MockDatabase {
     this.leaderboardsData.clear()
     this.badgesData.clear()
     this.userBadgesData.clear()
+    this.messagesData.clear()
+    this.conversationsData.clear()
+    this.groupsData.clear()
+    this.messageSyncQueueData.clear()
   }
 
   async execAsync(sql: string): Promise<void> {
@@ -337,6 +346,75 @@ class MockDatabase {
     else if (sql.includes('DELETE FROM user_badges')) {
       this.userBadgesData.clear()
     }
+    // Messaging: messages
+    else if (sql.includes('INSERT OR REPLACE INTO messages')) {
+      const [id, senderId, senderName, senderAvatar, recipientId, groupId, content, createdAt, updatedAt, read, readAt] = params || []
+      this.messagesData.set(id, {
+        id,
+        senderId,
+        senderName,
+        senderAvatar,
+        recipientId,
+        groupId,
+        content,
+        createdAt,
+        updatedAt,
+        read,
+        readAt,
+      })
+    } else if (sql.includes('UPDATE messages SET read = 1')) {
+      const readAt = params?.[0]
+      const messageId = params?.[2]
+      const msg = this.messagesData.get(messageId)
+      if (msg) {
+        msg.read = 1
+        msg.readAt = readAt
+      }
+    }
+    // Messaging: conversations
+    else if (sql.includes('INSERT OR REPLACE INTO conversations')) {
+      const [id, userId, participantId, participantName, participantAvatar, groupId, groupName, groupAvatar, lastMessage, lastMessageAt, unreadCount, type] = params || []
+      this.conversationsData.set(id, {
+        id,
+        userId,
+        participantId,
+        participantName,
+        participantAvatar,
+        groupId,
+        groupName,
+        groupAvatar,
+        lastMessage,
+        lastMessageAt,
+        unreadCount,
+        type,
+      })
+    }
+    // Messaging: groups
+    else if (sql.includes('INSERT OR REPLACE INTO groups')) {
+      const [id, name, description, createdById, createdAt, members, avatar] = params || []
+      this.groupsData.set(id, {
+        id,
+        name,
+        description,
+        createdById,
+        createdAt,
+        members,
+        avatar,
+      })
+    }
+    // Messaging: sync queue
+    else if (sql.includes('INSERT OR REPLACE INTO message_sync_queue')) {
+      const [id, messageId, status, retryCount, createdAt, scheduledFor, expiresAt] = params || []
+      this.messageSyncQueueData.set(id, {
+        id,
+        messageId,
+        status,
+        retryCount,
+        createdAt,
+        scheduledFor,
+        expiresAt,
+      })
+    }
   }
 
   async getFirstAsync<T>(sql: string, params?: any[]): Promise<T | undefined> {
@@ -432,6 +510,18 @@ class MockDatabase {
       const key = `${userId}:${badgeId}`
       const badge = this.userBadgesData.get(key)
       return (badge as T) ?? (undefined as T | undefined)
+    }
+    // Messaging: get group
+    if (sql.includes('SELECT * FROM groups WHERE id = ?')) {
+      const groupId = params?.[0]
+      const group = this.groupsData.get(groupId)
+      return (group as T) ?? (undefined as T | undefined)
+    }
+    // Messaging: get sync queue item
+    if (sql.includes('SELECT * FROM message_sync_queue WHERE id = ?')) {
+      const itemId = params?.[0]
+      const item = this.messageSyncQueueData.get(itemId)
+      return (item as T) ?? (undefined as T | undefined)
     }
     return undefined
   }
@@ -547,6 +637,53 @@ class MockDatabase {
         }
       }
       return results.sort((a: any, b: any) => b.unlocked_at.localeCompare(a.unlocked_at))
+    }
+    // Messaging: get messages for conversation (check most specific pattern first)
+    if (sql.includes('FROM messages') && sql.includes('OR') && sql.includes('senderId')) {
+      // DM message query: WHERE (senderId = ? AND recipientId = ?) OR (senderId = ? AND recipientId = ?)
+      const userId = params?.[0]
+      const participantId = params?.[1]
+      const results: T[] = []
+      for (const [, value] of this.messagesData) {
+        if ((value.senderId === userId && value.recipientId === participantId) ||
+            (value.senderId === participantId && value.recipientId === userId)) {
+          results.push(value as T)
+        }
+      }
+      return results.sort((a: any, b: any) => a.createdAt.localeCompare(b.createdAt))
+    }
+    if (sql.includes('SELECT * FROM messages WHERE groupId')) {
+      // Group message query
+      const groupId = params?.[0]
+      const results: T[] = []
+      for (const [, value] of this.messagesData) {
+        if (value.groupId === groupId) {
+          results.push(value as T)
+        }
+      }
+      return results.sort((a: any, b: any) => a.createdAt.localeCompare(b.createdAt))
+    }
+    // Messaging: get conversations for user
+    if (sql.includes('SELECT * FROM conversations WHERE userId')) {
+      const userId = params?.[0]
+      const results: T[] = []
+      for (const [, value] of this.conversationsData) {
+        if (value.userId === userId) {
+          results.push(value as T)
+        }
+      }
+      return results.sort((a: any, b: any) => b.lastMessageAt.localeCompare(a.lastMessageAt))
+    }
+    // Messaging: get sync queue items by status
+    if (sql.includes('SELECT * FROM message_sync_queue WHERE status = ?')) {
+      const status = params?.[0]
+      const results: T[] = []
+      for (const [, value] of this.messageSyncQueueData) {
+        if (value.status === status) {
+          results.push(value as T)
+        }
+      }
+      return results.sort((a: any, b: any) => a.createdAt.localeCompare(b.createdAt))
     }
     return []
   }
