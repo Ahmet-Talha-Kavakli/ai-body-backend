@@ -42,3 +42,46 @@ export interface FriendSearchResult {
   isFriend: boolean
   pendingRequest?: boolean
 }
+
+export interface Nutrition {
+  calories: number
+  proteinG: number
+  carbsG: number
+  fatG: number
+  fiberG: number
+}
+
+export interface SharedMeal {
+  id: string
+  mealLogId: string
+  userId: string
+  foodName: string
+  photoUrl: string
+  nutrition: Nutrition
+  shareType: 'private' | 'friends' | 'team'
+  sharedWith: {
+    friendIds?: string[]
+    teamId?: string
+  }
+  createdAt: string
+  reactions?: Array<{
+    userId: string
+    type: 'like' | 'heart'
+  }>
+}
+
+export interface SocialFeedItem {
+  id: string
+  userId: string
+  userName: string
+  userAvatar: string
+  foodName: string
+  photoUrl: string
+  nutrition: Nutrition
+  timestamp: string
+  shareType: 'friends' | 'team'
+  reactions: Array<{
+    type: 'like' | 'heart'
+    count: number
+  }>
+}

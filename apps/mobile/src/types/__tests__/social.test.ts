@@ -5,6 +5,8 @@ import type {
   FriendRequest,
   FriendListItem,
   FriendSearchResult,
+  SharedMeal,
+  SocialFeedItem,
 } from '../social'
 
 describe('social types', () => {
@@ -198,6 +200,185 @@ describe('social types', () => {
       }
 
       expect(result.isFriend).toBe(true)
+    })
+  })
+})
+
+describe('Social Sharing Types', () => {
+  describe('SharedMeal', () => {
+    it('should create a private shared meal', () => {
+      const meal: SharedMeal = {
+        id: 'share-1',
+        mealLogId: 'meal-123',
+        userId: 'user-1',
+        foodName: 'Grilled Chicken with Rice',
+        photoUrl: 'https://example.com/meal.jpg',
+        nutrition: {
+          calories: 450,
+          proteinG: 35,
+          carbsG: 45,
+          fatG: 12,
+          fiberG: 5,
+        },
+        shareType: 'private',
+        sharedWith: {},
+        createdAt: '2026-04-19T12:00:00Z',
+      }
+      expect(meal.shareType).toBe('private')
+      expect(meal.nutrition.calories).toBe(450)
+    })
+
+    it('should create a friends shared meal', () => {
+      const meal: SharedMeal = {
+        id: 'share-2',
+        mealLogId: 'meal-456',
+        userId: 'user-2',
+        foodName: 'Salad Bowl',
+        photoUrl: 'https://example.com/salad.jpg',
+        nutrition: {
+          calories: 280,
+          proteinG: 15,
+          carbsG: 35,
+          fatG: 8,
+          fiberG: 8,
+        },
+        shareType: 'friends',
+        sharedWith: {
+          friendIds: ['friend-1', 'friend-2', 'friend-3'],
+        },
+        createdAt: '2026-04-19T13:00:00Z',
+      }
+      expect(meal.shareType).toBe('friends')
+      expect(meal.sharedWith.friendIds).toHaveLength(3)
+    })
+
+    it('should create a team shared meal', () => {
+      const meal: SharedMeal = {
+        id: 'share-3',
+        mealLogId: 'meal-789',
+        userId: 'user-3',
+        foodName: 'Protein Smoothie',
+        photoUrl: 'https://example.com/smoothie.jpg',
+        nutrition: {
+          calories: 320,
+          proteinG: 25,
+          carbsG: 40,
+          fatG: 6,
+          fiberG: 3,
+        },
+        shareType: 'team',
+        sharedWith: {
+          teamId: 'team-1',
+        },
+        createdAt: '2026-04-19T14:00:00Z',
+      }
+      expect(meal.shareType).toBe('team')
+      expect(meal.sharedWith.teamId).toBe('team-1')
+    })
+
+    it('should include reactions on shared meal', () => {
+      const meal: SharedMeal = {
+        id: 'share-4',
+        mealLogId: 'meal-999',
+        userId: 'user-4',
+        foodName: 'Sushi Platter',
+        photoUrl: 'https://example.com/sushi.jpg',
+        nutrition: {
+          calories: 500,
+          proteinG: 30,
+          carbsG: 60,
+          fatG: 10,
+          fiberG: 4,
+        },
+        shareType: 'friends',
+        sharedWith: {
+          friendIds: ['friend-1'],
+        },
+        createdAt: '2026-04-19T15:00:00Z',
+        reactions: [
+          { userId: 'friend-1', type: 'heart' },
+          { userId: 'friend-2', type: 'like' },
+        ],
+      }
+      expect(meal.reactions).toHaveLength(2)
+      expect(meal.reactions[0].type).toBe('heart')
+    })
+  })
+
+  describe('SocialFeedItem', () => {
+    it('should display friend meal in feed', () => {
+      const item: SocialFeedItem = {
+        id: 'feed-1',
+        userId: 'user-1',
+        userName: 'Alice',
+        userAvatar: 'https://example.com/avatar1.jpg',
+        foodName: 'Grilled Chicken',
+        photoUrl: 'https://example.com/meal.jpg',
+        nutrition: {
+          calories: 450,
+          proteinG: 35,
+          carbsG: 45,
+          fatG: 12,
+          fiberG: 5,
+        },
+        timestamp: '2026-04-19T12:00:00Z',
+        shareType: 'friends',
+        reactions: [
+          { type: 'like', count: 3 },
+          { type: 'heart', count: 2 },
+        ],
+      }
+      expect(item.userName).toBe('Alice')
+      expect(item.shareType).toBe('friends')
+      expect(item.reactions[0].count).toBe(3)
+    })
+
+    it('should display team meal in feed', () => {
+      const item: SocialFeedItem = {
+        id: 'feed-2',
+        userId: 'user-2',
+        userName: 'Bob',
+        userAvatar: 'https://example.com/avatar2.jpg',
+        foodName: 'Protein Smoothie',
+        photoUrl: 'https://example.com/smoothie.jpg',
+        nutrition: {
+          calories: 320,
+          proteinG: 25,
+          carbsG: 40,
+          fatG: 6,
+          fiberG: 3,
+        },
+        timestamp: '2026-04-19T13:00:00Z',
+        shareType: 'team',
+        reactions: [
+          { type: 'like', count: 5 },
+          { type: 'heart', count: 1 },
+        ],
+      }
+      expect(item.shareType).toBe('team')
+      expect(item.reactions[0].count).toBe(5)
+    })
+
+    it('should have empty reactions initially', () => {
+      const item: SocialFeedItem = {
+        id: 'feed-3',
+        userId: 'user-3',
+        userName: 'Carol',
+        userAvatar: 'https://example.com/avatar3.jpg',
+        foodName: 'Salad Bowl',
+        photoUrl: 'https://example.com/salad.jpg',
+        nutrition: {
+          calories: 280,
+          proteinG: 15,
+          carbsG: 35,
+          fatG: 8,
+          fiberG: 8,
+        },
+        timestamp: '2026-04-19T14:00:00Z',
+        shareType: 'friends',
+        reactions: [],
+      }
+      expect(item.reactions).toHaveLength(0)
     })
   })
 })
