@@ -64,13 +64,6 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(app)" />
-        {/* Deep-link screens accessible after auth */}
-        <Stack.Screen name="session/camera" options={{ presentation: 'fullScreenModal' }} />
-        <Stack.Screen name="session/offline" />
-        <Stack.Screen name="health/dashboard" />
-        <Stack.Screen name="nutrition/scanner" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="profile/passport" />
-        <Stack.Screen name="milestones/cinema" options={{ presentation: 'modal' }} />
       </Stack>
     </ClerkProvider>
   )

@@ -70,7 +70,9 @@ export async function initializeBarcodeTables(): Promise<void> {
  * Create a barcode result record
  * Note: For testing purposes, we use foodName as the barcode since the request doesn't include it
  */
-export async function createBarcodeResult(data: BarcodeLookupResponse & { barcode?: string }): Promise<BarcodeResult> {
+export async function createBarcodeResult(
+  data: BarcodeLookupResponse & { barcode?: string }
+): Promise<BarcodeResult> {
   const id = uuidv4()
   const now = new Date()
   const cachedAt = now.toISOString()
@@ -86,7 +88,17 @@ export async function createBarcodeResult(data: BarcodeLookupResponse & { barcod
     `INSERT INTO barcode_results (
       id, barcode, foodName, nutrition, source, servingSize, servingSizeG, cachedAt, expiresAt
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, barcode, data.foodName, nutritionJson, data.source, data.servingSize, data.servingSizeG, cachedAt, expiresAtIso],
+    [
+      id,
+      barcode,
+      data.foodName,
+      nutritionJson,
+      data.source,
+      data.servingSize,
+      data.servingSizeG,
+      cachedAt,
+      expiresAtIso,
+    ]
   )
 
   return {
@@ -108,7 +120,7 @@ export async function createBarcodeResult(data: BarcodeLookupResponse & { barcod
 export async function getBarcodeResult(id: string): Promise<BarcodeResult | undefined> {
   const row = await db.getFirstAsync<BarcodeResultRow>(
     `SELECT * FROM barcode_results WHERE id = ?`,
-    [id],
+    [id]
   )
 
   if (!row) {
@@ -124,7 +136,7 @@ export async function getBarcodeResult(id: string): Promise<BarcodeResult | unde
 export async function getCachedBarcode(barcode: string): Promise<BarcodeResult | undefined> {
   const row = await db.getFirstAsync<BarcodeResultRow>(
     `SELECT * FROM barcode_results WHERE barcode = ? AND expiresAt > ?`,
-    [barcode, new Date().toISOString()],
+    [barcode, new Date().toISOString()]
   )
 
   if (!row) {
@@ -147,7 +159,7 @@ export async function deleteBarcodeResult(id: string): Promise<void> {
 export async function createMealSuggestion(
   userId: string,
   mealData: BarcodeLookupResponse,
-  reasonForSuggestion: string,
+  reasonForSuggestion: string
 ): Promise<MealSuggestion> {
   const id = uuidv4()
   const now = new Date()
@@ -163,7 +175,7 @@ export async function createMealSuggestion(
     `INSERT INTO meal_suggestions (
       id, userId, mealName, nutrition, reasonForSuggestion, createdAt, expiresAt
     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, userId, mealData.foodName, nutritionJson, reasonForSuggestion, createdAt, expiresAtIso],
+    [id, userId, mealData.foodName, nutritionJson, reasonForSuggestion, createdAt, expiresAtIso]
   )
 
   return {
@@ -183,7 +195,7 @@ export async function createMealSuggestion(
 export async function getMealSuggestions(userId: string): Promise<MealSuggestion[]> {
   const rows = await db.getAllAsync<MealSuggestionRow>(
     `SELECT * FROM meal_suggestions WHERE userId = ? AND expiresAt > ? ORDER BY createdAt DESC`,
-    [userId, new Date().toISOString()],
+    [userId, new Date().toISOString()]
   )
 
   return rows.map(convertMealSuggestionRow)
@@ -203,7 +215,7 @@ export async function createSharedMeal(
   mealLogId: string,
   userId: string,
   shareType: 'friend' | 'group' | 'public',
-  sharedWith: string[],
+  sharedWith: string[]
 ): Promise<SharedMeal> {
   const id = uuidv4()
   const createdAt = new Date().toISOString()
@@ -213,7 +225,7 @@ export async function createSharedMeal(
     `INSERT OR REPLACE INTO shared_meals (
       id, mealLogId, userId, shareType, sharedWith, createdAt
     ) VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, mealLogId, userId, shareType, sharedWithJson, createdAt],
+    [id, mealLogId, userId, shareType, sharedWithJson, createdAt]
   )
 
   return {
@@ -230,10 +242,7 @@ export async function createSharedMeal(
  * Get a shared meal by ID
  */
 export async function getSharedMeal(id: string): Promise<SharedMeal | undefined> {
-  const row = await db.getFirstAsync<SharedMealRow>(
-    `SELECT * FROM shared_meals WHERE id = ?`,
-    [id],
-  )
+  const row = await db.getFirstAsync<SharedMealRow>(`SELECT * FROM shared_meals WHERE id = ?`, [id])
 
   if (!row) {
     return undefined
@@ -247,6 +256,87 @@ export async function getSharedMeal(id: string): Promise<SharedMeal | undefined>
  */
 export async function deleteSharedMeal(id: string): Promise<void> {
   await db.runAsync(`DELETE FROM shared_meals WHERE id = ?`, [id])
+}
+
+/**
+ * Create or update a barcode result (for caching)
+ */
+export async function createOrUpdateBarcode(
+  data: BarcodeLookupResponse & { barcode: string }
+): Promise<BarcodeResult> {
+  const id = uuidv4()
+  const now = new Date()
+  const cachedAt = now.toISOString()
+
+  // Set expiration to 30 days from now
+  const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+  const expiresAtIso = expiresAt.toISOString()
+
+  const nutritionJson = JSON.stringify(data.nutrition)
+
+  // Try to delete existing entry first (if any)
+  await db.runAsync(`DELETE FROM barcode_results WHERE barcode = ?`, [data.barcode])
+
+  // Insert new entry
+  await db.runAsync(
+    `INSERT INTO barcode_results (
+      id, barcode, foodName, nutrition, source, servingSize, servingSizeG, cachedAt, expiresAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      data.barcode,
+      data.foodName,
+      nutritionJson,
+      data.source,
+      data.servingSize,
+      data.servingSizeG,
+      cachedAt,
+      expiresAtIso,
+    ]
+  )
+
+  return {
+    id,
+    barcode: data.barcode,
+    foodName: data.foodName,
+    nutrition: data.nutrition,
+    source: data.source,
+    servingSize: data.servingSize,
+    servingSizeG: data.servingSizeG,
+    cachedAt,
+    expiresAt: expiresAtIso,
+  }
+}
+
+/**
+ * Get a barcode by barcode value
+ */
+export async function getBarcode(barcode: string): Promise<BarcodeResult | null> {
+  const row = await db.getFirstAsync<BarcodeResultRow>(
+    `SELECT * FROM barcode_results WHERE barcode = ?`,
+    [barcode]
+  )
+
+  return row ? convertBarcodeRow(row) : null
+}
+
+/**
+ * Delete expired barcode entries (older than 30 days)
+ * Returns count of deleted entries
+ */
+export async function deleteExpiredBarcodes(): Promise<number> {
+  const now = new Date().toISOString()
+  const result = await db.runAsync(`DELETE FROM barcode_results WHERE expiresAt < ?`, [now])
+  return result.changes || 0
+}
+
+/**
+ * Delete all barcode entries
+ * Returns count of deleted entries
+ */
+export async function deleteAllBarcodes(): Promise<number> {
+  const result = await db.runAsync(`DELETE FROM barcode_results`)
+  return result.changes || 0
 }
 
 /**

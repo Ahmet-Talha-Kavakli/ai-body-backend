@@ -29,10 +29,7 @@ export const portionClient = {
    * @returns Promise with estimation results
    * @throws Error if API call fails or validation fails
    */
-  async estimatePortion(
-    photoPath: string,
-    foodName: string,
-  ): Promise<PortionEstimateResponse> {
+  async estimatePortion(photoPath: string, foodName: string): Promise<PortionEstimateResponse> {
     const request: PortionEstimateRequest = {
       photoPath,
       foodName,
@@ -101,6 +98,10 @@ export const portionClient = {
       throw new Error('Invalid portion: must be greater than 0')
     }
 
-    return response as PortionEstimateResponse
+    return {
+      estimatedPortionG: response.estimatedPortionG as number,
+      estimatedPortionDescription: response.estimatedPortionDescription as string,
+      confidence: response.confidence as number,
+    }
   },
 }

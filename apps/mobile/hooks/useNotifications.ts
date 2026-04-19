@@ -3,15 +3,19 @@ import * as Notifications from 'expo-notifications'
 import Constants from 'expo-constants'
 import { Platform } from 'react-native'
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-})
+const isWeb = Platform.OS === 'web'
+
+if (!isWeb) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  })
+}
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000'
 
@@ -21,6 +25,7 @@ export function useNotifications() {
   const notificationListener = useRef<Notifications.EventSubscription>()
 
   useEffect(() => {
+    if (isWeb) return
     registerForPushNotifications()
     notificationListener.current = Notifications.addNotificationReceivedListener((n) => {
       console.log('Notification received:', n)
@@ -63,6 +68,7 @@ export function useNotifications() {
   }
 
   const scheduleWaterReminders = async () => {
+    if (isWeb) return
     await Notifications.cancelAllScheduledNotificationsAsync()
     for (let hour = 8; hour <= 22; hour += 2) {
       await Notifications.scheduleNotificationAsync({
@@ -73,6 +79,7 @@ export function useNotifications() {
   }
 
   const scheduleMealReminders = async () => {
+    if (isWeb) return
     const meals = [
       {
         hour: 8,

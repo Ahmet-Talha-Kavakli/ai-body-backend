@@ -5,7 +5,7 @@
  * Includes fallback, error handling, and response validation.
  */
 
-import type { BarcodeLookupRequest, BarcodeLookupResponse } from '../types/barcode'
+import type { BarcodeLookupRequest, BarcodeLookupResponse, Nutrition } from '../types/barcode'
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'
 const MAX_RETRIES = 3
@@ -126,6 +126,12 @@ export const barcodeClient = {
       throw new Error('Invalid response: servingSizeG must be greater than 0')
     }
 
-    return response as BarcodeLookupResponse
+    return {
+      foodName: response.foodName as string,
+      nutrition: response.nutrition as Nutrition,
+      source: response.source as 'openfoodfacts' | 'usda',
+      servingSize: response.servingSize as string,
+      servingSizeG: response.servingSizeG as number,
+    }
   },
 }

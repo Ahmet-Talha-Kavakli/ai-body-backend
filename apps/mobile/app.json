@@ -4,7 +4,7 @@
     "slug": "fitai",
     "scheme": "fitai",
     "version": "1.0.0",
-    "platforms": ["ios", "android"],
+    "platforms": ["ios", "android", "web"],
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -16,11 +16,7 @@
       "checkOnLaunch": "ALWAYS",
       "fallbackToCacheTimeout": 30000
     },
-    "plugins": [
-      "expo-secure-store",
-      "@react-native-async-storage/async-storage",
-      "@react-native-community/netinfo"
-    ],
+    "plugins": ["expo-secure-store"],
     "ios": {
       "bundleIdentifier": "com.fitai.app",
       "buildNumber": "1",
