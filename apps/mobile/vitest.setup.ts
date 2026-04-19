@@ -90,6 +90,10 @@ class MockDatabase {
   private mealItemsData: Map<string, any> = new Map()
   // Phase 10: Portion estimations
   private portionEstimationsData: Map<string, any> = new Map()
+  // Phase 10: Barcode operations
+  private barcodeResultsData: Map<string, any> = new Map()
+  private mealSuggestionsData: Map<string, any> = new Map()
+  private sharedMealsData: Map<string, any> = new Map()
 
   clear() {
     this.waterData.clear()
@@ -118,6 +122,9 @@ class MockDatabase {
     this.mealLogsData.clear()
     this.mealItemsData.clear()
     this.portionEstimationsData.clear()
+    this.barcodeResultsData.clear()
+    this.mealSuggestionsData.clear()
+    this.sharedMealsData.clear()
   }
 
   async execAsync(sql: string): Promise<void> {
@@ -624,6 +631,55 @@ class MockDatabase {
       const id = params?.[0]
       this.portionEstimationsData.delete(id)
     }
+    // Phase 10: Barcode results
+    else if (sql.includes('INSERT INTO barcode_results')) {
+      const [id, barcode, foodName, nutrition, source, servingSize, servingSizeG, cachedAt, expiresAt] = params || []
+      this.barcodeResultsData.set(id, {
+        id,
+        barcode,
+        foodName,
+        nutrition,
+        source,
+        servingSize,
+        servingSizeG,
+        cachedAt,
+        expiresAt,
+      })
+    } else if (sql.includes('DELETE FROM barcode_results')) {
+      const id = params?.[0]
+      this.barcodeResultsData.delete(id)
+    }
+    // Phase 10: Meal suggestions
+    else if (sql.includes('INSERT INTO meal_suggestions')) {
+      const [id, userId, mealName, nutrition, reasonForSuggestion, createdAt, expiresAt] = params || []
+      this.mealSuggestionsData.set(id, {
+        id,
+        userId,
+        mealName,
+        nutrition,
+        reasonForSuggestion,
+        createdAt,
+        expiresAt,
+      })
+    } else if (sql.includes('DELETE FROM meal_suggestions')) {
+      const id = params?.[0]
+      this.mealSuggestionsData.delete(id)
+    }
+    // Phase 10: Shared meals
+    else if (sql.includes('INSERT OR REPLACE INTO shared_meals')) {
+      const [id, mealLogId, userId, shareType, sharedWith, createdAt] = params || []
+      this.sharedMealsData.set(id, {
+        id,
+        mealLogId,
+        userId,
+        shareType,
+        sharedWith,
+        createdAt,
+      })
+    } else if (sql.includes('DELETE FROM shared_meals')) {
+      const id = params?.[0]
+      this.sharedMealsData.delete(id)
+    }
   }
 
   async getFirstAsync<T>(sql: string, params?: any[]): Promise<T | undefined> {
@@ -761,6 +817,28 @@ class MockDatabase {
       const id = params?.[0]
       const estimation = this.portionEstimationsData.get(id)
       return (estimation as T) ?? (undefined as T | undefined)
+    }
+    // Phase 10: Barcode results - get by ID
+    if (sql.includes('SELECT * FROM barcode_results WHERE id =')) {
+      const id = params?.[0]
+      const result = this.barcodeResultsData.get(id)
+      return (result as T) ?? (undefined as T | undefined)
+    }
+    // Phase 10: Barcode results - get by barcode (cached)
+    if (sql.includes('SELECT * FROM barcode_results WHERE barcode =')) {
+      const barcode = params?.[0]
+      for (const [, value] of this.barcodeResultsData) {
+        if (value.barcode === barcode) {
+          return (value as T) ?? (undefined as T | undefined)
+        }
+      }
+      return undefined
+    }
+    // Phase 10: Shared meals - get by ID
+    if (sql.includes('SELECT * FROM shared_meals WHERE id =')) {
+      const id = params?.[0]
+      const shared = this.sharedMealsData.get(id)
+      return (shared as T) ?? (undefined as T | undefined)
     }
     return undefined
   }
@@ -997,6 +1075,17 @@ class MockDatabase {
         results.push(value as T)
       }
       return results.sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit)
+    }
+    // Phase 10: Meal suggestions - get by user
+    if (sql.includes('SELECT * FROM meal_suggestions WHERE userId =')) {
+      const userId = params?.[0]
+      const results: T[] = []
+      for (const [, value] of this.mealSuggestionsData) {
+        if (value.userId === userId) {
+          results.push(value as T)
+        }
+      }
+      return results.sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt))
     }
     return []
   }
