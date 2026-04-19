@@ -1,61 +1,117 @@
 import { create } from 'zustand'
-import type { SocialFeedItem, SharedMeal } from '../types/social'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { socialSharingService } from '../services/socialSharingService'
+import type { SharedMeal, SocialFeedItem, SocialFeedFilter } from '../types/social'
 
-interface SocialState {
+interface SocialStoreState {
+  sharedMeals: SharedMeal[]
   socialFeed: SocialFeedItem[]
-  teamMeals: SocialFeedItem[]
-  userSharedMeals: SharedMeal[]
-  isLoading: boolean
+  reactions: Map<string, number>
+  loading: boolean
   error: string | null
 
-  setSocialFeed: (items: SocialFeedItem[]) => void
-  setTeamMeals: (items: SocialFeedItem[]) => void
-  setUserSharedMeals: (meals: SharedMeal[]) => void
-  addToFeed: (item: SocialFeedItem) => void
-  removeFromFeed: (id: string) => void
-  setLoading: (loading: boolean) => void
-  setError: (error: string | null) => void
-  resetStore: () => void
+  shareMeal: (
+    mealLogId: string,
+    shareType: 'private' | 'friends' | 'team',
+    sharedWith?: { friendIds?: string[]; teamId?: string }
+  ) => Promise<SharedMeal>
+  getSocialFeed: (userId: string, filter: SocialFeedFilter) => Promise<SocialFeedItem[]>
+  addReaction: (
+    sharedMealId: string,
+    reactionType: 'like' | 'heart'
+  ) => Promise<{ success: boolean; count: number }>
+  syncOfflineData: () => Promise<void>
+  clearSocialData: () => void
+  loadFromStorage: () => Promise<void>
 }
 
-export const useSocialStore = create<SocialState>((set) => ({
+const STORAGE_KEY = 'social_store'
+
+export const useSocialStore = create<SocialStoreState>((set, get) => ({
+  sharedMeals: [],
   socialFeed: [],
-  teamMeals: [],
-  userSharedMeals: [],
-  isLoading: false,
+  reactions: new Map(),
+  loading: false,
   error: null,
 
-  setSocialFeed: (items: SocialFeedItem[]) =>
-    set({ socialFeed: items }),
+  shareMeal: async (mealLogId, shareType, sharedWith = {}) => {
+    set({ loading: true, error: null })
+    try {
+      const result = await socialSharingService.shareMeal(mealLogId, shareType, sharedWith)
+      set((state) => ({
+        sharedMeals: [...state.sharedMeals, result],
+        loading: false,
+      }))
+      await AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ sharedMeals: [...get().sharedMeals, result] })
+      )
+      return result
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false })
+      throw error
+    }
+  },
 
-  setTeamMeals: (items: SocialFeedItem[]) =>
-    set({ teamMeals: items }),
+  getSocialFeed: async (userId, filter) => {
+    set({ loading: true, error: null })
+    try {
+      const feed = await socialSharingService.getSocialFeed(userId, filter)
+      set({ socialFeed: feed, loading: false })
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ socialFeed: feed }))
+      return feed
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false })
+      throw error
+    }
+  },
 
-  setUserSharedMeals: (meals: SharedMeal[]) =>
-    set({ userSharedMeals: meals }),
+  addReaction: async (sharedMealId, reactionType) => {
+    try {
+      const result = await socialSharingService.addReaction(sharedMealId, reactionType)
+      const key = `${sharedMealId}-${reactionType}`
+      set((state) => {
+        const newReactions = new Map(state.reactions)
+        newReactions.set(key, result.count)
+        return { reactions: newReactions }
+      })
+      return result
+    } catch (error) {
+      set({ error: (error as Error).message })
+      throw error
+    }
+  },
 
-  addToFeed: (item: SocialFeedItem) =>
-    set((state) => ({
-      socialFeed: [item, ...state.socialFeed],
-    })),
+  syncOfflineData: async () => {
+    try {
+      await socialSharingService.syncOfflineData()
+    } catch (error) {
+      set({ error: (error as Error).message })
+    }
+  },
 
-  removeFromFeed: (id: string) =>
-    set((state) => ({
-      socialFeed: state.socialFeed.filter((item) => item.id !== id),
-    })),
-
-  setLoading: (loading: boolean) =>
-    set({ isLoading: loading }),
-
-  setError: (error: string | null) =>
-    set({ error }),
-
-  resetStore: () =>
+  clearSocialData: () => {
     set({
+      sharedMeals: [],
       socialFeed: [],
-      teamMeals: [],
-      userSharedMeals: [],
-      isLoading: false,
+      reactions: new Map(),
       error: null,
-    }),
+    })
+    AsyncStorage.removeItem(STORAGE_KEY)
+  },
+
+  loadFromStorage: async () => {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEY)
+      if (data) {
+        const parsed = JSON.parse(data)
+        set({
+          sharedMeals: parsed.sharedMeals || [],
+          socialFeed: parsed.socialFeed || [],
+        })
+      }
+    } catch (error) {
+      set({ error: (error as Error).message })
+    }
+  },
 }))

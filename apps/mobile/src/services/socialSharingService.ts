@@ -1,101 +1,72 @@
+import type { SharedMeal, SocialFeedItem, SocialFeedFilter } from '../types/social'
+import { socialSharingClient } from '../api/socialSharingClient'
 import * as socialDb from '../db/social'
-import type { SharedMeal, SocialFeedItem, Nutrition } from '../types/social'
-import { v4 as uuidv4 } from 'uuid'
-
-export interface ShareMealRequest {
-  mealLogId: string
-  userId: string
-  foodName: string
-  photoUrl: string
-  nutrition: Nutrition
-  shareType: 'private' | 'friends' | 'team'
-  friendIds?: string[]
-  teamId?: string
-}
-
-export interface MealComparison {
-  meal1: SharedMeal
-  meal2: SharedMeal
-  difference: {
-    calories: number
-    proteinG: number
-    carbsG: number
-    fatG: number
-    fiberG: number
-  }
-}
 
 export const socialSharingService = {
-  async shareMeal(request: ShareMealRequest): Promise<SharedMeal> {
-    const meal: SharedMeal = {
-      id: uuidv4(),
-      mealLogId: request.mealLogId,
-      userId: request.userId,
-      foodName: request.foodName,
-      photoUrl: request.photoUrl,
-      nutrition: request.nutrition,
-      shareType: request.shareType,
-      sharedWith: {
-        friendIds: request.friendIds,
-        teamId: request.teamId,
-      },
-      createdAt: new Date().toISOString(),
-      reactions: [],
+  async shareMeal(
+    mealLogId: string,
+    shareType: 'private' | 'friends' | 'team',
+    sharedWith: {
+      friendIds?: string[]
+      teamId?: string
     }
-
-    await socialDb.createSharedMeal(meal)
-    return meal
-  },
-
-  async getSocialFeed(userId: string): Promise<SocialFeedItem[]> {
-    return await socialDb.getSocialFeed(userId)
-  },
-
-  async getTeamMeals(teamId: string): Promise<SocialFeedItem[]> {
-    return await socialDb.getTeamMeals(teamId)
-  },
-
-  async compareMeals(
-    mealId1: string,
-    mealId2: string
-  ): Promise<MealComparison> {
-    const meal1 = await socialDb.getSharedMealById(mealId1)
-    const meal2 = await socialDb.getSharedMealById(mealId2)
-
-    if (!meal1 || !meal2) {
-      throw new Error('Meal not found')
-    }
-
-    return {
-      meal1,
-      meal2,
-      difference: {
-        calories: meal1.nutrition.calories - meal2.nutrition.calories,
-        proteinG: meal1.nutrition.proteinG - meal2.nutrition.proteinG,
-        carbsG: meal1.nutrition.carbsG - meal2.nutrition.carbsG,
-        fatG: meal1.nutrition.fatG - meal2.nutrition.fatG,
-        fiberG: meal1.nutrition.fiberG - meal2.nutrition.fiberG,
-      },
+  ): Promise<SharedMeal> {
+    try {
+      const result = await socialSharingClient.shareMeal(mealLogId, shareType, sharedWith)
+      await socialDb.saveSharedMeal(result)
+      return result
+    } catch (error) {
+      await socialDb.queueShare(mealLogId, shareType, sharedWith)
+      throw error
     }
   },
 
-  async reactToMeal(
-    mealId: string,
-    userId: string,
+  async getSocialFeed(userId: string, filter: SocialFeedFilter): Promise<SocialFeedItem[]> {
+    try {
+      const feed = await socialSharingClient.getSocialFeed(userId, filter)
+      await socialDb.cacheFeed(feed)
+      return feed
+    } catch (error) {
+      const cachedFeed = await socialDb.getCachedFeed()
+      return cachedFeed
+    }
+  },
+
+  async addReaction(
+    sharedMealId: string,
     reactionType: 'like' | 'heart'
-  ): Promise<void> {
-    await socialDb.addReaction(mealId, userId, reactionType)
+  ): Promise<{ success: boolean; count: number }> {
+    try {
+      const result = await socialSharingClient.addReaction(sharedMealId, reactionType)
+      await socialDb.addReactionToMeal(sharedMealId, 'user-1', reactionType)
+      return result
+    } catch (error) {
+      await socialDb.queueReaction(sharedMealId, reactionType)
+      throw error
+    }
   },
 
-  async removeReaction(mealId: string, userId: string): Promise<void> {
-    await socialDb.removeReaction(mealId, userId)
-  },
+  async syncOfflineData(): Promise<void> {
+    const pendingShares = await socialDb.getPendingShares()
+    for (const share of pendingShares) {
+      try {
+        const data = JSON.parse(share.data)
+        await socialSharingClient.shareMeal(data.mealLogId, data.shareType, data.sharedWith)
+        await socialDb.removePendingShare(share.id)
+      } catch {
+        // Keep in queue for retry
+      }
+    }
 
-  async getUserSharedMeals(userId: string): Promise<SharedMeal[]> {
-    return await socialDb.getUserSharedMeals(userId)
-  },
-
-  async deleteSharedMeal(mealId: string): Promise<void> {
-    await socialDb.deleteSharedMeal(mealId)
+    const pendingReactions = await socialDb.getPendingReactions()
+    for (const reaction of pendingReactions) {
+      try {
+        const data = JSON.parse(reaction.data)
+        await socialSharingClient.addReaction(data.sharedMealId, data.reactionType)
+        await socialDb.removePendingReaction(reaction.id)
+      } catch {
+        // Keep in queue for retry
+      }
+    }
   },
 }
