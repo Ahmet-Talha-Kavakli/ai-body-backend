@@ -2,6 +2,9 @@ import type { ARFoodModel } from '../types/ar'
 
 const modelCache = new Map<string, ARFoodModel>()
 const usageCounter = new Map<string, number>()
+const cacheTimestamps = new Map<string, number>()
+const CACHE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+const MAX_CACHE_SIZE_MB = 500 // 500MB cache limit
 
 function generateId(): string {
   return `model-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -9,6 +12,11 @@ function generateId(): string {
 
 function normalizeKey(foodName: string): string {
   return foodName.toLowerCase().trim()
+}
+
+function getCacheSize(): number {
+  // Rough estimate: each model ~1-5MB
+  return modelCache.size * 2 // 2MB average per model
 }
 
 export const arModelGenerationService = {
@@ -24,6 +32,8 @@ export const arModelGenerationService = {
       confidence: Math.floor(Math.random() * 20) + 80, // 80-100
       generatedBy: 'meshy_ai',
       createdAt: new Date().toISOString(),
+      cachedAt: new Date().toISOString(),
+      cacheSize: Math.random() * 4 + 1, // 1-5MB
     }
 
     return model
@@ -35,9 +45,18 @@ export const arModelGenerationService = {
     // Check cache
     if (modelCache.has(key)) {
       const cached = modelCache.get(key)!
-      // Update usage count
-      usageCounter.set(key, (usageCounter.get(key) || 0) + 1)
-      return cached
+      const cachedAt = cacheTimestamps.get(key) || Date.now()
+
+      // Check if cache expired
+      if (Date.now() - cachedAt > CACHE_EXPIRY_MS) {
+        modelCache.delete(key)
+        cacheTimestamps.delete(key)
+        usageCounter.delete(key)
+      } else {
+        // Update usage count
+        usageCounter.set(key, (usageCounter.get(key) || 0) + 1)
+        return cached
+      }
     }
 
     // Generate new model
@@ -51,7 +70,14 @@ export const arModelGenerationService = {
 
   cacheModel(model: ARFoodModel): void {
     const key = normalizeKey(model.foodName)
+
+    // Check cache size and evict if necessary
+    if (getCacheSize() > MAX_CACHE_SIZE_MB) {
+      this._evictLeastUsed()
+    }
+
     modelCache.set(key, model)
+    cacheTimestamps.set(key, Date.now())
     usageCounter.set(key, (usageCounter.get(key) || 0) + 1)
   },
 
@@ -69,8 +95,50 @@ export const arModelGenerationService = {
     return sorted
   },
 
+  getCacheStats(): {
+    size: number
+    count: number
+    topModels: { foodName: string; usageCount: number }[]
+  } {
+    const topModels = Array.from(modelCache.entries())
+      .map(([key, model]) => ({
+        foodName: model.foodName,
+        usageCount: usageCounter.get(key) || 0,
+      }))
+      .sort((a, b) => b.usageCount - a.usageCount)
+      .slice(0, 10)
+
+    return {
+      size: getCacheSize(),
+      count: modelCache.size,
+      topModels,
+    }
+  },
+
+  _evictLeastUsed(): void {
+    // Find least used model
+    let leastUsedKey: string | null = null
+    let leastUsedCount = Infinity
+
+    for (const [key] of modelCache.entries()) {
+      const count = usageCounter.get(key) || 0
+      if (count < leastUsedCount) {
+        leastUsedCount = count
+        leastUsedKey = key
+      }
+    }
+
+    // Evict least used
+    if (leastUsedKey) {
+      modelCache.delete(leastUsedKey)
+      cacheTimestamps.delete(leastUsedKey)
+      usageCounter.delete(leastUsedKey)
+    }
+  },
+
   _resetCache(): void {
     modelCache.clear()
     usageCounter.clear()
+    cacheTimestamps.clear()
   },
 }

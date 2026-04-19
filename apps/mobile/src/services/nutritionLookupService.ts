@@ -1,4 +1,6 @@
 import { nutritionClient } from '../api/nutritionClient'
+import type { FoodDetectionResult } from '../types/ar'
+import type { MealLog } from '@fitai/shared-types'
 
 type Nutrition = {
   calories: number
@@ -10,15 +12,24 @@ type Nutrition = {
 }
 
 const cache = new Map<string, Nutrition>()
+const CACHE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 export const nutritionLookupService = {
   async getNutrition(
     foodName: string,
     photoPath?: string
   ): Promise<Nutrition> {
+    // Check cache first
+    const cached = cache.get(foodName.toLowerCase())
+    if (cached) {
+      return cached
+    }
+
     // Try USDA first
     try {
-      return await nutritionClient.lookupUSDA(foodName)
+      const nutrition = await nutritionClient.lookupUSDA(foodName)
+      this.cacheNutrition(foodName, nutrition)
+      return nutrition
     } catch (error) {
       // Fallback to GPT-4
       if (!photoPath) {
@@ -34,6 +45,7 @@ export const nutritionLookupService = {
         )
         // Remove confidence field to match Nutrition type
         const { confidence, ...nutrition } = gpt4Response
+        this.cacheNutrition(foodName, nutrition)
         return nutrition
       } catch (gpt4Error) {
         throw new Error(
@@ -64,6 +76,46 @@ export const nutritionLookupService = {
 
   cacheNutrition(foodName: string, nutrition: Nutrition): void {
     cache.set(foodName.toLowerCase(), nutrition)
+  },
+
+  /**
+   * Create a Phase 3 MealLog from an AR food detection result
+   * Integrates AR detection data with Phase 3 nutrition system
+   */
+  createMealLogFromDetection(
+    detection: FoodDetectionResult,
+    userId: string,
+    mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'pre_workout' | 'post_workout' = 'snack'
+  ): Partial<MealLog> {
+    const loggedAt = new Date(detection.detectedAt)
+
+    return {
+      userId,
+      mealType,
+      loggedAt,
+      photoUrl: detection.modelUrl,
+      aiAnalyzed: true,
+      totalCalories: Math.round(detection.nutrition.calories),
+      totalProteinG: Math.round(detection.nutrition.proteinG * 100) / 100,
+      totalCarbsG: Math.round(detection.nutrition.carbsG * 100) / 100,
+      totalFatG: Math.round(detection.nutrition.fatG * 100) / 100,
+      notes: `AR detected: ${detection.detectedFoodName} (${detection.confidence}% confidence, ${detection.portionSize}${detection.portionUnit})`,
+      items: [
+        {
+          id: `item-${detection.id}`,
+          name: detection.detectedFoodName,
+          servingSize: detection.portionSize,
+          servingUnit: detection.portionUnit,
+          calories: Math.round(detection.nutrition.calories),
+          proteinG: Math.round(detection.nutrition.proteinG * 100) / 100,
+          carbsG: Math.round(detection.nutrition.carbsG * 100) / 100,
+          fatG: Math.round(detection.nutrition.fatG * 100) / 100,
+          fiberG: detection.nutrition.fiberG
+            ? Math.round(detection.nutrition.fiberG * 100) / 100
+            : undefined,
+        },
+      ],
+    }
   },
 
   _resetCache(): void {
