@@ -574,3 +574,12 @@ vi.mock('expo-secure-store', () => ({
   setItemAsync: vi.fn().mockResolvedValue(undefined),
   deleteItemAsync: vi.fn().mockResolvedValue(undefined),
 }))
+
+// Mock pg (PostgreSQL client - not available in React Native)
+vi.mock('pg', () => ({
+  Client: vi.fn(() => ({
+    connect: vi.fn().mockResolvedValue(undefined),
+    end: vi.fn().mockResolvedValue(undefined),
+    query: vi.fn().mockResolvedValue({ rows: [] }),
+  })),
+}))

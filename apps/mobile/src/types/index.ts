@@ -41,3 +41,18 @@ export interface SyncQueueItem {
   createdAt: string
   retries: number
 }
+
+// Re-export analytics types
+export type {
+  UserEmbedding,
+  Recommendation,
+  CoachingInsight,
+  AnalyticsSummary,
+} from './analytics'
+
+// Re-export insights types
+export type {
+  InsightCard,
+  AnalyticsChartData,
+  TrendData,
+} from './insights'
