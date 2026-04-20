@@ -19,5 +19,6 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     'react-native-mmkv': '<rootDir>/__mocks__/react-native-mmkv.ts',
+    'react-native-reanimated': '<rootDir>/__mocks__/react-native-reanimated.ts',
   },
 };

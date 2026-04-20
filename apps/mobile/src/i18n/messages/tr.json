@@ -1,0 +1,33 @@
+{
+  "common": {
+    "loading": "Yükleniyor...",
+    "error": "Bir hata oluştu",
+    "retry": "Tekrar dene",
+    "cancel": "İptal",
+    "confirm": "Onayla",
+    "save": "Kaydet",
+    "delete": "Sil",
+    "back": "Geri",
+    "next": "İleri",
+    "done": "Tamam",
+    "edit": "Düzenle",
+    "close": "Kapat"
+  },
+  "empty": {
+    "title": "Henüz bir şey yok",
+    "subtitle": "Başlamak için harika bir zaman!"
+  },
+  "error": {
+    "network": "İnternet bağlantısı yok. Lütfen tekrar dene.",
+    "server": "Sunucu hatası. Kısa süre sonra tekrar dene.",
+    "unknown": "Beklenmedik bir hata oluştu.",
+    "timeout": "İstek zaman aşımına uğradı."
+  },
+  "tabs": {
+    "home": "Ana Sayfa",
+    "train": "Antrenman",
+    "nutrition": "Beslenme",
+    "health": "Sağlık",
+    "you": "Sen"
+  }
+}

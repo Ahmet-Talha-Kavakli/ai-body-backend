@@ -1,0 +1,33 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "edit": "Edit",
+    "close": "Close"
+  },
+  "empty": {
+    "title": "Nothing here yet",
+    "subtitle": "A great time to get started!"
+  },
+  "error": {
+    "network": "No internet connection. Please try again.",
+    "server": "Server error. Try again shortly.",
+    "unknown": "An unexpected error occurred.",
+    "timeout": "The request timed out."
+  },
+  "tabs": {
+    "home": "Home",
+    "train": "Train",
+    "nutrition": "Nutrition",
+    "health": "Health",
+    "you": "You"
+  }
+}
