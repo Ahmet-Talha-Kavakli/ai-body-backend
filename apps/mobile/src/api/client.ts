@@ -1,46 +1,48 @@
-import axios, { AxiosInstance } from 'axios'
-import * as SecureStore from 'expo-secure-store'
+import axios, { AxiosInstance, AxiosResponse, isAxiosError } from 'axios';
+import { ApiError, NetworkError } from './errors';
+import { CircuitBreaker } from './circuit-breaker';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'
+const breaker = new CircuitBreaker({ failureThreshold: 3, openDurationMs: 30_000 });
 
-let client: AxiosInstance | null = null
+function buildClient(): AxiosInstance {
+  const instance = axios.create({
+    baseURL: process.env['EXPO_PUBLIC_API_URL'] ?? 'http://localhost:3000',
+    timeout: 15_000,
+    headers: { 'Content-Type': 'application/json' },
+  });
 
-export async function getAuthenticatedClient(): Promise<AxiosInstance> {
-  if (client) return client
+  instance.interceptors.request.use((config) => {
+    breaker.guard();
+    config.headers['X-Idempotency-Key'] = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return config;
+  });
 
-  const token = await SecureStore.getItemAsync('auth_token')
-
-  client = axios.create({
-    baseURL: API_BASE_URL,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
+  instance.interceptors.response.use(
+    (res: AxiosResponse) => {
+      breaker.recordSuccess();
+      return res;
     },
-    timeout: 10000,
-  })
-
-  // Add response interceptor for token refresh if needed
-  client.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      if (error.response?.status === 401) {
-        // Token expired, clear it
-        await SecureStore.deleteItemAsync('auth_token')
-        client = null
+    (error: unknown) => {
+      if (isAxiosError(error)) {
+        const status = error.response?.status ?? 0;
+        if (status >= 500) {
+          breaker.recordFailure();
+        }
+        if (!error.response) {
+          return Promise.reject(new NetworkError());
+        }
+        const code = (error.response.data as { code?: string })?.code ?? 'UNKNOWN';
+        const message = (error.response.data as { message?: string })?.message ?? error.message;
+        return Promise.reject(new ApiError(status, code, message));
       }
-      return Promise.reject(error)
-    }
-  )
+      return Promise.reject(error);
+    },
+  );
 
-  return client
+  return instance;
 }
 
-export async function setAuthToken(token: string): Promise<void> {
-  await SecureStore.setItemAsync('auth_token', token)
-  client = null // Reset client to pick up new token
-}
+export const apiClient = buildClient();
 
-export async function clearAuthToken(): Promise<void> {
-  await SecureStore.deleteItemAsync('auth_token')
-  client = null
-}
+// Exposed for testing
+export { breaker as _circuitBreaker };
