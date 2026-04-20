@@ -13,11 +13,13 @@ export default function HomeScreen() {
 
   const fetchReadiness = async () => {
     try {
-      const res = await fetch('/api/readiness');
+      const base = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+      const res = await fetch(`${base}/api/readiness`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setReadiness(data.score);
     } catch (err) {
-      console.error(err);
+      console.log('[home] readiness fetch failed, using fallback', err);
       setReadiness(75);
     } finally {
       setLoading(false);
@@ -43,7 +45,11 @@ export default function HomeScreen() {
           Merhaba, {user?.firstName || 'Sporcu'}! 👋
         </Text>
         <Text className="text-text-secondary mb-8">
-          {new Date().toLocaleDateString('tr-TR', { weekday: 'long', month: 'long', day: 'numeric' })}
+          {new Date().toLocaleDateString('tr-TR', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+          })}
         </Text>
 
         {/* Readiness Card */}

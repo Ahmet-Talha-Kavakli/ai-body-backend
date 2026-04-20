@@ -16,7 +16,7 @@
       "checkOnLaunch": "ALWAYS",
       "fallbackToCacheTimeout": 30000
     },
-    "plugins": ["expo-secure-store"],
+    "plugins": ["expo-secure-store", "expo-sqlite"],
     "ios": {
       "bundleIdentifier": "com.fitai.app",
       "buildNumber": "1",

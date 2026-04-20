@@ -1,6 +1,6 @@
-import { useSignIn } from '@clerk/expo'
-import { useRouter } from 'expo-router'
-import { useState } from 'react'
+import { useSignIn } from '@clerk/expo/legacy';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
   StyleSheet,
-} from 'react-native'
+} from 'react-native';
 
 const styles = StyleSheet.create({
   container: {
@@ -53,29 +53,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-})
+});
 
 export default function SignIn() {
-  const { signIn, isLoaded } = useSignIn()
-  const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+  const { signIn, isLoaded } = useSignIn();
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
-    if (!isLoaded) return
-    setLoading(true)
+    if (!isLoaded) return;
+    setLoading(true);
     try {
-      const result = await signIn.create({ identifier: email, password })
+      const result = await signIn.create({ identifier: email, password });
       if (result.status === 'complete') {
-        router.replace('/(app)/home')
+        router.replace('/(app)/home');
       }
     } catch (err: any) {
-      Alert.alert('Hata', err.errors[0]?.message || 'Giriş başarısız')
+      Alert.alert('Hata', err.errors[0]?.message || 'Giriş başarısız');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -119,5 +119,5 @@ export default function SignIn() {
         </Text>
       </TouchableOpacity>
     </View>
-  )
+  );
 }

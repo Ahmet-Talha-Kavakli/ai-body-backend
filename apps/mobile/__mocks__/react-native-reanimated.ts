@@ -13,6 +13,8 @@ const runOnJS = (fn: (...args: unknown[]) => unknown) => fn;
 const runOnUI = (fn: (...args: unknown[]) => unknown) => fn;
 const interpolate = (value: unknown) => value;
 const Extrapolation = { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' };
+const useAnimatedProps = (fn: () => unknown) => fn();
+const cancelAnimation = (_sharedValue: unknown) => {};
 const useAnimatedScrollHandler = () => ({});
 const useAnimatedRef = () => ({ current: null });
 const useScrollViewOffset = () => ({ value: 0 });
@@ -50,6 +52,8 @@ module.exports = {
   runOnUI,
   interpolate,
   Extrapolation,
+  useAnimatedProps,
+  cancelAnimation,
   useAnimatedScrollHandler,
   useAnimatedRef,
   useScrollViewOffset,

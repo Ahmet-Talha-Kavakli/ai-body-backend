@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
-import * as Notifications from 'expo-notifications'
-import Constants from 'expo-constants'
-import { Platform } from 'react-native'
+import { useState, useEffect, useRef } from 'react';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
-const isWeb = Platform.OS === 'web'
+const isWeb = Platform.OS === 'web';
 
 if (!isWeb) {
   Notifications.setNotificationHandler({
@@ -14,72 +14,76 @@ if (!isWeb) {
       shouldShowBanner: true,
       shouldShowList: true,
     }),
-  })
+  });
 }
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000'
+const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 export function useNotifications() {
-  const [expoPushToken, setExpoPushToken] = useState<string | null>(null)
-  const [permission, setPermission] = useState<string>('undetermined')
-  const notificationListener = useRef<Notifications.EventSubscription>()
+  const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
+  const [permission, setPermission] = useState<string>('undetermined');
+  const notificationListener = useRef<Notifications.EventSubscription>();
 
   useEffect(() => {
-    if (isWeb) return
-    registerForPushNotifications()
+    if (isWeb) return;
+    registerForPushNotifications();
     notificationListener.current = Notifications.addNotificationReceivedListener((n) => {
-      console.log('Notification received:', n)
-    })
+      console.log('Notification received:', n);
+    });
     return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current)
-      }
-    }
-  }, [])
+      notificationListener.current?.remove();
+    };
+  }, []);
 
   const registerForPushNotifications = async () => {
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',
         importance: Notifications.AndroidImportance.MAX,
-      })
+      });
     }
 
-    const { status: existingStatus } = await Notifications.getPermissionsAsync()
-    let finalStatus = existingStatus
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync()
-      finalStatus = status
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
     }
-    setPermission(finalStatus)
-    if (finalStatus !== 'granted') return
+    setPermission(finalStatus);
+    if (finalStatus !== 'granted') return;
 
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId
-    if (!projectId) return
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    if (!projectId) return;
 
-    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data
-    setExpoPushToken(token)
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    setExpoPushToken(token);
 
-    await fetch(`${API_BASE}/api/notifications/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'expo', token }),
-    }).catch(() => {})
-  }
+    try {
+      const res = await fetch(`${API_BASE}/api/notifications/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'expo', token }),
+      });
+      if (!res.ok) return;
+      await res.json();
+    } catch (err) {
+      console.log('[notifications] register failed (non-fatal)', err);
+    }
+  };
 
   const scheduleWaterReminders = async () => {
-    if (isWeb) return
-    await Notifications.cancelAllScheduledNotificationsAsync()
+    if (isWeb) return;
+    await Notifications.cancelAllScheduledNotificationsAsync();
     for (let hour = 8; hour <= 22; hour += 2) {
       await Notifications.scheduleNotificationAsync({
         content: { title: '💧 Su İçmeyi Unutma!', body: 'Günde 8 bardak su içmeyi hedefle.' },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute: 0 },
-      })
+      });
     }
-  }
+  };
 
   const scheduleMealReminders = async () => {
-    if (isWeb) return
+    if (isWeb) return;
     const meals = [
       {
         hour: 8,
@@ -99,7 +103,7 @@ export function useNotifications() {
         title: '🌙 Akşam Yemeği Vakti',
         body: 'Akşam yemeğini kaydet ve hedeflerini gör.',
       },
-    ]
+    ];
     for (const meal of meals) {
       await Notifications.scheduleNotificationAsync({
         content: { title: meal.title, body: meal.body },
@@ -108,9 +112,9 @@ export function useNotifications() {
           hour: meal.hour,
           minute: meal.minute,
         },
-      })
+      });
     }
-  }
+  };
 
-  return { expoPushToken, permission, scheduleWaterReminders, scheduleMealReminders }
+  return { expoPushToken, permission, scheduleWaterReminders, scheduleMealReminders };
 }

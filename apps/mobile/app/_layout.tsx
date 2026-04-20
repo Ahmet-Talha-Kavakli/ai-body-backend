@@ -1,51 +1,59 @@
-import { ClerkProvider, useAuth } from '@clerk/expo'
-import * as SecureStore from 'expo-secure-store'
-import { Stack, useRouter, useSegments } from 'expo-router'
-import { useEffect } from 'react'
-import '../global.css'
-import { useNotifications } from '@/hooks/useNotifications'
+import { ClerkProvider, useAuth } from '@clerk/expo';
+import * as SecureStore from 'expo-secure-store';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import '../global.css';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const tokenCache = {
   async getToken(key: string) {
-    return SecureStore.getItemAsync(key)
+    return SecureStore.getItemAsync(key);
   },
   async saveToken(key: string, value: string) {
-    return SecureStore.setItemAsync(key, value)
+    return SecureStore.setItemAsync(key, value);
   },
   async clearToken(key: string) {
-    return SecureStore.deleteItemAsync(key)
+    return SecureStore.deleteItemAsync(key);
   },
-}
+};
 
 // Redirects unauthenticated users away from protected routes
 function AuthGuard() {
-  const { isSignedIn, isLoaded } = useAuth()
-  const segments = useSegments()
-  const router = useRouter()
-  const { scheduleWaterReminders, scheduleMealReminders } = useNotifications()
+  const { isSignedIn, isLoaded } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+  const { scheduleWaterReminders, scheduleMealReminders } = useNotifications();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isLoaded) return
+    const id = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(id);
+  }, []);
 
-    const inAuthGroup = segments[0] === '(auth)'
-    const inPublicRoute = segments[0] === 'index' || segments.length === 0
+  useEffect(() => {
+    if (!mounted) return;
+    if (!isLoaded) return;
+    if (segments.length === 0) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+    const inPublicRoute = segments[0] === 'index';
 
     if (!isSignedIn && !inAuthGroup && !inPublicRoute) {
-      router.replace('/(auth)/sign-in')
+      router.replace('/(auth)/sign-in');
     } else if (isSignedIn && inAuthGroup) {
-      router.replace('/(app)/home')
+      router.replace('/(app)/home');
     }
-  }, [isSignedIn, isLoaded, segments])
+  }, [mounted, isSignedIn, isLoaded, segments]);
 
   // Schedule local notifications when user is signed in
   useEffect(() => {
     if (isSignedIn) {
-      scheduleWaterReminders()
-      scheduleMealReminders()
+      scheduleWaterReminders();
+      scheduleMealReminders();
     }
-  }, [isSignedIn])
+  }, [isSignedIn]);
 
-  return null
+  return null;
 }
 
 export default function RootLayout() {
@@ -54,7 +62,6 @@ export default function RootLayout() {
       publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
       tokenCache={tokenCache}
     >
-      <AuthGuard />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -65,6 +72,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(app)" />
       </Stack>
+      <AuthGuard />
     </ClerkProvider>
-  )
+  );
 }

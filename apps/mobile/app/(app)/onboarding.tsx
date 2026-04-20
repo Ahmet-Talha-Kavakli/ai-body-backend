@@ -23,7 +23,7 @@ export default function OnboardingScreen() {
   const steps = [
     {
       title: 'Merhaba! 👋',
-      desc: 'FitAI\'ye hoş geldiniz. Adınız nedir?',
+      desc: "FitAI'ye hoş geldiniz. Adınız nedir?",
       content: (
         <TextInput
           placeholder="Adınız"
@@ -116,7 +116,9 @@ export default function OnboardingScreen() {
       desc: 'Antrenmanına başlamaya hazır mısın?',
       content: (
         <View className="bg-bg-surface rounded-2xl p-6 border border-border-default items-center">
-          <Text className="text-text-primary font-bold text-lg mb-2">Hoşgeldin {formData.firstName}!</Text>
+          <Text className="text-text-primary font-bold text-lg mb-2">
+            Hoşgeldin {formData.firstName}!
+          </Text>
           <Text className="text-text-secondary text-center text-base">
             Tüm bilgiler kaydedildi. FitAI'yi keşfet ve antrenman yapmaya başla!
           </Text>
@@ -128,7 +130,10 @@ export default function OnboardingScreen() {
   const current = steps[step - 1];
 
   return (
-    <ScrollView className="flex-1 bg-bg-primary p-6 justify-center">
+    <ScrollView
+      className="flex-1 bg-bg-primary"
+      contentContainerStyle={{ padding: 24, flexGrow: 1, justifyContent: 'center' }}
+    >
       <View className="mb-8">
         {/* Progress Bar */}
         <View className="flex-row items-center gap-1 mb-4">
@@ -141,9 +146,7 @@ export default function OnboardingScreen() {
             />
           ))}
         </View>
-        <Text className="text-text-secondary text-xs text-center">
-          Adım {step} / 5
-        </Text>
+        <Text className="text-text-secondary text-xs text-center">Adım {step} / 5</Text>
       </View>
 
       {/* Content */}
@@ -154,10 +157,7 @@ export default function OnboardingScreen() {
 
       {/* Buttons */}
       <View className="gap-3">
-        <TouchableOpacity
-          onPress={handleNext}
-          className="bg-accent-primary rounded-lg p-4"
-        >
+        <TouchableOpacity onPress={handleNext} className="bg-accent-primary rounded-lg p-4">
           <Text className="text-white text-center font-bold text-lg">
             {step === 5 ? 'Başla' : 'İleri'}
           </Text>
