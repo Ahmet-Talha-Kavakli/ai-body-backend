@@ -1,4 +1,4 @@
-export class MMKV {
+class MMKVInstance {
   private store: Record<string, string> = {};
   set(key: string, value: string) {
     this.store[key] = value;
@@ -6,7 +6,7 @@ export class MMKV {
   getString(key: string) {
     return this.store[key];
   }
-  delete(key: string) {
+  remove(key: string) {
     delete this.store[key];
   }
   getAllKeys() {
@@ -19,3 +19,11 @@ export class MMKV {
     return key in this.store;
   }
 }
+
+// v4 API: createMMKV factory function
+export function createMMKV(_config?: { id?: string }) {
+  return new MMKVInstance();
+}
+
+// Keep MMKV type export for backwards compat
+export type MMKV = MMKVInstance;

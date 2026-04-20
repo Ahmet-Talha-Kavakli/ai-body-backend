@@ -1,5 +1,9 @@
 import '@testing-library/jest-native/extend-expect';
 
+// Required env vars for tests — real values are in .env.local
+process.env['EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY'] = 'pk_test_placeholder';
+process.env['EXPO_PUBLIC_API_URL'] = 'http://localhost:3000';
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
   useSegments: () => [],

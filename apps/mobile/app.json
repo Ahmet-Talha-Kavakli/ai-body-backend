@@ -16,15 +16,15 @@
       "checkOnLaunch": "ALWAYS",
       "fallbackToCacheTimeout": 30000
     },
-    "plugins": ["expo-secure-store", "expo-sqlite"],
+    "plugins": ["expo-secure-store", "expo-sqlite", "@sentry/react-native/expo"],
     "ios": {
       "bundleIdentifier": "com.fitai.app",
       "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "Egzersiz form analizi için kamera gerekli.",
-        "NSMicrophoneUsageDescription": "Sesli koç için mikrofon gerekli.",
-        "NSHealthShareUsageDescription": "Sağlık verilerinizi analiz etmek için.",
-        "NSLocationWhenInUseUsageDescription": "Antrenman takibi için konum gerekli."
+        "NSCameraUsageDescription": "Egzersiz form analizi i\u00e7in kamera gerekli.",
+        "NSMicrophoneUsageDescription": "Sesli ko\u00e7 i\u00e7in mikrofon gerekli.",
+        "NSHealthShareUsageDescription": "Sa\u011fl\u0131k verilerinizi analiz etmek i\u00e7in.",
+        "NSLocationWhenInUseUsageDescription": "Antrenman takibi i\u00e7in konum gerekli."
       }
     },
     "android": {
@@ -41,6 +41,9 @@
         "ACCESS_COARSE_LOCATION",
         "BODY_SENSORS"
       ]
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
     }
   }
 }

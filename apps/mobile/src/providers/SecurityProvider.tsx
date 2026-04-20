@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext } from 'react';
 import { View } from 'react-native';
 import JailMonkey from 'jail-monkey';
 import { DSText } from '../design-system/primitives/Text';
 
-type SecurityStatus = 'checking' | 'safe' | 'compromised';
+type SecurityStatus = 'safe' | 'compromised';
 
-const SecurityContext = createContext<SecurityStatus>('checking');
+const SecurityContext = createContext<SecurityStatus>('safe');
 
 export function useSecurityStatus(): SecurityStatus {
   return useContext(SecurityContext);
@@ -22,15 +22,14 @@ function BlockedScreen() {
   );
 }
 
+function getSecurityStatus(): SecurityStatus {
+  return JailMonkey.isJailBroken() || JailMonkey.canMockLocation() ? 'compromised' : 'safe';
+}
+
 export function SecurityProvider({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<SecurityStatus>('checking');
+  // Synchronous check at render time — no async, no effect needed
+  const status = getSecurityStatus();
 
-  useEffect(() => {
-    const isCompromised = JailMonkey.isJailBroken() || JailMonkey.canMockLocation();
-    setStatus(isCompromised ? 'compromised' : 'safe');
-  }, []);
-
-  if (status === 'checking') return null;
   if (status === 'compromised') return <BlockedScreen />;
 
   return <SecurityContext.Provider value={status}>{children}</SecurityContext.Provider>;

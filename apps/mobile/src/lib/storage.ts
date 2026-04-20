@@ -1,9 +1,8 @@
-import { MMKV } from 'react-native-mmkv';
+import { createMMKV } from 'react-native-mmkv';
 
 // AES-256 encrypted MMKV instance.
-// encryptionKey is set at runtime by SecurityProvider after Keychain retrieval.
 // Direct MMKV reads/writes — Zustand persist middleware is intentionally NOT used (SSR crash risk).
-export const storage = new MMKV({ id: 'fitai-secure-storage' });
+export const storage = createMMKV({ id: 'fitai-secure-storage' });
 
 export const typedStorage = {
   set(key: string, value: string): void {
@@ -29,7 +28,7 @@ export const typedStorage = {
   },
 
   delete(key: string): void {
-    storage.delete(key);
+    storage.remove(key);
   },
 
   contains(key: string): boolean {

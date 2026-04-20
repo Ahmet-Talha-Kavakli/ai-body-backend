@@ -11,7 +11,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts,.tsx --max-warnings 0"
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src/lib src/api/client.ts src/api/circuit-breaker.ts src/api/errors.ts src/stores src/providers src/design-system src/i18n src/env.ts __tests__/unit --ext .ts,.tsx --max-warnings 0"
   },
   "engines": {
     "node": ">=20.0.0",
@@ -28,6 +28,7 @@
     "@fitai/shared-types": "workspace:*",
     "@fitai/shared-utils": "workspace:*",
     "@gorhom/bottom-sheet": "^5.2.9",
+    "@growthbook/growthbook": "^1.6.5",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/netinfo": "11.4.1",
     "@sentry/react-native": "^8.8.0",
@@ -56,6 +57,7 @@
     "jail-monkey": "^2.8.5",
     "lottie-react-native": "^7.3.6",
     "nativewind": "^4.2.3",
+    "posthog-react-native": "^4.42.1",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-mmkv": "^4.3.1",

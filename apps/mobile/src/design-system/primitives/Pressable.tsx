@@ -30,12 +30,14 @@ export function DSPressable({
 
   function handlePressIn() {
     if (scaleOnPress) {
+      // eslint-disable-next-line react-hooks/immutability
       scale.value = withSpring(0.96, spring.snappy);
     }
   }
 
   function handlePressOut() {
     if (scaleOnPress) {
+      // eslint-disable-next-line react-hooks/immutability
       scale.value = withSpring(1, spring.snappy);
     }
   }

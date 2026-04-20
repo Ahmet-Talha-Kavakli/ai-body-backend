@@ -3,6 +3,9 @@ import '../global.css';
 import React from 'react';
 import { Stack } from 'expo-router';
 import { RootProviders } from '../src/providers';
+import { initSentry } from '../src/lib/sentry';
+
+initSentry();
 
 export default function RootLayout() {
   return (

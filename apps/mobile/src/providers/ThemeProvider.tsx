@@ -4,17 +4,19 @@ import { colors } from '../design-system/tokens/colors';
 
 type ThemeMode = 'dark' | 'light' | 'system';
 
+type ColorGroup = Record<string, string>;
+
 type ThemeColors = {
-  bg: typeof colors.bg;
-  text: typeof colors.text;
-  border: typeof colors.border;
-  accent: typeof colors.accent;
+  bg: ColorGroup;
+  text: ColorGroup;
+  border: ColorGroup;
+  accent: ColorGroup;
   success: string;
   warning: string;
   danger: string;
   info: string;
   recovery: string;
-  ai: typeof colors.ai;
+  ai: ColorGroup;
 };
 
 type ThemeContextValue = {

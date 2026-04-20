@@ -1,25 +1,19 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { SecurityProvider, useSecurityStatus } from '../../../src/providers/SecurityProvider';
+import { SecurityProvider } from '../../../src/providers/SecurityProvider';
 import { ThemeProvider } from '../../../src/providers/ThemeProvider';
 import { DSText } from '../../../src/design-system/primitives/Text';
 
-jest.mock('jail-monkey', () => ({
-  isJailBroken: jest.fn(() => false),
-  canMockLocation: jest.fn(() => false),
-}));
+const mockIsJailBroken = jest.fn(() => false);
+const mockCanMockLocation = jest.fn(() => false);
 
-import JailMonkey from 'jail-monkey';
-const mockIsJailBroken = JailMonkey.isJailBroken as jest.Mock;
-const mockCanMockLocation = JailMonkey.canMockLocation as jest.Mock;
+jest.mock('jail-monkey', () => ({
+  isJailBroken: () => mockIsJailBroken(),
+  canMockLocation: () => mockCanMockLocation(),
+}));
 
 function W({ children }: { children: React.ReactNode }) {
   return <ThemeProvider defaultMode="dark">{children}</ThemeProvider>;
-}
-
-function StatusDisplay() {
-  const status = useSecurityStatus();
-  return <DSText variant="body">{status}</DSText>;
 }
 
 describe('SecurityProvider', () => {

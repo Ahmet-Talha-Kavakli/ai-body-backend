@@ -1,0 +1,17 @@
+appId: com.fitai.app
+---
+# Navigation smoke test — verifies all 5 tabs are reachable
+# Run with: maestro test apps/mobile/e2e/navigation-smoke.yaml
+# Requires: app running on simulator/device, Maestro installed
+- launchApp
+- assertVisible: "Home"
+- tapOn: "Train"
+- assertVisible: "Train"
+- tapOn: "Nutrition"
+- assertVisible: "Nutrition"
+- tapOn: "Health"
+- assertVisible: "Health"
+- tapOn: "You"
+- assertVisible: "You"
+- tapOn: "Home"
+- assertVisible: "Home"
