@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/design-system/**/*.ts", "__tests__/unit/design-system/**/*.ts"]
+}
