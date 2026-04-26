@@ -31,6 +31,7 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapboxRouteView, { MapboxRouteViewRef } from '../../../components/maps/MapboxRouteView';
 import { useTrackingSession } from '../../../src/hooks/useTrackingSession';
+import { usePedometer } from '../../../src/hooks/usePedometer';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ACCENT = '#FF6B35';
@@ -131,10 +132,29 @@ export default function RotaTakip() {
   const [offRoute, setOffRoute] = useState(false);
   const offRouteHapticTime = useRef(0);
 
-  const { phase, setPhase, samples, elapsed, lastCoord, distanceKm, finish } = useTrackingSession({
+  const {
+    phase,
+    setPhase,
+    samples,
+    elapsed,
+    lastCoord,
+    distanceKm,
+    avgSpeedKmh,
+    maxSpeedKmh,
+    startedAt,
+    finish,
+    pause,
+    resume,
+  } = useTrackingSession({
     activityType: isFreeRun ? activityType : (mapStravaToKind(route?.activityType) ?? activityType),
     routeId: isFreeRun ? undefined : (params.id as string | undefined),
   });
+
+  const resolvedActivity: ActivityKind = isFreeRun
+    ? activityType
+    : (mapStravaToKind(route?.activityType) ?? activityType);
+  const isFootActivity = resolvedActivity === 'running' || resolvedActivity === 'walking';
+  const steps = usePedometer(phase === 'tracking' && isFootActivity, startedAt || null);
 
   // Load planned route (skipped in free-run mode)
   useEffect(() => {
@@ -404,17 +424,29 @@ export default function RotaTakip() {
               <Text style={s.subStat}>
                 <Ionicons name="map-outline" size={12} color="rgba(255,255,255,0.5)" />{' '}
                 <Text style={{ fontWeight: '700', color: '#fff' }}>
-                  {activityLabel(activityType)}
+                  {activityLabel(resolvedActivity)}
                 </Text>
               </Text>
             )}
-            <Text style={s.subStat}>
-              <Ionicons name="footsteps-outline" size={12} color="rgba(255,255,255,0.5)" />{' '}
-              <Text style={{ fontWeight: '700', color: '#fff' }}>
-                {Math.round(distanceKm * 1300)}
-              </Text>{' '}
-              adım
-            </Text>
+            {isFootActivity ? (
+              <Text style={s.subStat}>
+                <Ionicons name="footsteps-outline" size={12} color="rgba(255,255,255,0.5)" />{' '}
+                <Text style={{ fontWeight: '700', color: '#fff' }}>{steps}</Text> adım
+              </Text>
+            ) : (
+              <>
+                <Text style={s.subStat}>
+                  <Ionicons name="speedometer-outline" size={12} color="rgba(255,255,255,0.5)" />{' '}
+                  <Text style={{ fontWeight: '700', color: '#fff' }}>{avgSpeedKmh.toFixed(1)}</Text>{' '}
+                  km/h ort.
+                </Text>
+                <Text style={s.subStat}>
+                  <Ionicons name="flash-outline" size={12} color="rgba(255,255,255,0.5)" />{' '}
+                  <Text style={{ fontWeight: '700', color: '#fff' }}>{maxSpeedKmh.toFixed(1)}</Text>{' '}
+                  km/h maks.
+                </Text>
+              </>
+            )}
           </View>
 
           <Pressable onPress={handleFinish} style={s.finishBtn}>
