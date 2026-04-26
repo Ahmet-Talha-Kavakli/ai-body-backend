@@ -5,12 +5,11 @@ import {
   avgSpeedKmh,
   maxSpeedKmh,
   splitsPerKm,
-  type Sample,
 } from '../../../../src/lib/tracking/sessionMetrics';
 
-const A: Sample = { latitude: 41.0082, longitude: 28.9784, t: 0 };
-const B: Sample = { latitude: 41.009, longitude: 28.9784, t: 60 };
-const C: Sample = { latitude: 41.0098, longitude: 28.9784, t: 120 };
+const A = { latitude: 41.0082, longitude: 28.9784, t: 0 };
+const B = { latitude: 41.009, longitude: 28.9784, t: 60 };
+const C = { latitude: 41.0098, longitude: 28.9784, t: 120 };
 
 describe('sessionMetrics', () => {
   test('haversineKm two known points (~89m apart)', () => {
@@ -41,17 +40,17 @@ describe('sessionMetrics', () => {
   });
 
   test('maxSpeedKmh picks fastest segment', () => {
-    const fast: Sample = { latitude: 41.011, longitude: 28.9784, t: 130 };
+    const fast = { latitude: 41.011, longitude: 28.9784, t: 130 };
     expect(maxSpeedKmh([A, B, C, fast])).toBeGreaterThan(40);
   });
 
   test('maxSpeedKmh ignores absurd >250 km/h spikes', () => {
-    const teleport: Sample = { latitude: 50.0, longitude: 28.9784, t: 121 };
+    const teleport = { latitude: 50.0, longitude: 28.9784, t: 121 };
     expect(maxSpeedKmh([A, B, teleport])).toBeLessThan(250);
   });
 
   test('splitsPerKm returns one entry per completed km', () => {
-    const points: Sample[] = [];
+    const points = [];
     for (let i = 0; i <= 100; i++) {
       points.push({ latitude: 41.0082 + i * 0.0002, longitude: 28.9784, t: i * 30 });
     }
