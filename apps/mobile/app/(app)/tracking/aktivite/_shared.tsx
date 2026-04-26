@@ -20,39 +20,39 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@clerk/expo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { detectCombos, type ActivityCombo } from '../../../lib/activity-combos';
+import { detectCombos, type ActivityCombo } from '../../../../lib/activity-combos';
 import {
   getActivitySubIcon,
   getMainActivityIcon,
   ACTIVITY_TYPES_WITH_SUBTYPES,
   ALL_ACTIVITY_ICONS,
-} from '../../../lib/activity-icons';
-import Pamuk, { type PamukMood } from '../../../components/shared/Pamuk';
+} from '../../../../lib/activity-icons';
+import Pamuk, { type PamukMood } from '../../../../components/shared/Pamuk';
 import MapView, { Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
-import MapboxRouteView, { MapboxRouteViewRef } from '../../../components/maps/MapboxRouteView';
+import MapboxRouteView, { MapboxRouteViewRef } from '../../../../components/maps/MapboxRouteView';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const ACCENT = '#FF6B35';
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
-const { width: SW, height: SCREEN_H } = Dimensions.get('window');
+export const ACCENT = '#FF6B35';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+export const { width: SW, height: SCREEN_H } = Dimensions.get('window');
 
-const FAV_KEY = 'activity_favorites_v1';
-const GOAL_TYPE_KEY = 'activity_goal_type_v1';
-const GOAL_CAL_KEY = 'activity_goal_cal_v1';
+export const FAV_KEY = 'activity_favorites_v1';
+export const GOAL_TYPE_KEY = 'activity_goal_type_v1';
+export const GOAL_CAL_KEY = 'activity_goal_cal_v1';
 export const ROUTES_KEY = 'fitai_routes_v1';
 
-type GoalType = 'minutes' | 'calories';
+export type GoalType = 'minutes' | 'calories';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Intensity = 'low' | 'medium' | 'high';
-type AiScore = 'green' | 'yellow' | 'red';
+export type Intensity = 'low' | 'medium' | 'high';
+export type AiScore = 'green' | 'yellow' | 'red';
 
-interface FavoriteEntry {
+export interface FavoriteEntry {
   id: string; // activityType + ':' + (subType ?? '')
   activityType: string;
   subType: string | null;
@@ -62,34 +62,7 @@ interface FavoriteEntry {
   iconName: string;
 }
 
-function useFavorites() {
-  const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    AsyncStorage.getItem(FAV_KEY)
-      .then((raw) => {
-        if (raw) setFavorites(JSON.parse(raw));
-      })
-      .catch(() => {})
-      .finally(() => setReady(true));
-  }, []);
-
-  const toggle = useCallback((entry: FavoriteEntry) => {
-    setFavorites((prev) => {
-      const exists = prev.some((f) => f.id === entry.id);
-      const next = exists ? prev.filter((f) => f.id !== entry.id) : [...prev, entry];
-      AsyncStorage.setItem(FAV_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
-  }, []);
-
-  const isFav = useCallback((id: string) => favorites.some((f) => f.id === id), [favorites]);
-
-  return { favorites, toggle, isFav, ready };
-}
-
-interface ActivityLog {
+export interface ActivityLog {
   id: string;
   activityType: string;
   subType: string | null;
@@ -106,7 +79,7 @@ interface ActivityLog {
   completed: boolean;
 }
 
-interface CatalogItem {
+export interface CatalogItem {
   id: string;
   activityType: string;
   nametr: string;
@@ -127,7 +100,7 @@ interface CatalogItem {
   } | null;
 }
 
-interface ActivitySubType {
+export interface ActivitySubType {
   key: string;
   activityType: string;
   nametr: string;
@@ -137,7 +110,7 @@ interface ActivitySubType {
   intensity: string;
 }
 
-interface AllRecord {
+export interface AllRecord {
   activityType: string;
   totalCount: number;
   thisMonthCount: number;
@@ -154,7 +127,7 @@ interface AllRecord {
   last5Durations: number[];
 }
 
-interface PersonalRecord {
+export interface PersonalRecord {
   longestDuration: number;
   mostCalories: number;
   thisMonthCount: number;
@@ -163,7 +136,7 @@ interface PersonalRecord {
   avgDuration: number;
 }
 
-interface WeatherData {
+export interface WeatherData {
   temp: number;
   description: string;
   icon: string;
@@ -196,7 +169,7 @@ const SCORE_CONFIG: Record<AiScore, { bg: string; border: string; dot: string; l
   red: { bg: '#FFF1F2', border: '#FECDD3', dot: '#F43F5E', label: 'Riskli' },
 };
 
-function IntensityBar({ intensity }: { intensity: Intensity }) {
+export function IntensityBar({ intensity }: { intensity: Intensity }) {
   const cfg = INTENSITY_CONFIG[intensity];
   const filled = intensity === 'low' ? 1 : intensity === 'medium' ? 2 : 3;
   return (
@@ -220,11 +193,11 @@ function IntensityBar({ intensity }: { intensity: Intensity }) {
   );
 }
 
-function getCatalogItem(catalog: CatalogItem[], type: string) {
+export function getCatalogItem(catalog: CatalogItem[], type: string) {
   return catalog.find((c) => c.activityType === type);
 }
 
-function formatDuration(min: number): string {
+export function formatDuration(min: number): string {
   if (min < 60) return `${min}dk`;
   const h = Math.floor(min / 60);
   const m = min % 60;
@@ -249,198 +222,28 @@ const MONTHS_TR = [
 const DAYS_TR = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 const DAYS_S = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'];
 
-function formatDate(d: Date) {
+export function formatDate(d: Date) {
   return `${DAYS_TR[(d.getDay() + 6) % 7]}, ${d.getDate()} ${MONTHS_TR[d.getMonth()]} ${d.getFullYear()}`;
 }
-function isSameDay(a: Date, b: Date) {
+export function isSameDay(a: Date, b: Date) {
   return (
     a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
 }
-function toDateString(d: Date) {
+export function toDateString(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-function getDaysInMonth(y: number, m: number) {
+export function getDaysInMonth(y: number, m: number) {
   return new Date(y, m + 1, 0).getDate();
 }
-function getFirstDayOfMonth(y: number, m: number) {
+export function getFirstDayOfMonth(y: number, m: number) {
   return (new Date(y, m, 1).getDay() + 6) % 7;
 }
 
-// ─── API Hook ─────────────────────────────────────────────────────────────────
-function useActivityApi() {
-  const { session } = useSession();
-
-  const authFetch = useCallback(
-    async (path: string, options: RequestInit = {}) => {
-      const token = (await session?.getToken()) ?? null;
-      return fetch(`${API_URL}${path}`, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...((options.headers as Record<string, string>) ?? {}),
-        },
-      });
-    },
-    [session],
-  );
-
-  const fetchActivities = useCallback(
-    async (date: string): Promise<ActivityLog[]> => {
-      const r = await authFetch(`/api/tracking/activities?date=${date}`);
-      if (!r.ok) throw new Error();
-      return r.json();
-    },
-    [authFetch],
-  );
-  const addActivity = useCallback(
-    async (data: object): Promise<ActivityLog> => {
-      const r = await authFetch('/api/tracking/activities', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-      if (!r.ok) throw new Error();
-      return r.json();
-    },
-    [authFetch],
-  );
-  const deleteActivity = useCallback(
-    async (id: string) => {
-      const r = await authFetch(`/api/tracking/activities/${id}`, { method: 'DELETE' });
-      if (!r.ok) throw new Error();
-    },
-    [authFetch],
-  );
-  const toggleCompleted = useCallback(
-    async (id: string, completed: boolean) => {
-      const r = await authFetch(`/api/tracking/activities/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ completed }),
-      });
-      if (!r.ok) throw new Error();
-    },
-    [authFetch],
-  );
-  const updateImages = useCallback(
-    async (id: string, imageUrls: string[]) => {
-      const r = await authFetch(`/api/tracking/activities/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ imageUrls }),
-      });
-      if (!r.ok) throw new Error();
-      return r.json() as Promise<ActivityLog>;
-    },
-    [authFetch],
-  );
-  const updateNote = useCallback(
-    async (id: string, note: string) => {
-      const r = await authFetch(`/api/tracking/activities/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ note: note.trim() || null }),
-      });
-      if (!r.ok) throw new Error();
-      return r.json() as Promise<ActivityLog>;
-    },
-    [authFetch],
-  );
-  const fetchMonthly = useCallback(
-    async (year: number, month: number) => {
-      const r = await authFetch(`/api/tracking/activities/monthly?year=${year}&month=${month}`);
-      if (!r.ok) throw new Error();
-      return r.json() as Promise<{
-        days: Record<
-          string,
-          { count: number; totalMinutes: number; imageUrl: string | null; imageCount: number }
-        >;
-        userCreatedAt: string;
-      }>;
-    },
-    [authFetch],
-  );
-  const fetchCatalog = useCallback(async (): Promise<CatalogItem[]> => {
-    const r = await authFetch('/api/activities/catalog');
-    if (!r.ok) throw new Error();
-    return r.json();
-  }, [authFetch]);
-  const fetchGoal = useCallback(async (): Promise<number> => {
-    const r = await authFetch('/api/activities/goal');
-    if (!r.ok) return 60;
-    const d = (await r.json()) as { dailyMinutes: number };
-    return d.dailyMinutes;
-  }, [authFetch]);
-  const saveGoal = useCallback(
-    async (dailyMinutes: number) => {
-      await authFetch('/api/activities/goal', {
-        method: 'POST',
-        body: JSON.stringify({ dailyMinutes }),
-      });
-    },
-    [authFetch],
-  );
-  const fetchRecords = useCallback(
-    async (activityType: string): Promise<PersonalRecord> => {
-      const r = await authFetch(`/api/activities/personal-records?activityType=${activityType}`);
-      if (!r.ok) throw new Error();
-      return r.json();
-    },
-    [authFetch],
-  );
-  const fetchAllRecords = useCallback(async (): Promise<AllRecord[]> => {
-    const r = await authFetch('/api/activities/personal-records/all');
-    if (!r.ok) return [];
-    return r.json();
-  }, [authFetch]);
-  const fetchSocialProof = useCallback(
-    async (activityType: string, date: string): Promise<number> => {
-      const r = await authFetch(
-        `/api/activities/social-proof?activityType=${activityType}&date=${date}`,
-      );
-      if (!r.ok) return 0;
-      const d = (await r.json()) as { count: number };
-      return d.count;
-    },
-    [authFetch],
-  );
-  const fetchWeather = useCallback(async (city: string): Promise<WeatherData | null> => {
-    const r = await fetch(`${API_URL}/api/weather?city=${encodeURIComponent(city)}`);
-    if (!r.ok) return null;
-    const d = (await r.json()) as { error?: string } & Partial<WeatherData>;
-    return d.error ? null : (d as WeatherData);
-  }, []);
-  const fetchSubTypes = useCallback(
-    async (activityType: string): Promise<ActivitySubType[]> => {
-      const r = await authFetch(`/api/activities/subtypes?activityType=${activityType}`);
-      if (!r.ok) return [];
-      const d = (await r.json()) as { subtypes: ActivitySubType[] };
-      return d.subtypes;
-    },
-    [authFetch],
-  );
-
-  return {
-    fetchActivities,
-    addActivity,
-    deleteActivity,
-    toggleCompleted,
-    updateImages,
-    updateNote,
-    fetchMonthly,
-    fetchCatalog,
-    fetchGoal,
-    saveGoal,
-    fetchRecords,
-    fetchAllRecords,
-    fetchSocialProof,
-    fetchWeather,
-    fetchSubTypes,
-  };
-}
-
 // ─── Arrow / Add Buttons ──────────────────────────────────────────────────────
-function ArrowBtn({
+export function ArrowBtn({
   name,
   onPress,
   disabled,
@@ -485,7 +288,7 @@ function ArrowBtn({
   );
 }
 
-function AddBtn({ onPress }: { onPress: () => void }) {
+export function AddBtn({ onPress }: { onPress: () => void }) {
   const scale = useRef(new Animated.Value(1)).current;
   return (
     <Pressable
@@ -516,7 +319,7 @@ function AddBtn({ onPress }: { onPress: () => void }) {
 }
 
 // ─── Date Header ──────────────────────────────────────────────────────────────
-function DateHeader({
+export function DateHeader({
   date,
   onPrev,
   onNext,
@@ -606,7 +409,7 @@ const dh = StyleSheet.create({
 });
 
 // ─── Calendar Modal ───────────────────────────────────────────────────────────
-function CalendarModal({
+export function CalendarModal({
   visible,
   current,
   onSelect,
@@ -1032,7 +835,7 @@ const cm = StyleSheet.create({
 });
 
 // ─── Weather Widget ───────────────────────────────────────────────────────────
-function WeatherWidget({ weather }: { weather: WeatherData }) {
+export function WeatherWidget({ weather }: { weather: WeatherData }) {
   return (
     <View style={ww.card}>
       <View style={ww.left}>
@@ -1073,7 +876,7 @@ const ww = StyleSheet.create({
 });
 
 // ─── Combo Banner ─────────────────────────────────────────────────────────────
-function ComboBanner({ combos }: { combos: ActivityCombo[] }) {
+export function ComboBanner({ combos }: { combos: ActivityCombo[] }) {
   const [idx, setIdx] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -1157,7 +960,7 @@ const GOAL_CAL_OPTS = [200, 300, 400, 500, 600, 800, 1000];
 const OPT_COLS = 3;
 const OPT_CELL = (SW - 48 - 10 * (OPT_COLS - 1)) / OPT_COLS;
 
-function GoalModal({
+export function GoalModal({
   visible,
   currentGoal,
   currentGoalType,
@@ -1435,7 +1238,7 @@ const gm = StyleSheet.create({
 
 // ─── Summary Card ─────────────────────────────────────────────────────────────
 // ─── Pamuk Section ────────────────────────────────────────────────────────────
-function PamukSection({
+export function PamukSection({
   logs,
   goal,
   goalType,
@@ -1507,7 +1310,7 @@ const pk = StyleSheet.create({
   sub: { fontSize: 13, color: '#8E8E93', marginTop: 4 },
 });
 
-function SummaryCard({
+export function SummaryCard({
   logs,
   goal,
   goalType,
@@ -1679,7 +1482,7 @@ const CUSTOM_CAT_OPTIONS = [
   { val: 'other', label: 'Diğer', color: '#FF6B35' },
 ];
 
-function customToCatalogItem(c: CustomActivity): CatalogItem {
+export function customToCatalogItem(c: CustomActivity): CatalogItem {
   const catOpt =
     CUSTOM_CAT_OPTIONS.find((o) => o.val === c.category) ??
     CUSTOM_CAT_OPTIONS[CUSTOM_CAT_OPTIONS.length - 1]!;
@@ -1697,7 +1500,7 @@ function customToCatalogItem(c: CustomActivity): CatalogItem {
   };
 }
 
-function renderCustomIcon(ca: CustomActivity, size = 44): React.ReactNode {
+export function renderCustomIcon(ca: CustomActivity, size = 44): React.ReactNode {
   const iconSrc = ca.iconKey ? ALL_ACTIVITY_ICONS[ca.iconKey] : null;
   const uri = ca.iconUri;
   if (uri)
@@ -1713,7 +1516,7 @@ function renderCustomIcon(ca: CustomActivity, size = 44): React.ReactNode {
   return <Ionicons name="ellipsis-horizontal-circle-outline" size={size * 0.6} color="#8E8E93" />;
 }
 
-function PickerWheel({
+export function PickerWheel({
   items,
   value,
   onChange,
@@ -1823,7 +1626,7 @@ const FITNESS_CAT_COLORS: Record<string, string> = {
 };
 const FITNESS_CATS = ['evde', 'salonda', 'outdoor'] as const;
 
-function AddModal({
+export function AddModal({
   visible,
   onClose,
   catalog,
@@ -3171,7 +2974,7 @@ const am = StyleSheet.create({
 });
 
 // ─── Detail Sheet ─────────────────────────────────────────────────────────────
-function DetailSheet({
+export function DetailSheet({
   log,
   catalogItem,
   visible,
@@ -4005,7 +3808,7 @@ const DELETE_W = 90;
 const BTN_SIZE = 54;
 const SNAP_X = -DELETE_W;
 
-function ActivityCard({
+export function ActivityCard({
   log,
   catalogItem,
   onPress,
@@ -4411,7 +4214,7 @@ const ac = StyleSheet.create({
 });
 
 // ─── Loading Overlay ─────────────────────────────────────────────────────────
-function LoadingOverlay() {
+export function LoadingOverlay() {
   const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -4467,7 +4270,7 @@ function LoadingOverlay() {
 }
 
 // ─── Discover Button ──────────────────────────────────────────────────────────
-function DiscoverButton({ onPress }: { onPress: () => void }) {
+export function DiscoverButton({ onPress }: { onPress: () => void }) {
   const shimmer = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1)).current;
@@ -4636,7 +4439,7 @@ type PeriodKey =
   | 'yearly'
   | 'custom';
 
-function getPeriodRange(
+export function getPeriodRange(
   key: PeriodKey,
   customStart?: Date,
   customEnd?: Date,
@@ -4672,7 +4475,7 @@ function getPeriodRange(
   return { start: customStart ?? today, end: customEnd ?? today };
 }
 
-function fmtDate(d: Date) {
+export function fmtDate(d: Date) {
   return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1).toString().padStart(2, '0')}.${d.getFullYear()}`;
 }
 
@@ -4838,7 +4641,7 @@ const CONTENT_SECTIONS: {
   },
 ];
 
-function useAnimatedSection() {
+export function useAnimatedSection() {
   const op = useRef(new Animated.Value(0)).current;
   const ty = useRef(new Animated.Value(20)).current;
   const show = () =>
@@ -4892,15 +4695,15 @@ const CAL_MONTHS = [
 ];
 const CAL_DAYS = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'];
 
-function calDaysInMonth(year: number, month: number) {
+export function calDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
 }
-function calFirstDow(year: number, month: number) {
+export function calFirstDow(year: number, month: number) {
   const d = new Date(year, month, 1).getDay();
   return d === 0 ? 6 : d - 1;
 }
 
-function CalendarPicker({
+export function CalendarPicker({
   initialDate,
   onSelect,
 }: {
@@ -5034,7 +4837,7 @@ function CalendarPicker({
   );
 }
 
-function CustomDatePickerSheet({
+export function CustomDatePickerSheet({
   customStep,
   initialDate,
   onClose,
@@ -5214,7 +5017,7 @@ function CustomDatePickerSheet({
 
 const CARD_W = (SW - 20 * 2 - 12) / 2;
 
-function IndirTab() {
+export function IndirTab() {
   const [selected, setSelected] = useState<PeriodKey | null>(null);
   const [format, setFormat] = useState<FormatKey | null>(null);
   const [customStart, setCustomStart] = useState<Date | null>(null);
@@ -5849,7 +5652,7 @@ const it = StyleSheet.create({
 
 // ─── Rekorlar Tab ─────────────────────────────────────────────────────────────
 
-function formatDaysSince(days: number | null): string {
+export function formatDaysSince(days: number | null): string {
   if (days === null) return '—';
   if (days === 0) return 'Bugün';
   if (days === 1) return 'Dün';
@@ -5858,7 +5661,7 @@ function formatDaysSince(days: number | null): string {
   return `${Math.floor(days / 30)} ay önce`;
 }
 
-function MiniTrendBars({ durations, color }: { durations: number[]; color: string }) {
+export function MiniTrendBars({ durations, color }: { durations: number[]; color: string }) {
   if (!durations || durations.length === 0) return null;
   const max = Math.max(...durations, 1);
   return (
@@ -5884,7 +5687,7 @@ function MiniTrendBars({ durations, color }: { durations: number[]; color: strin
 
 // ─── Record Detail Sheet ───────────────────────────────────────────────────────
 
-function RecordDetailSheet({
+export function RecordDetailSheet({
   record,
   catalogItem,
   icon,
@@ -6219,7 +6022,7 @@ const rds = StyleSheet.create({
 });
 
 // ─── Rekorlar Tab ──────────────────────────────────────────────────────────────
-function RekorlarTab({
+export function RekorlarTab({
   catalog,
   fetchAllRecords,
 }: {
@@ -6368,7 +6171,7 @@ function RekorlarTab({
   );
 }
 
-function RecordCard({
+export function RecordCard({
   record,
   catalogItem,
   icon,
@@ -6586,245 +6389,6 @@ const rt = StyleSheet.create({
   cardStatVal: { fontSize: 13, fontWeight: '700', color: '#1C1C1E', marginTop: 2 },
 });
 
-// ─── Bottom Nav Bar ────────────────────────────────────────────────────────────
-type NavTab = 'aktiviteler' | 'kesif' | 'indir' | 'rekorlar' | 'rotalar';
-
-const NAV_ITEMS: { id: NavTab; label: string; icon: string; activeIcon: string }[] = [
-  { id: 'kesif', label: 'Keşfet', icon: 'compass-outline', activeIcon: 'compass' },
-  { id: 'aktiviteler', label: 'Aktiviteler', icon: 'pulse-outline', activeIcon: 'pulse' },
-  { id: 'rotalar', label: 'Rotalar', icon: 'map-outline', activeIcon: 'map' },
-  { id: 'rekorlar', label: 'Rekorlar', icon: 'trophy-outline', activeIcon: 'trophy' },
-  { id: 'indir', label: 'İndir', icon: 'download-outline', activeIcon: 'download' },
-];
-
-// Nav item sayısı: 2 sol + merkez FAB + 3 sağ = 6 slot
-const NAV_SLOTS = 6;
-
-const NAV_FLOAT_MX = 20;
-const NAV_W = SW - NAV_FLOAT_MX * 2;
-const ITEM_W = NAV_W / NAV_SLOTS; // 6 slot
-const PILL_W = ITEM_W - 12;
-const PILL_H = 54;
-
-// Pill sadece gerçek sekmeler için (merkez FAB hariç), slot indexi: 0,1,_,3,4,5 → slot pozisyonu
-const NAV_SLOT_MAP: Record<NavTab, number> = {
-  kesif: 0,
-  aktiviteler: 1,
-  rotalar: 3,
-  rekorlar: 4,
-  indir: 5,
-};
-
-function BottomNavBar({
-  active,
-  onPress,
-  onAdd,
-  bottomInset,
-}: {
-  active: NavTab;
-  onPress: (tab: NavTab) => void;
-  onAdd: () => void;
-  bottomInset: number;
-}) {
-  const slotIdx = NAV_SLOT_MAP[active];
-  const pillX = useRef(new Animated.Value(slotIdx * ITEM_W + (ITEM_W - PILL_W) / 2)).current;
-  const addScale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const idx = NAV_SLOT_MAP[active];
-    Animated.spring(pillX, {
-      toValue: idx * ITEM_W + (ITEM_W - PILL_W) / 2,
-      useNativeDriver: true,
-      tension: 220,
-      friction: 22,
-    }).start();
-  }, [active]);
-
-  const leftItems = NAV_ITEMS.slice(0, 2); // Keşfet, Aktiviteler
-  const rightItems = NAV_ITEMS.slice(2); // Rotalar, Rekorlar, İndir
-
-  return (
-    <View style={[nb.wrapper, { paddingBottom: bottomInset > 0 ? bottomInset + 6 : 16 }]}>
-      <View style={nb.bar}>
-        {/* Sliding pill */}
-        <Animated.View style={[nb.pill, { transform: [{ translateX: pillX }] }]} />
-
-        {/* Sol 2 */}
-        {leftItems.map((item) => (
-          <NavBarItem
-            key={item.id}
-            item={item}
-            isActive={active === item.id}
-            onPress={() => onPress(item.id)}
-          />
-        ))}
-
-        {/* Merkez FAB */}
-        <View style={nb.fabSlot}>
-          <Pressable
-            onPressIn={() =>
-              Animated.spring(addScale, {
-                toValue: 0.88,
-                useNativeDriver: true,
-                tension: 300,
-                friction: 12,
-              }).start()
-            }
-            onPressOut={() =>
-              Animated.spring(addScale, {
-                toValue: 1,
-                useNativeDriver: true,
-                tension: 300,
-                friction: 12,
-              }).start()
-            }
-            onPress={onAdd}
-          >
-            <Animated.View style={[nb.fab, { transform: [{ scale: addScale }] }]}>
-              <Ionicons name="add" size={30} color="#fff" />
-            </Animated.View>
-          </Pressable>
-        </View>
-
-        {/* Sağ 2 */}
-        {rightItems.map((item) => (
-          <NavBarItem
-            key={item.id}
-            item={item}
-            isActive={active === item.id}
-            onPress={() => onPress(item.id)}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function NavBarItem({
-  item,
-  isActive,
-  onPress,
-}: {
-  item: (typeof NAV_ITEMS)[0];
-  isActive: boolean;
-  onPress: () => void;
-}) {
-  const pressScale = useRef(new Animated.Value(1)).current;
-  const iconScale = useRef(new Animated.Value(isActive ? 1.1 : 1)).current;
-  const iconTy = useRef(new Animated.Value(isActive ? -2 : 0)).current;
-  const labelOp = useRef(new Animated.Value(isActive ? 1 : 0.55)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.spring(iconScale, {
-        toValue: isActive ? 1.12 : 1,
-        useNativeDriver: true,
-        tension: 300,
-        friction: 16,
-      }),
-      Animated.spring(iconTy, {
-        toValue: isActive ? -2 : 0,
-        useNativeDriver: true,
-        tension: 300,
-        friction: 16,
-      }),
-      Animated.timing(labelOp, {
-        toValue: isActive ? 1 : 0.5,
-        duration: 220,
-        useNativeDriver: true,
-        easing: Easing.bezier(0.16, 1, 0.3, 1),
-      }),
-    ]).start();
-  }, [isActive]);
-
-  return (
-    <Pressable
-      style={nb.item}
-      onPressIn={() =>
-        Animated.timing(pressScale, {
-          toValue: 0.9,
-          duration: 100,
-          useNativeDriver: true,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
-        }).start()
-      }
-      onPressOut={() =>
-        Animated.spring(pressScale, {
-          toValue: 1,
-          useNativeDriver: true,
-          tension: 300,
-          friction: 12,
-        }).start()
-      }
-      onPress={onPress}
-      hitSlop={8}
-    >
-      <Animated.View style={{ alignItems: 'center', gap: 5, transform: [{ scale: pressScale }] }}>
-        <Animated.View style={{ transform: [{ scale: iconScale }, { translateY: iconTy }] }}>
-          <Ionicons
-            name={(isActive ? item.activeIcon : item.icon) as any}
-            size={24}
-            color={isActive ? ACCENT : '#8E8E93'}
-          />
-        </Animated.View>
-        <Animated.Text
-          style={[
-            nb.label,
-            {
-              opacity: labelOp,
-              color: isActive ? ACCENT : '#8E8E93',
-              fontWeight: isActive ? '700' : '400',
-            },
-          ]}
-        >
-          {item.label}
-        </Animated.Text>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-const nb = StyleSheet.create({
-  wrapper: { paddingHorizontal: NAV_FLOAT_MX, backgroundColor: 'transparent' },
-  bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 28,
-    paddingVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    position: 'relative',
-  },
-  pill: {
-    position: 'absolute',
-    top: 6,
-    left: 0,
-    width: PILL_W,
-    height: PILL_H,
-    borderRadius: 18,
-    backgroundColor: `${ACCENT}14`,
-  },
-  item: { width: ITEM_W, alignItems: 'center', paddingVertical: 2 },
-  label: { fontSize: 10, letterSpacing: 0.1 },
-  fabSlot: { width: ITEM_W, alignItems: 'center', justifyContent: 'center' },
-  fab: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: ACCENT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: ACCENT,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    marginTop: -18,
-  },
-});
-
 // ─── Rotalar Tab ──────────────────────────────────────────────────────────────
 
 interface GpsRoute {
@@ -6852,7 +6416,7 @@ const SPORT_ICONS: Record<string, string> = {
   hike: '🥾',
 };
 
-function formatRouteDuration(sec: number) {
+export function formatRouteDuration(sec: number) {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   return h > 0 ? `${h}s ${m}dk` : `${m}dk`;
@@ -6860,7 +6424,7 @@ function formatRouteDuration(sec: number) {
 
 // ─── Rota Kartı ───────────────────────────────────────────────────────────────
 
-function RouteCard({ route, onPress }: { route: GpsRoute; onPress: () => void }) {
+export function RouteCard({ route, onPress }: { route: GpsRoute; onPress: () => void }) {
   const pressScale = useRef(new Animated.Value(1)).current;
   const sport = SPORT_ICONS[route.activityType] ?? '🏃';
   const cardMapRef = useRef<MapboxRouteViewRef>(null);
@@ -6971,7 +6535,7 @@ function RouteCard({ route, onPress }: { route: GpsRoute; onPress: () => void })
 
 // ─── Boş Durum ───────────────────────────────────────────────────────────────
 
-function RoutesEmptyState({ onCreate }: { onCreate: () => void }) {
+export function RoutesEmptyState({ onCreate }: { onCreate: () => void }) {
   const btnScale = useRef(new Animated.Value(1)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
 
@@ -7042,7 +6606,7 @@ function RoutesEmptyState({ onCreate }: { onCreate: () => void }) {
 
 // ─── Harita Modu ─────────────────────────────────────────────────────────────
 
-function RoutesMapView({
+export function RoutesMapView({
   routes,
   onRoutePress,
   onBack,
@@ -7192,7 +6756,7 @@ function RoutesMapView({
 // Her biri rota-takip ekranına `?mode=free&activityType=...` ile push eder.
 type FreeRunActivity = 'running' | 'cycling' | 'walking';
 
-function FreeRunQuickStart({ router }: { router: ReturnType<typeof useRouter> }) {
+export function FreeRunQuickStart({ router }: { router: ReturnType<typeof useRouter> }) {
   const items: { kind: FreeRunActivity; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { kind: 'running', label: 'Koşu', icon: 'walk' },
     { kind: 'cycling', label: 'Bisiklet', icon: 'bicycle' },
@@ -7268,7 +6832,7 @@ const frs = StyleSheet.create({
 
 type RouteSort = 'recent' | 'distance' | 'duration';
 
-function RotalarTab() {
+export function RotalarTab() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [routes, setRoutes] = useState<GpsRoute[]>([]);
@@ -7707,544 +7271,4 @@ const rts = StyleSheet.create({
 
   // Loading
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-});
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
-export default function AktiviteScreen() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const api = useActivityApi();
-
-  const [date, setDate] = useState(new Date());
-  const [calOpen, setCalOpen] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
-  const [goalOpen, setGoalOpen] = useState(false);
-  const [detailLog, setDetailLog] = useState<ActivityLog | null>(null);
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
-  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [catalogReady, setCatalogReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [goal, setGoal] = useState(60);
-  const [goalType, setGoalType] = useState<GoalType>('minutes');
-  const [calGoal, setCalGoal] = useState(500);
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [activeFav, setActiveFav] = useState<FavoriteEntry | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<NavTab>('aktiviteler');
-  const tabOp = useRef(new Animated.Value(1)).current;
-  const tabTy = useRef(new Animated.Value(0)).current;
-  const pageOpAnim = useRef(new Animated.Value(0)).current;
-  const combinedOp = useRef(Animated.multiply(tabOp, pageOpAnim)).current;
-  const { favorites, toggle: toggleFav, isFav, ready: favReady } = useFavorites();
-
-  const switchTab = useCallback(
-    (tab: NavTab) => {
-      if (tab === activeTab) return;
-      if (tab === 'kesif') {
-        router.push('/(app)/tracking/aktivite-discover');
-        return;
-      }
-      if (tab === 'rotalar') {
-        setActiveTab('rotalar');
-        return;
-      }
-      Animated.parallel([
-        Animated.timing(tabOp, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-          easing: Easing.bezier(0.4, 0, 1, 1),
-        }),
-        Animated.timing(tabTy, {
-          toValue: 12,
-          duration: 150,
-          useNativeDriver: true,
-          easing: Easing.bezier(0.4, 0, 1, 1),
-        }),
-      ]).start(() => {
-        setActiveTab(tab);
-        tabTy.setValue(-12);
-        Animated.parallel([
-          Animated.timing(tabOp, {
-            toValue: 1,
-            duration: 260,
-            useNativeDriver: true,
-            easing: Easing.bezier(0.16, 1, 0.3, 1),
-          }),
-          Animated.timing(tabTy, {
-            toValue: 0,
-            duration: 260,
-            useNativeDriver: true,
-            easing: Easing.bezier(0.16, 1, 0.3, 1),
-          }),
-        ]).start();
-      });
-    },
-    [activeTab],
-  );
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const dateStr = toDateString(date);
-  const readOnly = !isSameDay(date, new Date());
-
-  // Katalog + hedef yükle
-  useEffect(() => {
-    api
-      .fetchCatalog()
-      .then(setCatalog)
-      .catch(() => {})
-      .finally(() => setCatalogReady(true));
-    api
-      .fetchGoal()
-      .then(setGoal)
-      .catch(() => {});
-    api
-      .fetchWeather('Istanbul')
-      .then(setWeather)
-      .catch(() => {});
-    AsyncStorage.getItem(GOAL_TYPE_KEY)
-      .then((v) => {
-        if (v === 'calories' || v === 'minutes') setGoalType(v);
-      })
-      .catch(() => {});
-    AsyncStorage.getItem(GOAL_CAL_KEY)
-      .then((v) => {
-        if (v) setCalGoal(parseInt(v));
-      })
-      .catch(() => {});
-  }, []);
-
-  // Günlük logları yükle
-  const loadLogs = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setLogs(await api.fetchActivities(dateStr));
-    } catch {
-      setError('Aktiviteler yüklenemedi.');
-    } finally {
-      setLoading(false);
-    }
-  }, [dateStr]);
-
-  useEffect(() => {
-    loadLogs();
-  }, [loadLogs]);
-
-  const goToPrev = () => {
-    const d = new Date(date);
-    d.setDate(d.getDate() - 1);
-    setDate(d);
-  };
-  const goToNext = () => {
-    const c = new Date(date);
-    c.setHours(0, 0, 0, 0);
-    if (c >= today) return;
-    const d = new Date(date);
-    d.setDate(d.getDate() + 1);
-    setDate(d);
-  };
-
-  const handleAdd = useCallback(
-    async (data: object) => {
-      const existingTypes = logs.map((l) => l.activityType);
-      const newType = (data as { activityType: string }).activityType;
-      const afterTypes = [...existingTypes, newType];
-      const newCombos = detectCombos(afterTypes).filter(
-        (c) => !detectCombos(existingTypes).some((e) => e.id === c.id),
-      );
-      const comboTag = newCombos.length > 0 ? newCombos[0]!.id : undefined;
-      const newLog = await api.addActivity({
-        ...(data as object),
-        ...(comboTag ? { comboTag } : {}),
-      });
-      setLogs((prev) => [...prev, newLog as ActivityLog]);
-    },
-    [dateStr, logs],
-  );
-
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await api.deleteActivity(id);
-      setLogs((prev) => prev.filter((l) => l.id !== id));
-    } catch {
-      Alert.alert('Hata', 'Aktivite silinemedi.');
-    }
-  }, []);
-
-  const handleToggle = useCallback(async (id: string, completed: boolean) => {
-    setLogs((prev) => prev.map((l) => (l.id === id ? { ...l, completed } : l)));
-    try {
-      await api.toggleCompleted(id, completed);
-    } catch {
-      setLogs((prev) => prev.map((l) => (l.id === id ? { ...l, completed: !completed } : l)));
-    }
-  }, []);
-
-  const handleGoalSave = async (value: number, type: GoalType) => {
-    setGoalType(type);
-    AsyncStorage.setItem(GOAL_TYPE_KEY, type).catch(() => {});
-    if (type === 'minutes') {
-      setGoal(value);
-      try {
-        await api.saveGoal(value);
-      } catch {}
-    } else {
-      setCalGoal(value);
-      AsyncStorage.setItem(GOAL_CAL_KEY, String(value)).catch(() => {});
-    }
-  };
-
-  // Combo tespiti
-  const activityTypes = logs.map((l) => l.activityType);
-  const activeCombos = detectCombos(activityTypes);
-
-  const detailCatalogItem = detailLog
-    ? (getCatalogItem(catalog, detailLog.activityType) ?? null)
-    : null;
-
-  const pageReady = !loading && favReady && catalogReady;
-
-  useEffect(() => {
-    if (!pageReady) return;
-    Animated.timing(pageOpAnim, {
-      toValue: 1,
-      duration: 380,
-      easing: Easing.bezier(0.16, 1, 0.3, 1),
-      useNativeDriver: true,
-    }).start();
-  }, [pageReady]);
-
-  return (
-    <>
-      <Stack.Screen options={{ headerShown: false }} />
-      <View style={[s.root, { paddingTop: insets.top + 12 }]}>
-        {pageReady &&
-          activeTab !== 'indir' &&
-          activeTab !== 'rekorlar' &&
-          activeTab !== 'rotalar' && (
-            <DateHeader
-              date={date}
-              onPrev={goToPrev}
-              onNext={goToNext}
-              onOpenCal={() => setCalOpen(true)}
-              onBack={() => router.back()}
-            />
-          )}
-
-        {/* Unified loading overlay — tüm veri hazır olana kadar */}
-        {!pageReady && <LoadingOverlay />}
-
-        <Animated.View style={{ flex: 1, opacity: combinedOp, transform: [{ translateY: tabTy }] }}>
-          {activeTab === 'indir' && <IndirTab />}
-          {activeTab === 'rekorlar' && (
-            <RekorlarTab catalog={catalog} fetchAllRecords={api.fetchAllRecords} />
-          )}
-          {activeTab === 'rotalar' && <RotalarTab />}
-
-          {activeTab === 'aktiviteler' && (
-            <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-              {/* Pamuk maskot */}
-              <PamukSection
-                logs={logs}
-                goal={goalType === 'minutes' ? goal : calGoal}
-                goalType={goalType}
-              />
-
-              {/* Hava durumu */}
-              {weather && <WeatherWidget weather={weather} />}
-
-              {/* Özet kart */}
-              {logs.length > 0 && (
-                <SummaryCard
-                  logs={logs}
-                  goal={goalType === 'minutes' ? goal : calGoal}
-                  goalType={goalType}
-                  onGoalPress={() => setGoalOpen(true)}
-                />
-              )}
-
-              {/* Combo banner */}
-              {activeCombos.length > 0 && <ComboBanner combos={activeCombos} />}
-
-              {/* ReadOnly banner */}
-              {readOnly && (
-                <View style={s.readOnlyBanner}>
-                  <Ionicons name="lock-closed-outline" size={14} color="#8E8E93" />
-                  <Text style={s.readOnlyTxt}>Geçmiş tarihlerde değişiklik yapılamaz</Text>
-                </View>
-              )}
-
-              {error && (
-                <View style={s.errorBox}>
-                  <Ionicons name="alert-circle-outline" size={20} color="#FF453A" />
-                  <Text style={s.errorTxt}>{error}</Text>
-                </View>
-              )}
-
-              {/* Favoriler */}
-              {!readOnly && pageReady && favorites.length > 0 && (
-                <View style={s.favSection}>
-                  <View style={s.favHeader}>
-                    <Ionicons name="heart" size={14} color="#FF2D55" />
-                    <Text style={s.favHeaderTxt}>Favoriler</Text>
-                  </View>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ gap: 10, paddingRight: 4 }}
-                  >
-                    {favorites.map((fav) => {
-                      const icon = fav.subType
-                        ? getActivitySubIcon(fav.subType)
-                        : getMainActivityIcon(fav.activityType);
-                      return (
-                        <Pressable
-                          key={fav.id}
-                          style={({ pressed }) => [s.favCard, { opacity: pressed ? 0.75 : 1 }]}
-                          onPress={() => {
-                            setActiveFav(fav);
-                            setAddOpen(true);
-                          }}
-                        >
-                          <View style={[s.favCardIcon, { backgroundColor: fav.color + '18' }]}>
-                            {icon ? (
-                              <Image
-                                source={icon}
-                                style={{ width: 52, height: 52 }}
-                                resizeMode="contain"
-                              />
-                            ) : (
-                              <Ionicons name={fav.iconName as any} size={28} color={fav.color} />
-                            )}
-                          </View>
-                          <Text style={[s.favCardName, { color: fav.color }]} numberOfLines={1}>
-                            {fav.nametr}
-                          </Text>
-                          {fav.subTypeNametr && (
-                            <Text style={s.favCardSub} numberOfLines={1}>
-                              {fav.subTypeNametr}
-                            </Text>
-                          )}
-                        </Pressable>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-              )}
-
-              {!error && logs.length === 0 && (
-                <View style={s.emptyBox}>
-                  <Ionicons name="walk-outline" size={48} color="#C7C7CC" />
-                  <Text style={s.emptyTitle}>Aktivite yok</Text>
-                  <Text style={s.emptyTxt}>Bugün ne yaptın? + ile ekle</Text>
-                  {favorites.length === 0 && (
-                    <View style={s.quickRow}>
-                      {(['walking', 'running', 'swimming'] as const).map((type) => {
-                        const item = getCatalogItem(catalog, type);
-                        if (!item) return null;
-                        return (
-                          <Pressable
-                            key={type}
-                            onPress={() => {
-                              if (!readOnly) setAddOpen(true);
-                            }}
-                            style={[s.quickBtn, { borderColor: item.color + '40' }]}
-                          >
-                            <Ionicons name={item.iconName as any} size={20} color={item.color} />
-                            <Text style={[s.quickTxt, { color: item.color }]}>{item.nametr}</Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {logs.map((log, idx) => (
-                <ActivityCard
-                  key={log.id}
-                  log={log}
-                  catalogItem={getCatalogItem(catalog, log.activityType)}
-                  onPress={() => setDetailLog(log)}
-                  onDelete={() => handleDelete(log.id)}
-                  onToggle={handleToggle}
-                  index={idx}
-                />
-              ))}
-
-              <View style={{ height: 20 }} />
-            </ScrollView>
-          )}
-        </Animated.View>
-
-        <BottomNavBar
-          active={activeTab}
-          onPress={switchTab}
-          onAdd={() => {
-            if (activeTab !== 'aktiviteler') {
-              switchTab('aktiviteler');
-              // AddModal'ı switchTab animasyonu bittikten sonra aç
-              setTimeout(() => setAddOpen(true), 300);
-            } else if (!readOnly) {
-              setAddOpen(true);
-            }
-          }}
-          bottomInset={insets.bottom}
-        />
-
-        <CalendarModal
-          visible={calOpen}
-          current={date}
-          onSelect={(d) => setDate(d)}
-          onClose={() => setCalOpen(false)}
-          fetchMonthly={api.fetchMonthly}
-        />
-        <AddModal
-          visible={addOpen && !readOnly}
-          onClose={() => {
-            setAddOpen(false);
-            setActiveFav(undefined);
-          }}
-          catalog={catalog}
-          onAdd={handleAdd}
-          date={dateStr}
-          fetchSubTypes={api.fetchSubTypes}
-          initialFav={activeFav}
-          checkIsFav={isFav}
-          toggleFav={toggleFav}
-        />
-        <GoalModal
-          visible={goalOpen}
-          currentGoal={goal}
-          currentGoalType={goalType}
-          currentCalGoal={calGoal}
-          onClose={() => setGoalOpen(false)}
-          onSave={handleGoalSave}
-        />
-        <DetailSheet
-          log={detailLog}
-          catalogItem={detailCatalogItem}
-          visible={!!detailLog}
-          onClose={() => setDetailLog(null)}
-          onDelete={handleDelete}
-          fetchSocialProof={api.fetchSocialProof}
-          dateStr={dateStr}
-          isFav={detailLog ? isFav(`${detailLog.activityType}:${detailLog.subType ?? ''}`) : false}
-          onToggleFav={() => {
-            if (!detailLog || !detailCatalogItem) return;
-            toggleFav({
-              id: `${detailLog.activityType}:${detailLog.subType ?? ''}`,
-              activityType: detailLog.activityType,
-              subType: detailLog.subType,
-              nametr: detailCatalogItem.nametr,
-              subTypeNametr: detailLog.subTypeNametr,
-              color: detailCatalogItem.color,
-              iconName: detailLog.subType ?? detailCatalogItem.iconName,
-            });
-          }}
-          onUpdateImages={api.updateImages}
-          onUpdateNote={api.updateNote}
-        />
-      </View>
-    </>
-  );
-}
-
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F2F2F7' },
-  pageLoadingBox: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  content: { paddingHorizontal: 20, paddingBottom: 40 },
-  readOnlyBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#F2F2F7',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-  },
-  readOnlyTxt: { color: '#8E8E93', fontSize: 13 },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FFF1F2',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-  },
-  errorTxt: { color: '#FF453A', fontSize: 13 },
-  emptyBox: { alignItems: 'center', paddingTop: 48, gap: 8 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#1C1C1E' },
-  emptyTxt: { fontSize: 13, color: '#8E8E93' },
-  quickRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  quickBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-  },
-  quickTxt: { fontSize: 13, fontWeight: '700' },
-  favSection: { marginBottom: 16 },
-  favHeader: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 10 },
-  favHeaderTxt: { fontSize: 13, fontWeight: '700', color: '#FF2D55' },
-  favChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  favChipIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  favChipName: { fontSize: 13, fontWeight: '700' },
-  favChipSub: { fontSize: 11, color: '#8E8E93', marginTop: 1 },
-  favCard: {
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    width: 88,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  favCardIcon: {
-    width: 68,
-    height: 68,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  favCardName: { fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  favCardSub: { fontSize: 10, color: '#8E8E93', marginTop: 2, textAlign: 'center' },
 });
