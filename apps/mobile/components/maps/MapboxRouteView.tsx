@@ -338,9 +338,7 @@ const MapboxRouteView = forwardRef<MapboxRouteViewRef, Props>(function MapboxRou
                   }
                 }}
               >
-                <View style={[ms.wpMarker, { backgroundColor: bg }]}>
-                  <Text style={ms.wpMarkerTxt}>{label}</Text>
-                </View>
+                <Text style={[ms.wpMarker, ms.wpMarkerTxt, { backgroundColor: bg }]}>{label}</Text>
               </Mapbox.PointAnnotation>
             );
           })}
@@ -407,12 +405,18 @@ const ms = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 3,
     borderColor: '#fff',
+    overflow: 'hidden',
   },
-  wpMarkerTxt: { fontSize: 11, fontWeight: '800', color: '#fff', letterSpacing: -0.3 },
+  wpMarkerTxt: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
   dotStart: {
     width: 16,
     height: 16,
