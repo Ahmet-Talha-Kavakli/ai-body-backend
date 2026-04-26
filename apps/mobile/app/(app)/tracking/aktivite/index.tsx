@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { detectCombos } from '../../../../lib/activity-combos';
 import { getActivitySubIcon, getMainActivityIcon } from '../../../../lib/activity-icons';
