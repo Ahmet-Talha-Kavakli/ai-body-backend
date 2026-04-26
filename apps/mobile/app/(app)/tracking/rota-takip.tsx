@@ -33,6 +33,11 @@ import MapboxRouteView, { MapboxRouteViewRef } from '../../../components/maps/Ma
 import { useTrackingSession } from '../../../src/hooks/useTrackingSession';
 import { usePedometer } from '../../../src/hooks/usePedometer';
 import { useFlyover } from '../../../src/hooks/useFlyover';
+import {
+  startRecording,
+  stopRecording,
+  isRecordingAvailable,
+} from '../../../src/lib/tracking/flyoverRecorder';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ACCENT = '#FF6B35';
@@ -113,7 +118,12 @@ function distanceFromRoute(p: LatLng, route: LatLng[]): number {
 type ScreenPhase = 'loading' | 'countdown' | 'tracking' | 'paused' | 'finished' | 'flyover';
 
 export default function RotaTakip() {
-  const params = useLocalSearchParams<{ id?: string; mode?: string; activityType?: string }>();
+  const params = useLocalSearchParams<{
+    id?: string;
+    mode?: string;
+    activityType?: string;
+    resume?: string;
+  }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapboxRouteViewRef>(null);
@@ -131,6 +141,7 @@ export default function RotaTakip() {
   const [countdown, setCountdown] = useState(3);
   const [showFlyover, setShowFlyover] = useState(false);
   const [offRoute, setOffRoute] = useState(false);
+  const [videoUri, setVideoUri] = useState<string | null>(null);
   const offRouteHapticTime = useRef(0);
 
   const {
@@ -188,6 +199,14 @@ export default function RotaTakip() {
       cancelled = true;
     };
   }, [params.id, isFreeRun]);
+
+  // Resume — coming back to an in-progress tracking session via Home banner.
+  // Skip countdown and jump straight to the tracking phase.
+  useEffect(() => {
+    if (params.resume === '1') {
+      setPhase('tracking');
+    }
+  }, [params.resume, setPhase]);
 
   // Countdown 3..2..1 → tracking
   useEffect(() => {
@@ -289,16 +308,42 @@ export default function RotaTakip() {
   useEffect(() => {
     if (!showFlyover || samples.length < 2) return;
     if (!mapRef.current) return;
+    let cancelled = false;
     const trace: LatLng[] = samples.map((s) => ({
       latitude: s.latitude,
       longitude: s.longitude,
     }));
-    flyover
-      .run(mapRef.current, trace, { totalSec: 8, pitch: 60, zoom: 17 })
-      .then(() => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      })
-      .catch(() => {});
+    (async () => {
+      let recording = false;
+      try {
+        const available = await isRecordingAvailable();
+        if (available) {
+          try {
+            await startRecording();
+            recording = true;
+          } catch {
+            recording = false;
+          }
+        }
+      } catch {}
+
+      try {
+        await flyover.run(mapRef.current!, trace, { totalSec: 8, pitch: 60, zoom: 17 });
+      } catch {}
+
+      if (cancelled) return;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+
+      if (recording) {
+        try {
+          const result = await stopRecording();
+          if (!cancelled && result?.uri) setVideoUri(result.uri);
+        } catch {}
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [showFlyover, samples.length, flyover]);
 
   // Loading guard: planned mode waits on route + bootstrap

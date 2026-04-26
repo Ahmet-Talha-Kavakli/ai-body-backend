@@ -1,0 +1,7 @@
+{
+  "name": "flyover-recorder",
+  "version": "0.1.0",
+  "description": "Local Expo module wrapping ReplayKit for FitAI flyover MP4 capture (iOS only).",
+  "main": "src/index.ts",
+  "private": true
+}

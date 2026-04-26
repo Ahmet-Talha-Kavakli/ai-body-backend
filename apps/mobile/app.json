@@ -42,6 +42,7 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Antrenman bittiğinde bile rotanı kaydedebilelim diye konum gerekli.",
         "NSLocationAlwaysUsageDescription": "Antrenman bittiğinde bile rotanı kaydedebilelim diye konum gerekli.",
         "NSMotionUsageDescription": "Adım sayını ve aktiviteni hesaplayabilmemiz için hareket verisi gerekli.",
+        "NSPhotoLibraryAddUsageDescription": "Antrenman videon Fotoğraflar uygulamasına kaydedilebilsin diye gerekli.",
         "UIBackgroundModes": ["location", "fetch"]
       }
     },
