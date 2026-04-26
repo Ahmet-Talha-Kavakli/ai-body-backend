@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, useSession } from '@clerk/expo';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { getMainActivityIcon } from '../../../lib/activity-icons';
+import { getMainActivityIcon } from '../../../../lib/activity-icons';
 
 const ACCENT = '#FF6B35';
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';

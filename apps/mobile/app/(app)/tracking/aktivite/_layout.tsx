@@ -8,6 +8,10 @@ export default function AktiviteLayout() {
       <Stack.Screen options={{ headerShown: false }} />
       <AktiviteProvider>
         <NativeTabs>
+          <NativeTabs.Trigger name="kesif">
+            <NativeTabs.Trigger.Label>Keşfet</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon sf={{ default: 'safari', selected: 'safari.fill' }} />
+          </NativeTabs.Trigger>
           <NativeTabs.Trigger name="index">
             <NativeTabs.Trigger.Label>Aktiviteler</NativeTabs.Trigger.Label>
             <NativeTabs.Trigger.Icon sf={{ default: 'figure.run', selected: 'figure.run' }} />

@@ -63,21 +63,6 @@ export default function AktivitelerIndex() {
 
       <Animated.View style={{ flex: 1, opacity: pageOpAnim }}>
         <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-          {/* Keşfet button (replaces removed sub-tab) */}
-          <Pressable
-            style={s.discoverBtn}
-            onPress={() => router.push('/(app)/tracking/aktivite-discover' as never)}
-          >
-            <View style={s.discoverIcon}>
-              <Ionicons name="compass" size={20} color={ACCENT} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.discoverTitle}>Aktivite Keşfet</Text>
-              <Text style={s.discoverSub}>AI önerileri ve şehrine uygun seçenekler</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#C7C7CC" />
-          </Pressable>
-
           {/* Pamuk maskot */}
           <PamukSection
             logs={logs}
