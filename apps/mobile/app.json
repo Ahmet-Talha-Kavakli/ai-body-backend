@@ -38,7 +38,11 @@
         "NSCameraUsageDescription": "Egzersiz form analizi i\u00e7in kamera gerekli.",
         "NSMicrophoneUsageDescription": "Sesli ko\u00e7 i\u00e7in mikrofon gerekli.",
         "NSHealthShareUsageDescription": "Sa\u011fl\u0131k verilerinizi analiz etmek i\u00e7in.",
-        "NSLocationWhenInUseUsageDescription": "Antrenman takibi i\u00e7in konum gerekli."
+        "NSLocationWhenInUseUsageDescription": "Antrenman takibi i\u00e7in konum gerekli.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Antrenman bittiğinde bile rotanı kaydedebilelim diye konum gerekli.",
+        "NSLocationAlwaysUsageDescription": "Antrenman bittiğinde bile rotanı kaydedebilelim diye konum gerekli.",
+        "NSMotionUsageDescription": "Adım sayını ve aktiviteni hesaplayabilmemiz için hareket verisi gerekli.",
+        "UIBackgroundModes": ["location", "fetch"]
       }
     },
     "android": {
