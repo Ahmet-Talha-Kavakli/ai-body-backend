@@ -1,30 +1,30 @@
-import React from 'react';
-import { Tabs } from 'expo-router';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { useI18n } from '../../src/providers/I18nProvider';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 export default function TabsLayout() {
-  const { colors } = useTheme();
-  const { t } = useI18n();
-
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.bg.surface,
-          borderTopColor: colors.border.subtle,
-          borderTopWidth: 1,
-        },
-        tabBarActiveTintColor: colors.accent.primary,
-        tabBarInactiveTintColor: colors.text.tertiary,
-      }}
-    >
-      <Tabs.Screen name="index" options={{ title: t('tabs.home') }} />
-      <Tabs.Screen name="train" options={{ title: t('tabs.train') }} />
-      <Tabs.Screen name="nutrition" options={{ title: t('tabs.nutrition') }} />
-      <Tabs.Screen name="health" options={{ title: t('tabs.health') }} />
-      <Tabs.Screen name="you" options={{ title: t('tabs.you') }} />
-    </Tabs>
+    <NativeTabs>
+      <NativeTabs.Trigger name="index">
+        <NativeTabs.Trigger.Label>Ev</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="roadmap">
+        <NativeTabs.Trigger.Label>Yol</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'map', selected: 'map.fill' }} />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="sessions">
+        <NativeTabs.Trigger.Label>Seans</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'play.circle', selected: 'play.circle.fill' }} />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="tracking">
+        <NativeTabs.Trigger.Label>Takip</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="chart.bar.fill" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="more">
+        <NativeTabs.Trigger.Label>Daha</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'square.grid.2x2', selected: 'square.grid.2x2.fill' }}
+        />
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }
