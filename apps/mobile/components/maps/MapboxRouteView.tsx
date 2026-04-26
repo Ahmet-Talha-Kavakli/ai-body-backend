@@ -55,6 +55,7 @@ interface Props {
   pathways?: { id: number | string; coords: LatLng[]; category: 'foot' | 'bike' | 'mixed' }[];
   pathOverlayOpacity?: number; // 0..1
   kmMarkers?: { km: number; coord: LatLng }[];
+  heatmapPoints?: LatLng[];
   waypoints?: LatLng[];
   showStartEnd?: boolean;
   draggableWaypoints?: boolean;
@@ -84,6 +85,7 @@ const MapboxRouteView = forwardRef<MapboxRouteViewRef, Props>(function MapboxRou
     pathways,
     pathOverlayOpacity = 0.5,
     kmMarkers,
+    heatmapPoints,
     waypoints,
     showStartEnd = true,
     draggableWaypoints = false,
@@ -193,6 +195,21 @@ const MapboxRouteView = forwardRef<MapboxRouteViewRef, Props>(function MapboxRou
     return features.length ? { type: 'FeatureCollection' as const, features } : null;
   }, [pathways]);
 
+  const heatmapGeoJSON = useMemo(() => {
+    if (!heatmapPoints || heatmapPoints.length === 0) return null;
+    return {
+      type: 'FeatureCollection' as const,
+      features: heatmapPoints.map((p, i) => ({
+        type: 'Feature' as const,
+        properties: { weight: 1, idx: i },
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [p.longitude, p.latitude],
+        },
+      })),
+    };
+  }, [heatmapPoints]);
+
   const bikeGeoJSON = useMemo(() => {
     if (!pathways) return null;
     const features = pathways
@@ -292,6 +309,39 @@ const MapboxRouteView = forwardRef<MapboxRouteViewRef, Props>(function MapboxRou
           </Mapbox.ShapeSource>
         )}
 
+        {/* Heatmap layer */}
+        {heatmapGeoJSON && (
+          <Mapbox.ShapeSource id="heatmap-source" shape={heatmapGeoJSON}>
+            <Mapbox.HeatmapLayer
+              id="heatmap-layer"
+              sourceID="heatmap-source"
+              style={{
+                heatmapWeight: ['interpolate', ['linear'], ['get', 'weight'], 0, 0, 1, 1],
+                heatmapIntensity: ['interpolate', ['linear'], ['zoom'], 0, 1, 9, 2, 15, 3],
+                heatmapColor: [
+                  'interpolate',
+                  ['linear'],
+                  ['heatmap-density'],
+                  0,
+                  'rgba(0, 0, 0, 0)',
+                  0.15,
+                  'rgba(70, 130, 255, 0.55)',
+                  0.35,
+                  'rgba(0, 220, 200, 0.7)',
+                  0.55,
+                  'rgba(255, 220, 0, 0.85)',
+                  0.75,
+                  'rgba(255, 140, 0, 0.95)',
+                  1,
+                  'rgba(255, 60, 0, 1)',
+                ],
+                heatmapRadius: ['interpolate', ['linear'], ['zoom'], 0, 4, 9, 20, 13, 35, 17, 55],
+                heatmapOpacity: ['interpolate', ['linear'], ['zoom'], 7, 0.85, 16, 0.65],
+              }}
+            />
+          </Mapbox.ShapeSource>
+        )}
+
         {/* Route polyline (halo + main) */}
         {routeGeoJSON && (
           <Mapbox.ShapeSource id="route-source" shape={routeGeoJSON}>
@@ -313,7 +363,6 @@ const MapboxRouteView = forwardRef<MapboxRouteViewRef, Props>(function MapboxRou
                 lineCap: 'round',
                 lineJoin: 'round',
               }}
-              aboveLayerID="route-halo"
             />
           </Mapbox.ShapeSource>
         )}

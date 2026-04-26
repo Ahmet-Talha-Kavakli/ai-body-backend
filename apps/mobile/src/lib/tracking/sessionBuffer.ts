@@ -124,6 +124,24 @@ export async function getSamples(sessionId: string): Promise<SampleRow[]> {
   }));
 }
 
+/**
+ * Returns every (lat, lng) sample across every session — used by the heatmap
+ * screen to render activity density. Optionally filtered by activity_type.
+ */
+export async function getAllSamplePoints(
+  activityType?: string,
+): Promise<{ lat: number; lng: number }[]> {
+  const d = await db();
+  const sql = activityType
+    ? 'SELECT s.lat, s.lng FROM samples s JOIN sessions ss ON ss.id = s.session_id WHERE ss.activity_type = ?'
+    : 'SELECT lat, lng FROM samples';
+  const rows = await d.getAllAsync<{ lat: number; lng: number }>(
+    sql,
+    activityType ? [activityType] : [],
+  );
+  return rows;
+}
+
 export async function endSession(
   sessionId: string,
   status: 'completed' | 'synced' = 'completed',

@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
+  ActionSheetIOS,
   Alert,
   Keyboard,
 } from 'react-native';
@@ -21,7 +22,6 @@ import MapboxRouteView, {
   MapboxRouteViewRef,
   MapStyleKey,
 } from '../../../components/maps/MapboxRouteView';
-import MapView, { Polyline, Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 type Region = {
   latitude: number;
   longitude: number;
@@ -350,6 +350,7 @@ function SaveModal({
   const [surface, setSurface] = useState<Surface>('Karma');
   const slideY = useRef(new Animated.Value(500)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const previewMapRef = useRef<MapboxRouteViewRef>(null);
 
   // Auto-suggest name when modal opens (only if user hasn't typed)
   useEffect(() => {
@@ -360,6 +361,13 @@ function SaveModal({
     });
     return () => ctl.abort();
   }, [visible, startCoord, actType]);
+
+  // Fit preview map to route after modal animates in
+  useEffect(() => {
+    if (visible && coords.length >= 2) {
+      setTimeout(() => previewMapRef.current?.fitToCoords(coords, 40), 600);
+    }
+  }, [visible, coords]);
 
   useEffect(() => {
     if (visible) {
@@ -405,28 +413,6 @@ function SaveModal({
     Zor: '#FF3B30',
   };
 
-  // Compute preview region from route coords
-  const previewRegion = useMemo(() => {
-    if (coords.length < 2) {
-      return startCoord
-        ? { ...startCoord, latitudeDelta: 0.01, longitudeDelta: 0.01 }
-        : { latitude: 41.0082, longitude: 28.9784, latitudeDelta: 0.01, longitudeDelta: 0.01 };
-    }
-    const lats = coords.map((c) => c.latitude);
-    const lons = coords.map((c) => c.longitude);
-    const minLat = Math.min(...lats),
-      maxLat = Math.max(...lats);
-    const minLon = Math.min(...lons),
-      maxLon = Math.max(...lons);
-    const padFactor = 1.4;
-    return {
-      latitude: (minLat + maxLat) / 2,
-      longitude: (minLon + maxLon) / 2,
-      latitudeDelta: Math.max((maxLat - minLat) * padFactor, 0.005),
-      longitudeDelta: Math.max((maxLon - minLon) * padFactor, 0.005),
-    };
-  }, [coords, startCoord]);
-
   return (
     <Animated.View style={[s.modalBg, { opacity }]} pointerEvents={visible ? 'auto' : 'none'}>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
@@ -439,36 +425,22 @@ function SaveModal({
 
           {/* Hero: mini map preview */}
           <View style={s.previewMap}>
-            <MapView
-              provider={PROVIDER_DEFAULT}
+            <MapboxRouteView
+              ref={previewMapRef}
               style={StyleSheet.absoluteFill}
-              region={previewRegion}
+              styleKey="standard"
+              initialCenter={startCoord ?? { latitude: 41.0082, longitude: 28.9784 }}
+              initialZoom={13}
+              initialPitch={40}
+              routeCoords={coords.length >= 2 ? coords : undefined}
+              showStartEnd={coords.length >= 2}
               scrollEnabled={false}
               zoomEnabled={false}
-              pitchEnabled={false}
               rotateEnabled={false}
-              pointerEvents="none"
-            >
-              {coords.length > 1 && (
-                <Polyline
-                  coordinates={coords}
-                  strokeColor={ACCENT}
-                  strokeWidth={4}
-                  lineCap="round"
-                  lineJoin="round"
-                />
-              )}
-              {startCoord && (
-                <Marker coordinate={startCoord} anchor={{ x: 0.5, y: 0.5 }}>
-                  <View style={[s.dotStart]} />
-                </Marker>
-              )}
-              {coords.length > 0 && (
-                <Marker coordinate={coords[coords.length - 1]} anchor={{ x: 0.5, y: 0.5 }}>
-                  <View style={[s.dotEnd]} />
-                </Marker>
-              )}
-            </MapView>
+              pitchEnabled={false}
+              attributionEnabled={false}
+              logoEnabled={false}
+            />
             {/* Stats overlay */}
             <View style={s.previewStatsOv}>
               <View style={s.previewStat}>
@@ -623,6 +595,8 @@ export default function RotaOlustur() {
   const gainAnim = useRef(new Animated.Value(0)).current;
   const [shownDistM, setShownDistM] = useState(0);
   const [shownGain, setShownGain] = useState(0);
+  const [currentZoom, setCurrentZoom] = useState(17.2);
+  const lastCenterRef = useRef<LatLng | null>(null);
 
   // Hint pill animation (fade in on mount, fade out on first waypoint)
   const hintOp = useRef(new Animated.Value(0)).current;
@@ -682,7 +656,7 @@ export default function RotaOlustur() {
           setInitialRegion({ ...ll, latitudeDelta: 0.012, longitudeDelta: 0.012 });
           setLocWaiting(false);
         } else {
-          mapRef.current?.flyTo(ll, 16, 500);
+          mapRef.current?.flyTo(ll, 17.2, 500);
         }
 
         // Live tracking — keep userLoc fresh as user moves
@@ -1202,27 +1176,71 @@ export default function RotaOlustur() {
     }
   }, []);
 
-  const cycleMapType = useCallback(() => {
-    setMapType((t) => (t === 'standard' ? 'satellite' : t === 'satellite' ? 'hybrid' : 'standard'));
-  }, []);
+  const openMapTypeSheet = useCallback(() => {
+    const labels: Record<typeof mapType, string> = {
+      standard: 'Standart',
+      satellite: 'Uydu',
+      hybrid: 'Hibrit',
+    };
+    const opts: { key: typeof mapType; label: string; sub: string }[] = [
+      { key: 'standard', label: 'Standart', sub: 'Sokak haritası, açık tema' },
+      { key: 'satellite', label: 'Uydu', sub: 'Gerçek uydu görüntüsü' },
+      { key: 'hybrid', label: 'Hibrit', sub: 'Uydu + sokak isimleri' },
+    ];
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title: 'Harita Stili',
+        message: `Şu an: ${labels[mapType]}`,
+        options: [...opts.map((o) => `${o.label}  —  ${o.sub}`), 'İptal'],
+        cancelButtonIndex: opts.length,
+        userInterfaceStyle: 'dark',
+      },
+      (i) => {
+        if (i === undefined || i === opts.length) return;
+        Haptics.selectionAsync().catch(() => {});
+        setMapType(opts[i]!.key);
+      },
+    );
+  }, [mapType]);
 
   const openMenu = useCallback(() => {
+    Haptics.selectionAsync().catch(() => {});
     const mapTypeLabel =
       mapType === 'standard' ? 'Standart' : mapType === 'satellite' ? 'Uydu' : 'Hibrit';
-    Alert.alert('Seçenekler', '', [
-      { text: `Harita: ${mapTypeLabel}`, onPress: cycleMapType },
-      { text: 'Yol Vurgusu ' + (pathOverlay ? '· Açık' : '· Kapalı'), onPress: togglePathOverlay },
+    const items: { label: string; onPress: () => void; destructive?: boolean }[] = [
       {
-        text: 'Pusula Takibi ' + (headingFollow ? '· Açık' : '· Kapalı'),
+        label: `Harita Stili  ›  ${mapTypeLabel}`,
+        onPress: () => setTimeout(openMapTypeSheet, 350),
+      },
+      {
+        label: `Yol Vurgusu  ·  ${pathOverlay ? 'Açık' : 'Kapalı'}`,
+        onPress: togglePathOverlay,
+      },
+      {
+        label: `Pusula Takibi  ·  ${headingFollow ? 'Açık' : 'Kapalı'}`,
         onPress: () => setHeadingFollow((v) => !v),
       },
       {
-        text: 'Yola Otur ' + (snapToPath ? '· Açık' : '· Kapalı'),
+        label: `Yola Otur  ·  ${snapToPath ? 'Açık' : 'Kapalı'}`,
         onPress: () => setSnapToPath((v) => !v),
       },
-      { text: 'Rotayı Temizle', style: 'destructive', onPress: handleClear },
-      { text: 'İptal', style: 'cancel' },
-    ]);
+      { label: 'Rotayı Temizle', onPress: handleClear, destructive: true },
+    ];
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title: 'Seçenekler',
+        message: 'Harita ve rota tercihleri',
+        options: [...items.map((it) => it.label), 'İptal'],
+        destructiveButtonIndex: items.findIndex((it) => it.destructive),
+        cancelButtonIndex: items.length,
+        userInterfaceStyle: 'dark',
+      },
+      (i) => {
+        if (i === undefined || i === items.length) return;
+        Haptics.selectionAsync().catch(() => {});
+        items[i]?.onPress();
+      },
+    );
   }, [
     handleClear,
     snapToPath,
@@ -1230,7 +1248,7 @@ export default function RotaOlustur() {
     togglePathOverlay,
     mapType,
     headingFollow,
-    cycleMapType,
+    openMapTypeSheet,
   ]);
 
   const fitToRoute = useCallback(() => {
@@ -1267,7 +1285,7 @@ export default function RotaOlustur() {
           mapType === 'satellite' ? 'satellite' : mapType === 'hybrid' ? 'hybrid' : 'standard'
         }
         initialCenter={initialRegion}
-        initialZoom={16}
+        initialZoom={17.2}
         initialPitch={50}
         routeCoords={allCoords}
         waypoints={waypoints}
@@ -1283,7 +1301,8 @@ export default function RotaOlustur() {
           handleWaypointDrag(idx, c);
         }}
         onCameraChanged={(c) => {
-          // Approx region from center+zoom for path overlay fetcher
+          setCurrentZoom(c.zoom);
+          lastCenterRef.current = { latitude: c.center.latitude, longitude: c.center.longitude };
           const delta = 360 / Math.pow(2, c.zoom);
           handleRegionChange({
             latitude: c.center.latitude,
@@ -1424,7 +1443,7 @@ export default function RotaOlustur() {
         </Animated.View>
       )}
 
-      {/* Right side controls — minimal: locate + fit */}
+      {/* Right side controls — locate + fit + zoom +/- */}
       <View style={[s.rightControls, { top: insets.top + 130 }]}>
         <Animated.View style={{ transform: [{ scale: fabScale }] }}>
           <Pressable style={s.ctrlBtn} onPress={goToMyLocation}>
@@ -1436,6 +1455,33 @@ export default function RotaOlustur() {
             <Ionicons name="scan" size={18} color="#fff" />
           </Pressable>
         )}
+        <View style={s.zoomGroup}>
+          <Pressable
+            style={s.zoomBtn}
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              const c = lastCenterRef.current ?? userLoc;
+              if (!c) return;
+              const z = Math.min(21, currentZoom + 1);
+              mapRef.current?.flyTo(c, z, 280);
+            }}
+          >
+            <Ionicons name="add" size={20} color="#fff" />
+          </Pressable>
+          <View style={s.zoomDiv} />
+          <Pressable
+            style={s.zoomBtn}
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              const c = lastCenterRef.current ?? userLoc;
+              if (!c) return;
+              const z = Math.max(3, currentZoom - 1);
+              mapRef.current?.flyTo(c, z, 280);
+            }}
+          >
+            <Ionicons name="remove" size={20} color="#fff" />
+          </Pressable>
+        </View>
         {/* Loading indicator when path overlay fetches */}
         {pathOverlay && pathLoading && (
           <View style={s.pathLoadingPill}>
@@ -1463,6 +1509,8 @@ export default function RotaOlustur() {
             <View style={s.statItem}>
               {waypoints.length < 2 ? (
                 <Text style={s.statVal}>—</Text>
+              ) : routing && distKm === 0 ? (
+                <ActivityIndicator size="small" color="rgba(255,255,255,0.7)" />
               ) : shownDistM < 1000 ? (
                 <Text style={s.statVal}>
                   {Math.round(shownDistM)}
@@ -1480,6 +1528,8 @@ export default function RotaOlustur() {
             <View style={s.statItem}>
               {waypoints.length < 2 ? (
                 <Text style={s.statVal}>—</Text>
+              ) : routing && distKm === 0 ? (
+                <ActivityIndicator size="small" color="rgba(255,255,255,0.7)" />
               ) : (
                 <Text style={s.statVal}>
                   {Math.round(shownGain)}
@@ -1492,6 +1542,8 @@ export default function RotaOlustur() {
             <View style={s.statItem}>
               {waypoints.length < 2 ? (
                 <Text style={s.statVal}>—</Text>
+              ) : routing && distKm === 0 ? (
+                <ActivityIndicator size="small" color="rgba(255,255,255,0.7)" />
               ) : (
                 <Text style={s.statVal}>
                   {Math.round(estimateDuration(shownDistM / 1000, actType, shownGain) / 60)}
@@ -1739,6 +1791,20 @@ const s = StyleSheet.create({
     shadowRadius: 6,
   },
   ctrlBtnActive: { backgroundColor: 'rgba(20,20,30,0.96)', borderColor: `${ACCENT}88` },
+  zoomGroup: {
+    width: 44,
+    backgroundColor: 'rgba(10,10,20,0.94)',
+    borderRadius: 22,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  zoomBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  zoomDiv: { height: 0.5, backgroundColor: 'rgba(255,255,255,0.14)' },
   pathLoadingPill: {
     width: 44,
     height: 32,
@@ -1804,23 +1870,6 @@ const s = StyleSheet.create({
     shadowRadius: 4,
   },
   wpMarkerTxt: { fontSize: 11, fontWeight: '800', color: '#fff', letterSpacing: -0.3 },
-  // Simple dots for preview map markers
-  dotStart: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#34C759',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  dotEnd: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#FF3B30',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
 
   // KM markers (Strava style: white pill with orange border)
   kmMarker: {
