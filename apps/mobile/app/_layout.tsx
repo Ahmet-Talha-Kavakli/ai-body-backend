@@ -1,11 +1,22 @@
 import 'react-native-reanimated';
 import '../global.css';
+import '../src/lib/tracking/backgroundTask';
 import React from 'react';
 import { Stack } from 'expo-router';
 import { RootProviders } from '../src/providers';
 import { initSentry } from '../src/lib/sentry';
+import Mapbox from '@rnmapbox/maps';
+import { MAPBOX_PUBLIC_TOKEN } from '../lib/mapsConfig';
 
 initSentry();
+
+try {
+  if (MAPBOX_PUBLIC_TOKEN) {
+    Mapbox.setAccessToken(MAPBOX_PUBLIC_TOKEN);
+  }
+} catch (e) {
+  console.warn('Mapbox init failed:', e);
+}
 
 export default function RootLayout() {
   return (

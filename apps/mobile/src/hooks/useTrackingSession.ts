@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import * as Buffer from '../lib/tracking/sessionBuffer';
+import { startBackground, stopBackground } from '../lib/tracking/backgroundTask';
 import {
   totalDistanceKm,
   paceSecPerKm,
@@ -91,6 +92,18 @@ export function useTrackingSession(opts: UseTrackingSessionOpts) {
         } catch {
           // continue — buffer is best-effort during dev
         }
+        // Best-effort: kick off background location task so samples keep
+        // writing to SQLite while the app is backgrounded. If the user
+        // doesn't grant always-permission we silently fall back to
+        // foreground-only.
+        try {
+          const bg = await Location.requestBackgroundPermissionsAsync();
+          if (bg.status === 'granted') {
+            await startBackground(id);
+          }
+        } catch {
+          // ignore — foreground tracking still works
+        }
       }
 
       tickRef.current = setInterval(() => {
@@ -166,6 +179,7 @@ export function useTrackingSession(opts: UseTrackingSessionOpts) {
       clearInterval(tickRef.current);
       tickRef.current = null;
     }
+    stopBackground().catch(() => {});
     setPhase('paused');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
   }, []);
@@ -197,6 +211,9 @@ export function useTrackingSession(opts: UseTrackingSessionOpts) {
         await Buffer.endSession(id, 'completed');
       } catch {}
     }
+    try {
+      await stopBackground();
+    } catch {}
     setPhase('finished');
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
   }, []);
