@@ -258,6 +258,7 @@ interface AktiviteCtx {
   handleAdd: (data: object) => Promise<void>;
   handleDelete: (id: string) => Promise<void>;
   handleToggle: (id: string, completed: boolean) => Promise<void>;
+  reloadLogs: () => Promise<void>;
   // Page-ready
   pageReady: boolean;
   catalogReady: boolean;
@@ -455,6 +456,7 @@ export function AktiviteProvider({ children }: { children: React.ReactNode }) {
     handleAdd,
     handleDelete,
     handleToggle,
+    reloadLogs: loadLogs,
     pageReady,
     catalogReady,
     api,

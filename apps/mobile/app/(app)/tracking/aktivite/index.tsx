@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { detectCombos } from '../../../../lib/activity-combos';
 import { getActivitySubIcon, getMainActivityIcon } from '../../../../lib/activity-icons';
@@ -42,7 +43,14 @@ export default function AktivitelerIndex() {
     handleDelete,
     handleToggle,
     pageOpAnim,
+    reloadLogs,
   } = useAktivite();
+
+  useFocusEffect(
+    useCallback(() => {
+      reloadLogs();
+    }, [reloadLogs]),
+  );
 
   const activityTypes = logs.map((l) => l.activityType);
   const activeCombos = detectCombos(activityTypes);

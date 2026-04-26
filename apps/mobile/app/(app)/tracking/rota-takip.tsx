@@ -295,7 +295,7 @@ export default function RotaTakip() {
             const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             const startDate = startedAt ? new Date(startedAt) : now;
             const startTime = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`;
-            await fetch(`${API_URL}/api/tracking/activities`, {
+            const r = await fetch(`${API_URL}/api/tracking/activities`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -311,7 +311,13 @@ export default function RotaTakip() {
                 note: route?.name ? `Rota: ${route.name}` : undefined,
               }),
             });
-          } catch {}
+            if (!r.ok) {
+              const body = await r.text();
+              console.error('[rota-takip] aktivite log hatası:', r.status, body);
+            }
+          } catch (e) {
+            console.error('[rota-takip] aktivite log fetch hatası:', e);
+          }
           setShowFlyover(true);
         },
       },
