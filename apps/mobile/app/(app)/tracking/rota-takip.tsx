@@ -368,19 +368,36 @@ export default function RotaTakip() {
         </View>
       )}
 
+      {/* Paused tag (same style as off-route pill) */}
+      {screenPhase === 'paused' && (
+        <View style={[s.pausedPill, { top: insets.top + 12 }]}>
+          <Ionicons name="pause" size={14} color="#FFCC00" />
+          <Text style={s.pausedTxt}>DURDURULDU</Text>
+        </View>
+      )}
+
       {/* Top bar */}
-      {screenPhase === 'tracking' && (
+      {(screenPhase === 'tracking' || screenPhase === 'paused') && (
         <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
           <Pressable onPress={handleCancel} style={s.cancelBtn} hitSlop={10}>
             <Ionicons name="close" size={20} color="#fff" />
           </Pressable>
-          <View style={s.recDot} />
-          <Text style={s.recTxt}>KAYIT</Text>
+          {screenPhase === 'tracking' ? (
+            <>
+              <View style={s.recDot} />
+              <Text style={s.recTxt}>KAYIT</Text>
+            </>
+          ) : (
+            <>
+              <View style={s.pausedDot} />
+              <Text style={s.pausedTopTxt}>DURDURULDU</Text>
+            </>
+          )}
         </View>
       )}
 
       {/* Stats panel */}
-      {screenPhase === 'tracking' && (
+      {(screenPhase === 'tracking' || screenPhase === 'paused') && (
         <View style={[s.statsPanel, { paddingBottom: insets.bottom + 14 }]}>
           {!isFreeRun && (
             <View style={s.progressTrack}>
@@ -449,10 +466,29 @@ export default function RotaTakip() {
             )}
           </View>
 
-          <Pressable onPress={handleFinish} style={s.finishBtn}>
-            <Ionicons name="stop-circle" size={22} color="#fff" />
-            <Text style={s.finishBtnTxt}>Bitir</Text>
-          </Pressable>
+          <View style={s.actionRow}>
+            {screenPhase === 'tracking' ? (
+              <Pressable
+                onPress={pause}
+                style={[s.actionBtn, { backgroundColor: '#374151' }]}
+                hitSlop={8}
+              >
+                <Ionicons name="pause" size={20} color="#fff" />
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={resume}
+                style={[s.actionBtn, { backgroundColor: ACCENT }]}
+                hitSlop={8}
+              >
+                <Ionicons name="play" size={20} color="#fff" />
+              </Pressable>
+            )}
+            <Pressable onPress={handleFinish} style={[s.finishBtn, { flex: 1 }]}>
+              <Ionicons name="stop-circle" size={22} color="#fff" />
+              <Text style={s.finishBtnTxt}>Bitir</Text>
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -670,6 +706,39 @@ const s = StyleSheet.create({
     zIndex: 6,
   },
   offRouteTxt: { fontSize: 12.5, fontWeight: '700', color: '#FF9500' },
+
+  // Paused pill (same shape as off-route)
+  pausedPill: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(40,32,0,0.92)',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 18,
+    borderWidth: 0.5,
+    borderColor: '#FFCC0055',
+    zIndex: 6,
+  },
+  pausedTxt: { fontSize: 12.5, fontWeight: '700', color: '#FFCC00', letterSpacing: 0.6 },
+  pausedDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#FFCC00', marginLeft: 4 },
+  pausedTopTxt: { fontSize: 11, fontWeight: '900', color: '#FFCC00', letterSpacing: 1.5 },
+
+  // Action row (pause/resume + finish)
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  actionBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
 
   // Stats panel (live)
   statsPanel: {
