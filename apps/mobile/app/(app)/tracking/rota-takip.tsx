@@ -38,6 +38,7 @@ import {
   stopRecording,
   isRecordingAvailable,
 } from '../../../src/lib/tracking/flyoverRecorder';
+import { ShareSheet } from '../../../components/tracking/ShareSheet';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ACCENT = '#FF6B35';
@@ -527,13 +528,22 @@ export default function RotaTakip() {
 
       {/* Flyover overlay */}
       {screenPhase === 'flyover' && (
-        <FlyoverOverlay
-          insets={insets}
-          distKm={distanceKm}
-          duration={elapsed}
-          routeName={headerTitle}
-          onClose={() => router.back()}
-        />
+        <>
+          <FlyoverOverlay
+            insets={insets}
+            distKm={distanceKm}
+            duration={elapsed}
+            routeName={headerTitle}
+            onClose={() => router.back()}
+          />
+          {videoUri && (
+            <ShareSheet
+              uri={videoUri}
+              insetsBottom={insets.bottom}
+              onClose={() => setVideoUri(null)}
+            />
+          )}
+        </>
       )}
     </View>
   );
