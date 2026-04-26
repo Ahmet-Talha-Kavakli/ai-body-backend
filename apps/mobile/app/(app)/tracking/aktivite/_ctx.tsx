@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Easing } from 'react-native';
+import { Alert, Animated, DeviceEventEmitter, Easing } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSession } from '@clerk/expo';
 import { detectCombos } from '../../../../lib/activity-combos';
@@ -345,6 +345,14 @@ export function AktiviteProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     loadLogs();
+  }, [loadLogs]);
+
+  // Tracking ekranından aktivite kaydedilince anında yenile
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('AKTIVITE_LOG_ADDED', () => {
+      loadLogs();
+    });
+    return () => sub.remove();
   }, [loadLogs]);
 
   const goToPrev = () => {
