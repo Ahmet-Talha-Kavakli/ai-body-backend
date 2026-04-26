@@ -7157,7 +7157,7 @@ export function RotalarTab() {
           onBack={() => setViewMode('list')}
         />
         <Pressable
-          style={[rts.fab, { bottom: insets.bottom + 16 }]}
+          style={[rts.fab, { bottom: 16 }]}
           onPressIn={() =>
             Animated.spring(fabScale, {
               toValue: 0.88,
@@ -7243,7 +7243,7 @@ export function RotalarTab() {
 
           {/* FAB — sadece rotalar varsa göster */}
           <Pressable
-            style={[rts.fab, { bottom: insets.bottom + 16 }]}
+            style={[rts.fab, { bottom: 16 }]}
             onPressIn={() =>
               Animated.spring(fabScale, {
                 toValue: 0.88,
