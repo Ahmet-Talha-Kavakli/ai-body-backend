@@ -591,8 +591,6 @@ export default function RotaOlustur() {
   const [segWidth, setSegWidth] = useState(0);
 
   // Animated stat counters
-  const distAnim = useRef(new Animated.Value(0)).current;
-  const gainAnim = useRef(new Animated.Value(0)).current;
   const [shownDistM, setShownDistM] = useState(0);
   const [shownGain, setShownGain] = useState(0);
   const [currentZoom, setCurrentZoom] = useState(17.2);
@@ -723,34 +721,13 @@ export default function RotaOlustur() {
     }
   }, [initialRegion, start]);
 
-  // Listeners for animated counters
+  // Sync display values directly (addListener unreliable in new arch)
   useEffect(() => {
-    const id1 = distAnim.addListener(({ value }) => setShownDistM(value));
-    const id2 = gainAnim.addListener(({ value }) => setShownGain(value));
-    return () => {
-      distAnim.removeListener(id1);
-      gainAnim.removeListener(id2);
-    };
-  }, []);
-
-  // Drive distance animation
-  useEffect(() => {
-    Animated.timing(distAnim, {
-      toValue: distKm * 1000,
-      duration: 1100,
-      useNativeDriver: false,
-      easing: Easing.bezier(0.22, 1, 0.36, 1),
-    }).start();
+    setShownDistM(distKm * 1000);
   }, [distKm]);
 
-  // Drive gain animation
   useEffect(() => {
-    Animated.timing(gainAnim, {
-      toValue: gain,
-      duration: 1100,
-      useNativeDriver: false,
-      easing: Easing.bezier(0.22, 1, 0.36, 1),
-    }).start();
+    setShownGain(gain);
   }, [gain]);
 
   // Animate segmented indicator

@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  ActionSheetIOS,
   Alert,
   TouchableOpacity,
 } from 'react-native';
@@ -33,7 +34,6 @@ import {
   ALL_ACTIVITY_ICONS,
 } from '../../../../lib/activity-icons';
 import Pamuk, { type PamukMood } from '../../../../components/shared/Pamuk';
-import MapView, { Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 import MapboxRouteView, { MapboxRouteViewRef } from '../../../../components/maps/MapboxRouteView';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -6404,16 +6404,20 @@ interface GpsRoute {
   createdAt: string;
 }
 
-type RouteFilter = 'Tümü' | 'Koşu' | 'Bisiklet' | 'Yürüyüş';
 type RouteViewMode = 'list' | 'map';
-
-const ROUTE_FILTERS: RouteFilter[] = ['Tümü', 'Koşu', 'Bisiklet', 'Yürüyüş'];
 
 const SPORT_ICONS: Record<string, string> = {
   run: '🏃',
   ride: '🚴',
   walk: '🚶',
   hike: '🥾',
+};
+
+const SPORT_LABELS: Record<string, string> = {
+  run: 'Koşu',
+  ride: 'Bisiklet',
+  walk: 'Yürüyüş',
+  hike: 'Doğa Yürüyüşü',
 };
 
 export function formatRouteDuration(sec: number) {
@@ -6429,11 +6433,8 @@ export function RouteCard({ route, onPress }: { route: GpsRoute; onPress: () => 
   const sport = SPORT_ICONS[route.activityType] ?? '🏃';
   const cardMapRef = useRef<MapboxRouteViewRef>(null);
 
-  // Compute center from bbox
   const center = useMemo(() => {
-    if (route.coordinates.length < 2) {
-      return { latitude: 41.0082, longitude: 28.9784 };
-    }
+    if (route.coordinates.length < 2) return { latitude: 41.0082, longitude: 28.9784 };
     const lats = route.coordinates.map((c) => c.latitude);
     const lons = route.coordinates.map((c) => c.longitude);
     return {
@@ -6442,24 +6443,29 @@ export function RouteCard({ route, onPress }: { route: GpsRoute; onPress: () => 
     };
   }, [route.coordinates]);
 
-  // Auto-fit when component mounts
   useEffect(() => {
     if (route.coordinates.length >= 2) {
-      const t = setTimeout(() => cardMapRef.current?.fitToCoords(route.coordinates, 12), 250);
+      const t = setTimeout(() => cardMapRef.current?.fitToCoords(route.coordinates, 20), 300);
       return () => clearTimeout(t);
     }
   }, [route.coordinates]);
 
   const diffColor =
-    route.difficulty === 'Kolay' ? '#30D158' : route.difficulty === 'Orta' ? '#FF9500' : '#FF453A';
+    route.difficulty === 'Kolay' ? '#34C759' : route.difficulty === 'Orta' ? '#FF9500' : '#FF3B30';
+  const diffBg =
+    route.difficulty === 'Kolay'
+      ? 'rgba(52,199,89,0.1)'
+      : route.difficulty === 'Orta'
+        ? 'rgba(255,149,0,0.1)'
+        : 'rgba(255,59,48,0.1)';
 
   return (
     <Pressable
       onPressIn={() =>
         Animated.spring(pressScale, {
-          toValue: 0.97,
+          toValue: 0.975,
           useNativeDriver: true,
-          tension: 300,
+          tension: 280,
           friction: 14,
         }).start()
       }
@@ -6467,21 +6473,22 @@ export function RouteCard({ route, onPress }: { route: GpsRoute; onPress: () => 
         Animated.spring(pressScale, {
           toValue: 1,
           useNativeDriver: true,
-          tension: 300,
+          tension: 280,
           friction: 14,
         }).start()
       }
       onPress={onPress}
     >
-      <Animated.View style={[rts.cardCompact, { transform: [{ scale: pressScale }] }]}>
-        {/* Yatay mini harita */}
-        <View style={rts.thumbCompact} pointerEvents="none">
+      <Animated.View style={[rts.card, { transform: [{ scale: pressScale }] }]}>
+        {/* Harita — tam genişlik üst */}
+        <View style={rts.mapThumb} pointerEvents="none">
           <MapboxRouteView
             ref={cardMapRef}
             style={StyleSheet.absoluteFill}
             styleKey="standard"
             initialCenter={center}
             initialZoom={13}
+            initialPitch={35}
             routeCoords={route.coordinates}
             showStartEnd
             scrollEnabled={false}
@@ -6491,43 +6498,65 @@ export function RouteCard({ route, onPress }: { route: GpsRoute; onPress: () => 
             attributionEnabled={false}
             logoEnabled={false}
           />
-          <View style={rts.sportBadgeCompact}>
-            <Text style={{ fontSize: 13 }}>{sport}</Text>
+          {/* Sport badge — top right */}
+          <View style={rts.sportBadge}>
+            <Text style={{ fontSize: 15 }}>{sport}</Text>
+          </View>
+          {/* Mesafe pill — bottom left */}
+          <View style={rts.distPill}>
+            <Text style={rts.distPillTxt}>{route.distanceKm.toFixed(1)} km</Text>
           </View>
         </View>
 
-        {/* Bilgiler */}
-        <View style={rts.cardInfoCompact}>
-          <Text style={rts.cardNameCompact} numberOfLines={1}>
-            {route.name}
-          </Text>
-          <View style={rts.statsCompact}>
-            <Ionicons name="resize" size={11} color="rgba(255,255,255,0.45)" />
-            <Text style={rts.statTxtCompact}>{route.distanceKm.toFixed(1)} km</Text>
-            <Text style={rts.statSep}>·</Text>
-            <Ionicons name="trending-up" size={11} color="rgba(255,255,255,0.45)" />
-            <Text style={rts.statTxtCompact}>{Math.round(route.elevationGain)}m</Text>
-            <Text style={rts.statSep}>·</Text>
-            <Ionicons name="time-outline" size={11} color="rgba(255,255,255,0.45)" />
-            <Text style={rts.statTxtCompact}>{formatRouteDuration(route.durationSec)}</Text>
+        {/* Info */}
+        <View style={rts.cardInfo}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 10,
+            }}
+          >
+            <Text style={rts.cardName} numberOfLines={1}>
+              {route.name}
+            </Text>
+            <Ionicons name="chevron-forward" size={15} color="#C7C7CC" />
           </View>
-          <View style={rts.badgeRowCompact}>
-            <View style={[rts.badgeCompact, { backgroundColor: diffColor + '22' }]}>
-              <Text style={[rts.badgeTxtCompact, { color: diffColor }]}>{route.difficulty}</Text>
+
+          {/* Stats satırı */}
+          <View style={rts.statsRow}>
+            <View style={rts.statItem}>
+              <Text style={rts.statValue}>{route.distanceKm.toFixed(1)}</Text>
+              <Text style={rts.statLabel}>KM</Text>
             </View>
-            <View style={[rts.badgeCompact, { backgroundColor: 'rgba(10,132,255,0.18)' }]}>
-              <Text style={[rts.badgeTxtCompact, { color: '#5EB1FF' }]}>{route.surface}</Text>
+            <View style={rts.statDivider} />
+            <View style={rts.statItem}>
+              <Text style={rts.statValue}>↑{Math.round(route.elevationGain)}</Text>
+              <Text style={rts.statLabel}>TIRM.</Text>
+            </View>
+            <View style={rts.statDivider} />
+            <View style={rts.statItem}>
+              <Text style={rts.statValue}>{formatRouteDuration(route.durationSec)}</Text>
+              <Text style={rts.statLabel}>SÜRE</Text>
+            </View>
+          </View>
+
+          {/* Badge row */}
+          <View style={rts.badgeRow}>
+            <View style={[rts.badge, { backgroundColor: diffBg }]}>
+              <Text style={[rts.badgeTxt, { color: diffColor }]}>{route.difficulty}</Text>
+            </View>
+            <View style={[rts.badge, { backgroundColor: 'rgba(10,132,255,0.08)' }]}>
+              <Text style={[rts.badgeTxt, { color: '#007AFF' }]}>{route.surface}</Text>
+            </View>
+            <View style={[rts.badge, { backgroundColor: 'rgba(142,142,147,0.1)' }]}>
+              <Text style={[rts.badgeTxt, { color: '#8E8E93' }]}>
+                {SPORT_LABELS[route.activityType] ?? 'Aktivite'}
+              </Text>
             </View>
           </View>
         </View>
-
-        {/* Chevron */}
-        <Ionicons
-          name="chevron-forward"
-          size={16}
-          color="rgba(255,255,255,0.25)"
-          style={{ marginRight: 6 }}
-        />
       </Animated.View>
     </Pressable>
   );
@@ -6538,43 +6567,55 @@ export function RouteCard({ route, onPress }: { route: GpsRoute; onPress: () => 
 export function RoutesEmptyState({ onCreate }: { onCreate: () => void }) {
   const btnScale = useRef(new Animated.Value(1)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
+  const slideY = useRef(new Animated.Value(24)).current;
 
   useEffect(() => {
-    Animated.timing(fadeIn, {
-      toValue: 1,
-      duration: 480,
-      useNativeDriver: true,
-      easing: Easing.bezier(0.16, 1, 0.3, 1),
-    }).start();
+    Animated.parallel([
+      Animated.timing(fadeIn, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+      Animated.timing(slideY, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+    ]).start();
   }, []);
 
   return (
-    <Animated.View style={[rts.emptyWrap, { opacity: fadeIn }]}>
-      {/* Harita arka plan */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <Animated.View
+      style={[rts.emptyWrap, { opacity: fadeIn, transform: [{ translateY: slideY }] }]}
+    >
+      {/* Harita hero */}
+      <View style={rts.emptyMapHero} pointerEvents="none">
         <MapboxRouteView
           style={StyleSheet.absoluteFill}
           styleKey="standard"
           initialCenter={{ latitude: 41.0082, longitude: 28.9784 }}
-          initialZoom={11}
+          initialZoom={12}
+          initialPitch={45}
           scrollEnabled={false}
           zoomEnabled={false}
           pitchEnabled={false}
           rotateEnabled={false}
+          attributionEnabled={false}
+          logoEnabled={false}
         />
+        {/* Hafif alt gradient geçişi */}
+        <View style={rts.emptyMapFade} />
       </View>
-      {/* Koyu gradient overlay */}
-      <View style={rts.emptyMapOverlay} />
 
-      {/* İçerik */}
-      <View style={rts.emptyContent}>
+      {/* Metin + buton */}
+      <View style={rts.emptyBody}>
         <View style={rts.emptyIconWrap}>
-          <Text style={rts.emptyIcon}>🗺️</Text>
+          <Text style={{ fontSize: 32 }}>🗺️</Text>
         </View>
         <Text style={rts.emptyTitle}>Rotanı çiz, izini takip et</Text>
-        <Text style={rts.emptySub}>
-          Antrenman güzergahlarını kaydet{'\n'}ve istatistiklerini takip et
-        </Text>
+        <Text style={rts.emptySub}>Antrenman güzergahlarını kaydet{'\n'}ve performansını izle</Text>
         <Pressable
           onPressIn={() =>
             Animated.spring(btnScale, {
@@ -6664,43 +6705,97 @@ export function RoutesMapView({
       ? allCoords.reduce((s, c) => s + c.longitude, 0) / allCoords.length
       : 28.9784;
 
+  const mapViewRef = useRef<MapboxRouteViewRef>(null);
+  const [showHeat, setShowHeat] = useState(true);
+  const [heatPoints, setHeatPoints] = useState<{ latitude: number; longitude: number }[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const SessionBuffer = await import('../../../../src/lib/tracking/sessionBuffer');
+        await SessionBuffer.init();
+        const samples = await SessionBuffer.getAllSamplePoints();
+        // Combine: GPS samples (dense) + saved route coords (sparser fallback)
+        const routePts = routes.flatMap((r) =>
+          r.coordinates.map((c) => ({ latitude: c.latitude, longitude: c.longitude })),
+        );
+        const samplePts = samples.map((s) => ({ latitude: s.lat, longitude: s.lng }));
+        if (!cancelled) setHeatPoints([...samplePts, ...routePts]);
+      } catch {
+        if (!cancelled) {
+          // fallback: just route coords
+          const routePts = routes.flatMap((r) =>
+            r.coordinates.map((c) => ({ latitude: c.latitude, longitude: c.longitude })),
+          );
+          setHeatPoints(routePts);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [routes]);
+
   return (
     <View style={StyleSheet.absoluteFill}>
-      <MapView
-        provider={PROVIDER_DEFAULT}
+      <MapboxRouteView
+        ref={mapViewRef}
         style={StyleSheet.absoluteFill}
-        initialRegion={{
-          latitude: centerLat,
-          longitude: centerLng,
-          latitudeDelta: 0.1,
-          longitudeDelta: 0.1,
-        }}
-      >
-        {routes.map(
-          (route) =>
-            route.coordinates.length > 1 && (
-              <Polyline
-                key={route.id}
-                coordinates={route.coordinates}
-                strokeColor={selected?.id === route.id ? ACCENT : 'rgba(255,107,53,0.45)'}
-                strokeWidth={selected?.id === route.id ? 4 : 2.5}
-                tappable
-                onPress={() => showSheet(route)}
-              />
-            ),
-        )}
-      </MapView>
+        styleKey={showHeat ? 'dark' : 'standard'}
+        initialCenter={{ latitude: centerLat, longitude: centerLng }}
+        initialZoom={11}
+        initialPitch={showHeat ? 0 : 40}
+        routeCoords={selected ? selected.coordinates : undefined}
+        heatmapPoints={showHeat && !selected ? heatPoints : undefined}
+        showStartEnd={!!selected}
+        attributionEnabled={false}
+        logoEnabled={false}
+      />
 
-      {/* Geri + Liste butonu */}
+      {/* Top bar — back + heatmap toggle */}
       <View style={rts.mapTopBar}>
-        <Pressable onPress={onBack} style={rts.mapTopBtn}>
-          <Text style={rts.mapTopBtnTxt}>Rotalar</Text>
+        <Pressable onPress={onBack} style={rts.mapTopBtnBack} hitSlop={8}>
+          <Ionicons name="chevron-back" size={20} color="#fff" />
         </Pressable>
-        <Pressable onPress={() => {}} style={rts.mapTopBtn}>
-          <Ionicons name="list" size={16} color="#fff" />
-          <Text style={rts.mapTopBtnTxt}>Liste</Text>
-        </Pressable>
+        <View style={rts.mapModeWrap}>
+          <Pressable
+            onPress={() => setShowHeat(true)}
+            style={[rts.mapModeBtn, showHeat && rts.mapModeBtnActive]}
+          >
+            <Ionicons name="flame" size={13} color={showHeat ? '#FF6B35' : '#fff'} />
+            <Text style={[rts.mapModeTxt, showHeat && rts.mapModeTxtActive]}>Isı</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setShowHeat(false)}
+            style={[rts.mapModeBtn, !showHeat && rts.mapModeBtnActive]}
+          >
+            <Ionicons name="git-network" size={13} color={!showHeat ? '#FF6B35' : '#fff'} />
+            <Text style={[rts.mapModeTxt, !showHeat && rts.mapModeTxtActive]}>Rotalar</Text>
+          </Pressable>
+        </View>
       </View>
+
+      {/* Heatmap intro pill */}
+      {showHeat && !selected && heatPoints.length > 0 && (
+        <View style={rts.heatLegend}>
+          <View style={[rts.heatDot, { backgroundColor: '#4682FF' }]} />
+          <Text style={rts.heatLegendTxt}>Az</Text>
+          <View style={[rts.heatDot, { backgroundColor: '#00DCC8' }]} />
+          <View style={[rts.heatDot, { backgroundColor: '#FFDC00' }]} />
+          <View style={[rts.heatDot, { backgroundColor: '#FF8C00' }]} />
+          <View style={[rts.heatDot, { backgroundColor: '#FF3C00' }]} />
+          <Text style={rts.heatLegendTxt}>Çok</Text>
+        </View>
+      )}
+
+      {showHeat && heatPoints.length === 0 && (
+        <View style={rts.heatEmpty}>
+          <Ionicons name="flame-outline" size={20} color="#FF6B35" />
+          <Text style={rts.heatEmptyTxt}>Yeterli aktivite verisi yok</Text>
+          <Text style={rts.heatEmptySub}>Birkaç rota kaydet, ısı haritası oluşsun.</Text>
+        </View>
+      )}
 
       {/* Seçili rota bottom sheet */}
       {selected && (
@@ -6722,7 +6817,7 @@ export function RoutesMapView({
               </Text>
               <Text style={{ fontSize: 20 }}>{SPORT_ICONS[selected.activityType] ?? '🏃'}</Text>
             </View>
-            <Text style={rts.cardStats}>
+            <Text style={{ fontSize: 13, color: '#8E8E93', marginBottom: 8 }}>
               {selected.distanceKm.toFixed(1)} km · ↑{Math.round(selected.elevationGain)}m · ~
               {formatRouteDuration(selected.durationSec)}
             </Text>
@@ -6756,75 +6851,201 @@ export function RoutesMapView({
 // Her biri rota-takip ekranına `?mode=free&activityType=...` ile push eder.
 type FreeRunActivity = 'running' | 'cycling' | 'walking';
 
-export function FreeRunQuickStart({ router }: { router: ReturnType<typeof useRouter> }) {
+export function FreeRunQuickStart({
+  router,
+  selected,
+  onSelectActivity,
+}: {
+  router: ReturnType<typeof useRouter>;
+  selected: FreeRunActivity;
+  onSelectActivity: (k: FreeRunActivity) => void;
+}) {
   const items: { kind: FreeRunActivity; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { kind: 'running', label: 'Koşu', icon: 'walk' },
     { kind: 'cycling', label: 'Bisiklet', icon: 'bicycle' },
     { kind: 'walking', label: 'Yürüyüş', icon: 'footsteps' },
   ];
-  const start = (kind: FreeRunActivity) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    router.push(('/(app)/tracking/rota-takip?mode=free&activityType=' + kind) as never);
+  const ctaScale = useRef(new Animated.Value(1)).current;
+  const idx = items.findIndex((i) => i.kind === selected);
+  const segIndicator = useRef(new Animated.Value(idx >= 0 ? idx : 0)).current;
+
+  useEffect(() => {
+    Animated.spring(segIndicator, {
+      toValue: idx >= 0 ? idx : 0,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 22,
+    }).start();
+  }, [idx, segIndicator]);
+
+  const onSelect = (kind: FreeRunActivity) => {
+    Haptics.selectionAsync().catch(() => {});
+    onSelectActivity(kind);
   };
+
+  const onStart = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    router.push(('/(app)/tracking/rota-takip?mode=free&activityType=' + selected) as never);
+  };
+
+  const selectedItem = items.find((i) => i.kind === selected) ?? items[0];
+
   return (
     <View style={frs.wrap}>
-      {items.map((it) => (
-        <Pressable
-          key={it.kind}
-          onPress={() => start(it.kind)}
-          style={({ pressed }) => [frs.card, pressed && { opacity: 0.85 }]}
-        >
-          <Ionicons name={it.icon} size={18} color={ACCENT} />
-          <Text style={frs.label}>{it.label}</Text>
-          <View style={frs.cta}>
-            <Ionicons name="play" size={11} color="#fff" />
-            <Text style={frs.ctaTxt}>Şimdi Başlat</Text>
+      {/* Segmented control — aktivite seç (filtre + free-run) */}
+      <View style={frs.segWrap}>
+        <Animated.View
+          style={[
+            frs.segIndicator,
+            {
+              transform: [
+                {
+                  translateX: segIndicator.interpolate({
+                    inputRange: [0, 1, 2],
+                    outputRange: [0, SEG_W, SEG_W * 2],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+        {items.map((it) => {
+          const active = selected === it.kind;
+          return (
+            <Pressable key={it.kind} onPress={() => onSelect(it.kind)} style={frs.segBtn}>
+              <Ionicons name={it.icon} size={15} color={active ? '#1C1C1E' : '#8E8E93'} />
+              <Text style={[frs.segTxt, active && frs.segTxtActive]}>{it.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Compact CTA */}
+      <Pressable
+        onPressIn={() =>
+          Animated.spring(ctaScale, {
+            toValue: 0.97,
+            useNativeDriver: true,
+            tension: 280,
+            friction: 14,
+          }).start()
+        }
+        onPressOut={() =>
+          Animated.spring(ctaScale, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 280,
+            friction: 14,
+          }).start()
+        }
+        onPress={onStart}
+      >
+        <Animated.View style={[frs.cta, { transform: [{ scale: ctaScale }] }]}>
+          <View style={frs.ctaIconWrap}>
+            <Ionicons name={selectedItem!.icon} size={20} color="#fff" />
           </View>
-        </Pressable>
-      ))}
+          <View style={{ flex: 1 }}>
+            <Text style={frs.ctaLbl}>HIZLI BAŞLAT</Text>
+            <Text style={frs.ctaTitle}>{selectedItem!.label} başlat</Text>
+          </View>
+          <View style={frs.ctaPlay}>
+            <Ionicons name="play" size={15} color="#fff" style={{ marginLeft: 2 }} />
+          </View>
+        </Animated.View>
+      </Pressable>
     </View>
   );
 }
 
+const SEG_W = (SW - 40 - 8) / 3;
+
 const frs = StyleSheet.create({
-  wrap: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 10,
-  },
-  card: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    gap: 8,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#fff',
-    letterSpacing: -0.2,
-  },
+  wrap: { paddingHorizontal: 20, paddingTop: 2, paddingBottom: 12, gap: 10 },
+
+  // Compact CTA
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     backgroundColor: ACCENT,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 999,
+    borderRadius: 16,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    gap: 11,
+    shadowColor: ACCENT,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+    elevation: 5,
   },
-  ctaTxt: {
-    fontSize: 10,
-    fontWeight: '800',
+  ctaIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaLbl: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.78)',
+    letterSpacing: 0.7,
+    marginBottom: 1,
+  },
+  ctaTitle: {
+    fontSize: 15,
+    fontWeight: '700',
     color: '#fff',
-    letterSpacing: 0.2,
+    letterSpacing: -0.3,
+  },
+  ctaPlay: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Segmented control
+  segWrap: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(120,120,128,0.12)',
+    borderRadius: 12,
+    padding: 4,
+    position: 'relative',
+  },
+  segIndicator: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    width: SEG_W,
+    bottom: 4,
+    backgroundColor: '#fff',
+    borderRadius: 9,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+  },
+  segBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    zIndex: 1,
+  },
+  segTxt: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8E8E93',
+    letterSpacing: -0.1,
+  },
+  segTxtActive: {
+    color: '#1C1C1E',
+    fontWeight: '700',
   },
 });
 
@@ -6837,7 +7058,7 @@ export function RotalarTab() {
   const insets = useSafeAreaInsets();
   const [routes, setRoutes] = useState<GpsRoute[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<RouteFilter>('Tümü');
+  const [activity, setActivity] = useState<FreeRunActivity>('running');
   const [sort, setSort] = useState<RouteSort>('recent');
   const [viewMode, setViewMode] = useState<RouteViewMode>('list');
   const fabScale = useRef(new Animated.Value(1)).current;
@@ -6861,35 +7082,55 @@ export function RotalarTab() {
       useNativeDriver: true,
       easing: Easing.bezier(0.16, 1, 0.3, 1),
     }).start();
-  }, [filter, sort]);
+  }, [activity, sort]);
 
   const filtered = useMemo(() => {
-    let r =
-      filter === 'Tümü'
-        ? [...routes]
-        : routes.filter((rr) => {
-            if (filter === 'Koşu') return rr.activityType === 'run';
-            if (filter === 'Bisiklet') return rr.activityType === 'ride';
-            if (filter === 'Yürüyüş') return ['walk', 'hike'].includes(rr.activityType);
-            return true;
-          });
+    let r = routes.filter((rr) => {
+      if (activity === 'running') return rr.activityType === 'run';
+      if (activity === 'cycling') return rr.activityType === 'ride';
+      if (activity === 'walking') return ['walk', 'hike'].includes(rr.activityType);
+      return true;
+    });
     if (sort === 'recent')
       r.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     if (sort === 'distance') r.sort((a, b) => b.distanceKm - a.distanceKm);
     if (sort === 'duration') r.sort((a, b) => b.durationSec - a.durationSec);
     return r;
-  }, [routes, filter, sort]);
+  }, [routes, activity, sort]);
 
-  const cycleSort = () => {
-    setSort((s) => (s === 'recent' ? 'distance' : s === 'distance' ? 'duration' : 'recent'));
-  };
-  const sortLabel = sort === 'recent' ? 'Yeni' : sort === 'distance' ? 'Mesafe' : 'Süre';
+  const sortLabel = sort === 'recent' ? 'En yeni' : sort === 'distance' ? 'Mesafe' : 'Süre';
   const sortIcon: 'time-outline' | 'resize-outline' | 'hourglass-outline' =
     sort === 'recent'
       ? 'time-outline'
       : sort === 'distance'
         ? 'resize-outline'
         : 'hourglass-outline';
+
+  const openSortSheet = () => {
+    Haptics.selectionAsync().catch(() => {});
+    const SORT_OPTS: { label: string; key: RouteSort }[] = [
+      { label: 'En yeni', key: 'recent' },
+      { label: 'En uzun mesafe', key: 'distance' },
+      { label: 'En uzun süre', key: 'duration' },
+    ];
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title: 'Sıralama',
+        message: 'Rotaları nasıl listeleyelim?',
+        options: [
+          ...SORT_OPTS.map((o) => (sort === o.key ? `✓  ${o.label}` : `    ${o.label}`)),
+          'İptal',
+        ],
+        cancelButtonIndex: SORT_OPTS.length,
+        userInterfaceStyle: 'light',
+      },
+      (i) => {
+        if (i === undefined || i === SORT_OPTS.length) return;
+        setSort(SORT_OPTS[i]!.key);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      },
+    );
+  };
 
   const handleCreate = () => {
     router.push('/(app)/tracking/rota-olustur' as never);
@@ -6916,7 +7157,7 @@ export function RotalarTab() {
           onBack={() => setViewMode('list')}
         />
         <Pressable
-          style={[rts.fab, { bottom: insets.bottom + 80 }]}
+          style={[rts.fab, { bottom: insets.bottom + 16 }]}
           onPressIn={() =>
             Animated.spring(fabScale, {
               toValue: 0.88,
@@ -6948,45 +7189,30 @@ export function RotalarTab() {
       {/* Header */}
       <View style={rts.header}>
         <Text style={rts.headerTitle}>Rotalar</Text>
-        <Pressable onPress={() => setViewMode('map')} style={rts.mapToggleBtn}>
-          <Ionicons name="map-outline" size={16} color={ACCENT} />
-          <Text style={rts.mapToggleTxt}>Harita</Text>
+        <Pressable onPress={() => setViewMode('map')} style={rts.mapToggleBtn} hitSlop={8}>
+          <Ionicons name="map-outline" size={20} color={ACCENT} />
         </Pressable>
       </View>
 
-      {/* Filter + sort bar */}
-      <View style={rts.filterBar}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={rts.filterRow}
-          style={{ flex: 1 }}
-        >
-          {ROUTE_FILTERS.map((f) => {
-            const active = filter === f;
-            return (
-              <Pressable
-                key={f}
-                onPress={() => {
-                  filterAnim.setValue(0);
-                  setFilter(f);
-                }}
-                style={[rts.chip, active && rts.chipActive]}
-              >
-                <Text style={[rts.chipTxt, active && rts.chipTxtActive]}>{f}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-        <Pressable style={rts.sortBtn} onPress={cycleSort}>
+      {/* Free-run + aktivite seçici (filtre olarak da kullanılır) */}
+      <FreeRunQuickStart
+        router={router}
+        selected={activity}
+        onSelectActivity={(k) => {
+          filterAnim.setValue(0);
+          setActivity(k);
+        }}
+      />
+
+      {/* Sort row */}
+      <View style={rts.sortRow}>
+        <Text style={rts.sortRowLbl}>Kaydedilmiş rotalar</Text>
+        <Pressable style={rts.sortBtn} onPress={openSortSheet} hitSlop={6}>
           <Ionicons name={sortIcon} size={13} color={ACCENT} />
           <Text style={rts.sortBtnTxt}>{sortLabel}</Text>
-          <Ionicons name="chevron-down" size={11} color="rgba(255,255,255,0.4)" />
+          <Ionicons name="chevron-down" size={11} color="#8E8E93" />
         </Pressable>
       </View>
-
-      {/* Free-run hızlı başlangıç — rota olmadan kayıt başlat */}
-      <FreeRunQuickStart router={router} />
 
       {/* İçerik */}
       {filtered.length === 0 ? (
@@ -7012,12 +7238,12 @@ export function RotalarTab() {
                 <RouteCard route={route} onPress={() => handleRoutePress(route)} />
               </Animated.View>
             ))}
-            <View style={{ height: 120 }} />
+            <View style={{ height: 180 }} />
           </ScrollView>
 
           {/* FAB — sadece rotalar varsa göster */}
           <Pressable
-            style={[rts.fab, { bottom: insets.bottom + 80 }]}
+            style={[rts.fab, { bottom: insets.bottom + 16 }]}
             onPressIn={() =>
               Animated.spring(fabScale, {
                 toValue: 0.88,
@@ -7047,80 +7273,142 @@ export function RotalarTab() {
 }
 
 const rts = StyleSheet.create({
-  // Root
-  root: { flex: 1, backgroundColor: '#0A0A0F' },
+  // Root — beyaz tema
+  root: { flex: 1, backgroundColor: '#F2F2F7' },
 
-  // Kart
+  // ── Kart (dikey: üst harita + alt info) ──
   card: {
-    backgroundColor: '#1C1C2E',
+    backgroundColor: '#fff',
     borderRadius: 20,
     overflow: 'hidden',
-    marginHorizontal: 16,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.07)',
+    marginHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  mapThumb: { height: 160, position: 'relative', backgroundColor: '#1a2a1a' },
+  mapThumb: {
+    height: 180,
+    position: 'relative',
+    backgroundColor: '#E5E5EA',
+  },
   sportBadge: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(10,10,20,0.65)',
+    top: 12,
+    right: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.88)',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
   },
-  cardInfo: { padding: 14 },
+  distPill: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  distPillTxt: { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
+  cardInfo: { padding: 16 },
   cardName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
-    marginBottom: 4,
-    letterSpacing: -0.2,
+    color: '#1C1C1E',
+    letterSpacing: -0.3,
+    flex: 1,
+    marginRight: 8,
   },
-  cardStats: { fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 8 },
-  badgeRow: { flexDirection: 'row', gap: 6 },
+
+  // Stats satırı (3 sütun)
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    marginBottom: 12,
+  },
+  statItem: { flex: 1, alignItems: 'center', gap: 3 },
+  statValue: { fontSize: 15, fontWeight: '700', color: '#1C1C1E', letterSpacing: -0.3 },
+  statLabel: { fontSize: 10, fontWeight: '600', color: '#8E8E93', letterSpacing: 0.3 },
+  statDivider: { width: 1, height: 28, backgroundColor: '#E5E5EA' },
+
+  // Badge satırı
+  badgeRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  badgeTxt: { fontSize: 11, fontWeight: '600' },
+  badgeTxt: { fontSize: 11, fontWeight: '600', letterSpacing: -0.1 },
 
   // Boş durum
-  emptyWrap: { flex: 1, position: 'relative', minHeight: 400 },
-  emptyMapOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.62)' },
-  emptyContent: {
-    ...StyleSheet.absoluteFillObject,
+  emptyWrap: { flex: 1 },
+  emptyMapHero: {
+    height: 240,
+    position: 'relative',
+    backgroundColor: '#E5E5EA',
+    marginHorizontal: 20,
+    marginTop: 8,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  emptyMapFade: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    backgroundColor: 'rgba(242,242,247,0.0)',
+  },
+  emptyBody: {
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 10,
+    paddingTop: 28,
+    paddingHorizontal: 32,
+    gap: 8,
   },
   emptyIconWrap: {
     width: 72,
     height: 72,
     borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
   },
-  emptyIcon: { fontSize: 36 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
-  emptySub: { fontSize: 13, color: 'rgba(255,255,255,0.65)', textAlign: 'center', lineHeight: 20 },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    letterSpacing: -0.4,
+    textAlign: 'center',
+  },
+  emptySub: { fontSize: 14, color: '#8E8E93', textAlign: 'center', lineHeight: 20 },
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: ACCENT,
-    paddingHorizontal: 22,
+    paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 16,
     marginTop: 8,
     shadowColor: ACCENT,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.35,
     shadowRadius: 12,
   },
-  emptyBtnTxt: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  emptyBtnTxt: { fontSize: 15, fontWeight: '700', color: '#fff' },
 
   // Header
   header: {
@@ -7129,93 +7417,63 @@ const rts = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 12,
+    paddingBottom: 14,
+  },
+  headerTitle: { fontSize: 30, fontWeight: '800', color: '#1C1C1E', letterSpacing: -0.7 },
+  mapToggleBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+  },
+
+  // Sort row
+  sortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 4,
     paddingBottom: 8,
   },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
-  mapToggleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: `${ACCENT}18`,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
+  sortRowLbl: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8E8E93',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
-  mapToggleTxt: { fontSize: 13, fontWeight: '600', color: ACCENT },
-
-  // Filters + sort
-  filterBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingRight: 14,
-    paddingBottom: 12,
-    gap: 8,
-  },
-  filterRow: { paddingHorizontal: 16, gap: 8 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  chipActive: { backgroundColor: `${ACCENT}22`, borderColor: `${ACCENT}40` },
-  chipTxt: { fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.5)' },
-  chipTxtActive: { color: ACCENT, fontWeight: '700' },
   sortBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
+    gap: 5,
+    paddingHorizontal: 11,
     paddingVertical: 7,
-    borderRadius: 11,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    backgroundColor: '#fff',
     borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(60,60,67,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
   },
-  sortBtnTxt: { fontSize: 12, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
-
-  // Compact card (90×90 thumb left)
-  cardCompact: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1C1C2E',
-    borderRadius: 18,
-    marginHorizontal: 16,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.07)',
-    overflow: 'hidden',
-  },
-  thumbCompact: { width: 96, height: 96, position: 'relative', backgroundColor: '#1a2a1a' },
-  sportBadgeCompact: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 26,
-    height: 26,
-    borderRadius: 9,
-    backgroundColor: 'rgba(10,10,20,0.78)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardInfoCompact: { flex: 1, paddingHorizontal: 14, paddingVertical: 10, gap: 6 },
-  cardNameCompact: { fontSize: 14.5, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
-  statsCompact: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
-  statTxtCompact: { fontSize: 11.5, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
-  statSep: { fontSize: 11, color: 'rgba(255,255,255,0.25)' },
-  badgeRowCompact: { flexDirection: 'row', gap: 5 },
-  badgeCompact: { paddingHorizontal: 8, paddingVertical: 2.5, borderRadius: 7 },
-  badgeTxtCompact: { fontSize: 10, fontWeight: '700', letterSpacing: -0.1 },
+  sortBtnTxt: { fontSize: 12.5, fontWeight: '700', color: '#1C1C1E', letterSpacing: -0.1 },
 
   // Liste
-  listContent: { gap: 12, paddingTop: 4, paddingBottom: 16 },
+  listContent: { gap: 14, paddingTop: 4, paddingBottom: 20 },
 
   // FAB
   fab: { position: 'absolute', right: 20, zIndex: 10 },
   fabInner: {
-    width: 54,
-    height: 54,
+    width: 56,
+    height: 56,
     borderRadius: 18,
     backgroundColor: ACCENT,
     alignItems: 'center',
@@ -7229,46 +7487,120 @@ const rts = StyleSheet.create({
   // Harita modu
   mapTopBar: {
     position: 'absolute',
-    top: 16,
+    top: 56,
     left: 16,
     right: 16,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
   },
-  mapTopBtn: {
+  mapTopBtnBack: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  mapModeWrap: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 13,
+    padding: 3,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  mapModeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(10,10,20,0.82)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  mapModeBtnActive: {
+    backgroundColor: '#fff',
+  },
+  mapModeTxt: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: -0.1,
+  },
+  mapModeTxtActive: {
+    color: '#1C1C1E',
+  },
+
+  // Heatmap legend
+  heatLegend: {
+    position: 'absolute',
+    bottom: 32,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderRadius: 14,
-    backdropFilter: 'blur(10px)',
-  } as any,
-  mapTopBtnTxt: { fontSize: 13, fontWeight: '700', color: '#fff' },
+    borderRadius: 999,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  heatDot: { width: 10, height: 10, borderRadius: 5 },
+  heatLegendTxt: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.85)',
+    letterSpacing: 0.3,
+  },
+
+  // Heatmap empty
+  heatEmpty: {
+    position: 'absolute',
+    top: '40%',
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 22,
+    paddingVertical: 18,
+    borderRadius: 16,
+    maxWidth: 280,
+  },
+  heatEmptyTxt: { fontSize: 14, fontWeight: '800', color: '#fff', marginTop: 4 },
+  heatEmptySub: { fontSize: 12, color: 'rgba(255,255,255,0.7)', textAlign: 'center' },
   mapSheet: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#16162A',
+    backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 16,
     paddingBottom: 28,
-    borderTopWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
   },
   mapSheetHandle: {
     width: 36,
     height: 4,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#E5E5EA',
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 14,
   },
-  mapSheetName: { fontSize: 16, fontWeight: '700', color: '#fff', flex: 1, letterSpacing: -0.3 },
+  mapSheetName: { fontSize: 16, fontWeight: '700', color: '#1C1C1E', flex: 1, letterSpacing: -0.3 },
 
   // Loading
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F2F2F7',
+  },
 });
