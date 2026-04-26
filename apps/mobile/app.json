@@ -16,7 +16,21 @@
       "checkOnLaunch": "ALWAYS",
       "fallbackToCacheTimeout": 30000
     },
-    "plugins": ["expo-secure-store", "expo-sqlite", "@sentry/react-native/expo"],
+    "plugins": [
+      "expo-secure-store",
+      "expo-sqlite",
+      "@sentry/react-native/expo",
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "sk.eyJ1IjoiYWhtZXR0YWxoYTEyIiwiYSI6ImNtb2ZhNG5obDBnaGsydXM3NG15cmhyaDQifQ.eXH4oB5VFHPRr6Lj0MJalw"
+        }
+      ]
+    ],
+    "extra": {
+      "MAPBOX_PUBLIC_TOKEN": "pk.eyJ1IjoiYWhtZXR0YWxoYTEyIiwiYSI6ImNtb2Y5dzVnZzBtdzIycXMyMDluZ3UxNjYifQ.VOhvNTvBbB-VtfoW8Vm60w",
+      "GOOGLE_PLACES_KEY": "AIzaSyArKjcnXPHpydnc_DjSAFsnU7FgOIbApoM"
+    },
     "ios": {
       "bundleIdentifier": "com.fitai.app",
       "buildNumber": "1",
