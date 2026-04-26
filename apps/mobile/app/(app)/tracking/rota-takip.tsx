@@ -32,6 +32,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapboxRouteView, { MapboxRouteViewRef } from '../../../components/maps/MapboxRouteView';
 import { useTrackingSession } from '../../../src/hooks/useTrackingSession';
 import { usePedometer } from '../../../src/hooks/usePedometer';
+import { useFlyover } from '../../../src/hooks/useFlyover';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ACCENT = '#FF6B35';
@@ -284,34 +285,21 @@ export default function RotaTakip() {
   };
 
   // ─── Cinematic Flyover ─────────────────────────────────────────────────────
+  const flyover = useFlyover();
   useEffect(() => {
     if (!showFlyover || samples.length < 2) return;
-    let cancelled = false;
+    if (!mapRef.current) return;
     const trace: LatLng[] = samples.map((s) => ({
       latitude: s.latitude,
       longitude: s.longitude,
     }));
-    (async () => {
-      mapRef.current?.fitToCoords(trace, 80);
-      mapRef.current?.setPitch(0, 800);
-      await new Promise<void>((r) => setTimeout(r, 1200));
-      if (cancelled) return;
-
-      mapRef.current?.setPitch(60, 1200);
-      await new Promise<void>((r) => setTimeout(r, 1200));
-      if (cancelled) return;
-      const sampled = sampleEvenly(trace, 30);
-      await mapRef.current?.flyAlong(sampled, 14000, 60);
-      if (cancelled) return;
-
-      mapRef.current?.setPitch(0, 800);
-      mapRef.current?.fitToCoords(trace, 80);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [showFlyover, samples]);
+    flyover
+      .run(mapRef.current, trace, { totalSec: 8, pitch: 60, zoom: 17 })
+      .then(() => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      })
+      .catch(() => {});
+  }, [showFlyover, samples.length, flyover]);
 
   // Loading guard: planned mode waits on route + bootstrap
   if (!bootstrapped || (!isFreeRun && !route)) {
@@ -610,17 +598,6 @@ function FlyoverOverlay({
       </Animated.View>
     </View>
   );
-}
-
-// Sample N points evenly along the trace
-function sampleEvenly(coords: LatLng[], n: number): LatLng[] {
-  if (coords.length <= n) return coords;
-  const step = (coords.length - 1) / (n - 1);
-  const out: LatLng[] = [];
-  for (let i = 0; i < n; i++) {
-    out.push(coords[Math.round(i * step)]!);
-  }
-  return out;
 }
 
 function activityLabel(k: ActivityKind): string {

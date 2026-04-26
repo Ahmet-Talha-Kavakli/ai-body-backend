@@ -35,6 +35,14 @@ export interface MapboxRouteViewRef {
   setHeading: (heading: number, durationMs?: number) => void;
   setPitch: (pitch: number, durationMs?: number) => void;
   flyAlong: (coords: LatLng[], durationMs?: number, pitch?: number) => Promise<void>;
+  setCameraDetailed: (opts: {
+    centerCoordinate: [number, number];
+    zoomLevel?: number;
+    pitch?: number;
+    bearing?: number;
+    animationDuration?: number;
+    animationMode?: 'easeTo' | 'flyTo' | 'linearTo' | 'moveTo';
+  }) => void;
 }
 
 interface Props {
@@ -118,6 +126,18 @@ const MapboxRouteView = forwardRef<MapboxRouteViewRef, Props>(function MapboxRou
       },
       setPitch: (pitch, durationMs = 600) => {
         cameraRef.current?.setCamera({ pitch, animationDuration: durationMs });
+      },
+      setCameraDetailed: (opts) => {
+        const { centerCoordinate, zoomLevel, pitch, bearing, animationDuration, animationMode } =
+          opts;
+        cameraRef.current?.setCamera({
+          centerCoordinate,
+          zoomLevel,
+          pitch,
+          heading: bearing,
+          animationDuration,
+          animationMode,
+        });
       },
       flyAlong: async (coords, durationMs = 12000, pitch = 60) => {
         if (coords.length < 2) return;
