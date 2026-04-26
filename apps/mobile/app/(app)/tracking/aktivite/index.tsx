@@ -1,5 +1,14 @@
-import React, { useCallback } from 'react';
-import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect } from 'react';
+import {
+  Animated,
+  DeviceEventEmitter,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
@@ -46,6 +55,15 @@ export default function AktivitelerIndex() {
     reloadLogs,
   } = useAktivite();
 
+  // Tracking tamamlanınca anında reload (NativeTabs focus event'e güvenmiyoruz)
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('AKTIVITE_LOG_ADDED', () => {
+      reloadLogs();
+    });
+    return () => sub.remove();
+  }, [reloadLogs]);
+
+  // Sayfaya dönünce yenile (backup)
   useFocusEffect(
     useCallback(() => {
       reloadLogs();

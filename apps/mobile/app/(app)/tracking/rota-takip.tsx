@@ -23,6 +23,7 @@ import {
   Easing,
   ActivityIndicator,
   Alert,
+  DeviceEventEmitter,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -254,10 +255,6 @@ export default function RotaTakip() {
   const progress = route && route.distanceKm > 0 ? Math.min(1, distanceKm / route.distanceKm) : 0;
 
   const handleFinish = useCallback(() => {
-    if (samples.length < 5) {
-      Alert.alert('Çok kısa', 'Henüz yeterli mesafe yok. Devam et veya iptal et.');
-      return;
-    }
     Alert.alert('Antrenman bitsin mi?', 'Bitir ve özetle.', [
       { text: 'Devam et', style: 'cancel' },
       {
@@ -311,7 +308,9 @@ export default function RotaTakip() {
                 note: route?.name ? `Rota: ${route.name}` : undefined,
               }),
             });
-            if (!r.ok) {
+            if (r.ok) {
+              DeviceEventEmitter.emit('AKTIVITE_LOG_ADDED');
+            } else {
               const body = await r.text();
               console.error('[rota-takip] aktivite log hatası:', r.status, body);
             }
