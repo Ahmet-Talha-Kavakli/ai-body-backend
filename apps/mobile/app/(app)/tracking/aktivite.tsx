@@ -19,6 +19,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7186,6 +7187,83 @@ function RoutesMapView({
   );
 }
 
+// ─── Free-Run Hızlı Başlangıç ─────────────────────────────────────────────────
+// Rota seçmeden anında kayıt başlatmak için Koşu/Bisiklet/Yürüyüş tetikleri.
+// Her biri rota-takip ekranına `?mode=free&activityType=...` ile push eder.
+type FreeRunActivity = 'running' | 'cycling' | 'walking';
+
+function FreeRunQuickStart({ router }: { router: ReturnType<typeof useRouter> }) {
+  const items: { kind: FreeRunActivity; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { kind: 'running', label: 'Koşu', icon: 'walk' },
+    { kind: 'cycling', label: 'Bisiklet', icon: 'bicycle' },
+    { kind: 'walking', label: 'Yürüyüş', icon: 'footsteps' },
+  ];
+  const start = (kind: FreeRunActivity) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    router.push(('/(app)/tracking/rota-takip?mode=free&activityType=' + kind) as never);
+  };
+  return (
+    <View style={frs.wrap}>
+      {items.map((it) => (
+        <Pressable
+          key={it.kind}
+          onPress={() => start(it.kind)}
+          style={({ pressed }) => [frs.card, pressed && { opacity: 0.85 }]}
+        >
+          <Ionicons name={it.icon} size={18} color={ACCENT} />
+          <Text style={frs.label}>{it.label}</Text>
+          <View style={frs.cta}>
+            <Ionicons name="play" size={11} color="#fff" />
+            <Text style={frs.ctaTxt}>Şimdi Başlat</Text>
+          </View>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+const frs = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 10,
+  },
+  card: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    gap: 8,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: -0.2,
+  },
+  cta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: ACCENT,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  ctaTxt: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.2,
+  },
+});
+
 // ─── Ana RotalarTab ───────────────────────────────────────────────────────────
 
 type RouteSort = 'recent' | 'distance' | 'duration';
@@ -7342,6 +7420,9 @@ function RotalarTab() {
           <Ionicons name="chevron-down" size={11} color="rgba(255,255,255,0.4)" />
         </Pressable>
       </View>
+
+      {/* Free-run hızlı başlangıç — rota olmadan kayıt başlat */}
+      <FreeRunQuickStart router={router} />
 
       {/* İçerik */}
       {filtered.length === 0 ? (
