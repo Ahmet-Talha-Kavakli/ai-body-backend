@@ -29,6 +29,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSession } from '@clerk/expo';
+import { API_URL } from './aktivite/_shared';
 import MapboxRouteView, { MapboxRouteViewRef } from '../../../components/maps/MapboxRouteView';
 import { useTrackingSession } from '../../../src/hooks/useTrackingSession';
 import { usePedometer } from '../../../src/hooks/usePedometer';
@@ -128,6 +130,7 @@ export default function RotaTakip() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapboxRouteViewRef>(null);
+  const { session } = useSession();
 
   const isFreeRun = params.mode === 'free' || !params.id;
   const activityType: ActivityKind =
@@ -225,14 +228,14 @@ export default function RotaTakip() {
   // Map follow + heading rotation while tracking
   useEffect(() => {
     if (phase !== 'tracking' || !lastCoord) return;
-    mapRef.current?.flyTo(
-      { latitude: lastCoord.latitude, longitude: lastCoord.longitude },
-      17,
-      800,
-    );
-    if (lastCoord.heading != null) {
-      mapRef.current?.setHeading(lastCoord.heading, 600);
-    }
+    mapRef.current?.setCameraDetailed({
+      centerCoordinate: [lastCoord.longitude, lastCoord.latitude],
+      zoomLevel: 17.5,
+      pitch: 60,
+      bearing: lastCoord.heading ?? undefined,
+      animationMode: 'easeTo',
+      animationDuration: 800,
+    });
   }, [phase, lastCoord]);
 
   // Off-route detection (planned-route mode only)
@@ -262,13 +265,13 @@ export default function RotaTakip() {
         style: 'destructive',
         onPress: async () => {
           await finish();
-          // Persist legacy route session (back-compat — Chunk 4 will replace).
+          // Persist legacy route session (back-compat).
           if (route) {
             const trace: LatLng[] = samples.map((s) => ({
               latitude: s.latitude,
               longitude: s.longitude,
             }));
-            const session: RouteSession = {
+            const routeSession: RouteSession = {
               id: Date.now().toString(),
               routeId: route.id,
               routeName: route.name,
@@ -282,14 +285,38 @@ export default function RotaTakip() {
             try {
               const raw = await AsyncStorage.getItem(SESSIONS_KEY);
               const list: RouteSession[] = raw ? JSON.parse(raw) : [];
-              await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify([session, ...list]));
+              await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify([routeSession, ...list]));
             } catch {}
           }
+          // Auto-log to Aktivitelerim
+          try {
+            const token = (await session?.getToken()) ?? null;
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const startDate = startedAt ? new Date(startedAt) : now;
+            const startTime = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`;
+            await fetch(`${API_URL}/api/tracking/activities`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify({
+                activityType: resolvedActivity,
+                date: dateStr,
+                startTime,
+                duration: Math.max(1, Math.round(elapsed / 60)),
+                distance: parseFloat(distanceKm.toFixed(2)),
+                intensity: 'medium',
+                note: route?.name ? `Rota: ${route.name}` : undefined,
+              }),
+            });
+          } catch {}
           setShowFlyover(true);
         },
       },
     ]);
-  }, [samples, route, distanceKm, elapsed, finish]);
+  }, [samples, route, distanceKm, elapsed, finish, session, startedAt, resolvedActivity]);
 
   const handleCancel = () => {
     Alert.alert('İptal et', 'Bu kayıt silinecek.', [
@@ -376,7 +403,8 @@ export default function RotaTakip() {
         style={StyleSheet.absoluteFill}
         styleKey="standard"
         initialCenter={initialCenter}
-        initialZoom={16}
+        initialZoom={17}
+        initialPitch={55}
         routeCoords={route?.coordinates}
         showStartEnd={!isFreeRun}
         showsUserLocation
