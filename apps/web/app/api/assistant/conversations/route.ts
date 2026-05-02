@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { db } from '@/lib/db/client'
+import {
+  shouldShowBriefing,
+  loadBriefingContext,
+  generateBriefing,
+} from '@/lib/assistant/morning-briefing'
 
 // GET /api/assistant/conversations?archived=true
 export const GET = withAuth(async (req: NextRequest, { user }) => {
@@ -25,5 +30,38 @@ export const POST = withAuth(async (_req: NextRequest, { user }) => {
   const conversation = await db.assistantConversation.create({
     data: { userId: user.id },
   })
+
+  // Sabah briefing — saat 5-12 arası ve son mesajdan 6+ saat geçtiyse,
+  // AI ilk mesajı kendi atar (gerçek arkadaş hissi için).
+  try {
+    const lastMessage = await db.assistantMessage.findFirst({
+      where: { conversation: { userId: user.id } },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    })
+    const now = new Date()
+    if (shouldShowBriefing(now, lastMessage?.createdAt ?? null)) {
+      const ctx = await loadBriefingContext(user.id)
+      if (ctx) {
+        const briefingText = await generateBriefing(ctx)
+        if (briefingText) {
+          await db.assistantMessage.create({
+            data: {
+              conversationId: conversation.id,
+              role: 'assistant',
+              content: briefingText,
+            },
+          })
+          await db.assistantConversation.update({
+            where: { id: conversation.id },
+            data: { updatedAt: new Date() },
+          })
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[conversations/POST/briefing]', e)
+  }
+
   return NextResponse.json(conversation)
 })

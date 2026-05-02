@@ -30,7 +30,7 @@ Yanıtın SADECE şu JSON formatında olsun:
 
 Yanıtla başka açıklama YAPMA, sadece JSON dön.`
 
-interface ExtractedFact {
+export interface ExtractedFact {
   category: 'identity' | 'preference' | 'pattern' | 'event' | 'promise'
   content: string
 }
@@ -44,7 +44,7 @@ export async function extractAndStoreFacts(args: {
   userMessage: string
   aiResponse: string
   sourceMessageId: string
-}): Promise<void> {
+}): Promise<ExtractedFact[]> {
   const { userId, userMessage, aiResponse, sourceMessageId } = args
   try {
     const openai = new OpenAI()
@@ -67,7 +67,7 @@ export async function extractAndStoreFacts(args: {
     try {
       parsed = JSON.parse(text)
     } catch {
-      return
+      return []
     }
     const facts = (parsed.facts ?? []).filter(
       (f) =>
@@ -75,7 +75,7 @@ export async function extractAndStoreFacts(args: {
         f.content &&
         ['identity', 'preference', 'pattern', 'event', 'promise'].includes(f.category)
     )
-    if (!facts.length) return
+    if (!facts.length) return []
 
     // Mevcut fact'leri çek (duplikasyon kontrolü için)
     const existing = await db.assistantMemoryFact.findMany({
@@ -89,7 +89,7 @@ export async function extractAndStoreFacts(args: {
     const toInsert = facts
       .filter((f) => !existingNorm.has(`${f.category}|${f.content.toLowerCase().trim()}`))
       .slice(0, 3)
-    if (!toInsert.length) return
+    if (!toInsert.length) return []
 
     await db.assistantMemoryFact.createMany({
       data: toInsert.map((f) => ({
@@ -100,8 +100,10 @@ export async function extractAndStoreFacts(args: {
         sourceMessageId,
       })),
     })
+    return toInsert
   } catch (e) {
     // Sessiz fail — kullanıcıyı etkilemesin
     console.error('[memory-extract]', e)
+    return []
   }
 }

@@ -246,12 +246,6 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         })
         aiMessageId = aiMessage.id
         embedAndStoreMessage(aiMessage.id, finalText).catch(() => {})
-        extractAndStoreFacts({
-          userId: user.id,
-          userMessage: content,
-          aiResponse: finalText,
-          sourceMessageId: userMessage.id,
-        }).catch(() => {})
         maybeEvolvePersonality(user.id).catch(() => {})
 
         await db.assistantConversation.update({
@@ -266,6 +260,24 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
           aiMessageId,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any)
+
+        // Memory extraction — stream'i bitirmeden önce await et ki UI'a bildirim ulaşsın
+        try {
+          const newFacts = await extractAndStoreFacts({
+            userId: user.id,
+            userMessage: content,
+            aiResponse: finalText,
+            sourceMessageId: userMessage.id,
+          })
+          if (newFacts && newFacts.length > 0) {
+            send({
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              type: 'memory_saved' as any,
+              facts: newFacts,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any)
+          }
+        } catch {}
       } catch (e) {
         send({ type: 'error', message: e instanceof Error ? e.message : 'unknown' })
       }

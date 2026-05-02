@@ -12,6 +12,7 @@ export type StreamEvent =
   | { type: 'text_delta'; text: string }
   | { type: 'done'; finalText: string; toolCalls: unknown[] }
   | { type: 'saved'; aiMessageId: string }
+  | { type: 'memory_saved'; facts: Array<{ category: string; content: string }> }
   | { type: 'error'; message: string };
 
 export async function streamAssistantMessage(args: {
