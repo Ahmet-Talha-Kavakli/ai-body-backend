@@ -102,6 +102,7 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
     ragContext,
     greetingContext: ctx.greetingContext,
     isNewConversation,
+    grantedCapabilities: ctx.grantedCapabilities,
   })
 
   // SSE stream başlat

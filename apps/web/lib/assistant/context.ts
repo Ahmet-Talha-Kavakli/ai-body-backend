@@ -9,92 +9,105 @@ export async function loadAssistantContext(userId: string) {
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  const [profile, user, facts, people, recentEvents, environment, lastConversation, recentMoods] =
-    await Promise.all([
-      db.assistantProfile.findUnique({
-        where: { userId },
-        select: {
-          name: true,
-          formality: true,
-          humor: true,
-          directness: true,
-          supportStyle: true,
-          msgLengthPref: true,
-          emojiPref: true,
-          emotionalOpenness: true,
-          needsAdvice: true,
-          onboardingCompleted: true,
-          onboardingStep: true,
+  const [
+    profile,
+    user,
+    facts,
+    people,
+    recentEvents,
+    environment,
+    lastConversation,
+    recentMoods,
+    permissions,
+  ] = await Promise.all([
+    db.assistantProfile.findUnique({
+      where: { userId },
+      select: {
+        name: true,
+        formality: true,
+        humor: true,
+        directness: true,
+        supportStyle: true,
+        msgLengthPref: true,
+        emojiPref: true,
+        emotionalOpenness: true,
+        needsAdvice: true,
+        onboardingCompleted: true,
+        onboardingStep: true,
+      },
+    }),
+    db.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    }),
+    db.assistantMemoryFact.findMany({
+      // V2 (Faz J): Sadece aktif (supersede edilmemiş, arşivlenmemiş) facts
+      where: { userId, archived: false, supersededById: null },
+      orderBy: [{ category: 'asc' }, { lastConfirmedAt: 'desc' }],
+      take: 80,
+      select: {
+        id: true,
+        category: true,
+        content: true,
+        confidence: true,
+        lastConfirmedAt: true,
+      },
+    }),
+    db.person.findMany({
+      where: { userId, archived: false },
+      orderBy: [{ importance: 'desc' }, { lastMentionedAt: 'desc' }],
+      take: 20,
+      select: {
+        name: true,
+        relationship: true,
+        healthConditions: true,
+        importance: true,
+        isEmergencyContact: true,
+      },
+    }),
+    db.lifeEvent.findMany({
+      where: {
+        userId,
+        OR: [{ date: { gte: thirtyDaysAgo } }, { resolved: false }],
+      },
+      orderBy: { date: 'desc' },
+      take: 20,
+      select: { type: true, title: true, date: true, resolved: true },
+    }),
+    db.environmentContext.findUnique({
+      where: { userId },
+      select: { city: true, latitude: true, longitude: true, alertsEnabled: true },
+    }),
+    // V2 (Faz L3): son sohbet bağlamı — selamlama için
+    db.assistantConversation.findFirst({
+      where: { userId, archived: false },
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        updatedAt: true,
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { role: true, content: true, createdAt: true },
         },
-      }),
-      db.user.findUnique({
-        where: { id: userId },
-        select: { name: true },
-      }),
-      db.assistantMemoryFact.findMany({
-        // V2 (Faz J): Sadece aktif (supersede edilmemiş, arşivlenmemiş) facts
-        where: { userId, archived: false, supersededById: null },
-        orderBy: [{ category: 'asc' }, { lastConfirmedAt: 'desc' }],
-        take: 80,
-        select: {
-          id: true,
-          category: true,
-          content: true,
-          confidence: true,
-          lastConfirmedAt: true,
-        },
-      }),
-      db.person.findMany({
-        where: { userId, archived: false },
-        orderBy: [{ importance: 'desc' }, { lastMentionedAt: 'desc' }],
-        take: 20,
-        select: {
-          name: true,
-          relationship: true,
-          healthConditions: true,
-          importance: true,
-          isEmergencyContact: true,
-        },
-      }),
-      db.lifeEvent.findMany({
-        where: {
-          userId,
-          OR: [{ date: { gte: thirtyDaysAgo } }, { resolved: false }],
-        },
-        orderBy: { date: 'desc' },
-        take: 20,
-        select: { type: true, title: true, date: true, resolved: true },
-      }),
-      db.environmentContext.findUnique({
-        where: { userId },
-        select: { city: true, latitude: true, longitude: true, alertsEnabled: true },
-      }),
-      // V2 (Faz L3): son sohbet bağlamı — selamlama için
-      db.assistantConversation.findFirst({
-        where: { userId, archived: false },
-        orderBy: { updatedAt: 'desc' },
-        select: {
-          id: true,
-          title: true,
-          updatedAt: true,
-          messages: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-            select: { role: true, content: true, createdAt: true },
-          },
-        },
-      }),
-      // V2 (Faz L3): son 7 günün mood'u — açılışta dikkate alınır
-      db.moodLog.findMany({
-        where: {
-          userId,
-          loggedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-        },
-        orderBy: { loggedAt: 'desc' },
-        take: 7,
-        select: { mood: true, moodScore: true, note: true, loggedAt: true },
-      }),
-    ])
+      },
+    }),
+    db.assistantPermission.findMany({
+      where: { userId, status: 'granted' },
+      select: { capability: true },
+    }),
+    // V2 (Faz L3): son 7 günün mood'u — açılışta dikkate alınır
+    db.moodLog.findMany({
+      where: {
+        userId,
+        loggedAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+      },
+      orderBy: { loggedAt: 'desc' },
+      take: 7,
+      select: { mood: true, moodScore: true, note: true, loggedAt: true },
+    }),
+  ])
 
   // Çevre verisi varsa otomatik hava + deprem çek (paralel, cache'li)
   let weatherSummary: string | null = null
@@ -145,5 +158,6 @@ export async function loadAssistantContext(userId: string) {
     recentEvents,
     environment: environment ? { city: environment.city, weatherSummary, earthquakeAlert } : null,
     greetingContext,
+    grantedCapabilities: permissions.map((p) => p.capability),
   }
 }

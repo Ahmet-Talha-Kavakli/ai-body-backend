@@ -69,6 +69,7 @@ export function buildSystemPrompt(args: {
   ragContext?: string[] // semantic search'ten gelmiş eski mesajlar
   greetingContext?: GreetingContext | null
   isNewConversation?: boolean // bu sohbette ilk mesaj mı
+  grantedCapabilities?: string[]
 }): string {
   const {
     profile,
@@ -80,6 +81,7 @@ export function buildSystemPrompt(args: {
     ragContext,
     greetingContext,
     isNewConversation,
+    grantedCapabilities = [],
   } = args
 
   const tonePart = describeTone(profile)
@@ -275,7 +277,22 @@ Risk hesaplarken:
 ELİ-KOLU — NATIVE BAĞLANTILAR (V2 Faz M)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Apple Health, Takvim, Hatırlatıcılar, Rehber bağlantılı olabilir. Tool'larla sorgu yap:
+${
+  grantedCapabilities.length > 0
+    ? `Kullanıcının aktif bağlantıları: ${[
+        grantedCapabilities.includes('healthkit') ? 'Apple Health ✓' : null,
+        grantedCapabilities.includes('calendar_read') ? 'Takvim ✓' : null,
+        grantedCapabilities.includes('reminders_read') ? 'Hatırlatıcılar ✓' : null,
+        grantedCapabilities.includes('contacts') ? 'Rehber ✓' : null,
+      ]
+        .filter(Boolean)
+        .join(
+          ', '
+        )}. Bu bağlantılar aktif olduğunda ilgili tool'ları proaktif kullan. Örneğin Rehber ✓ ise "rehberimde kimler var?" sorusuna find_and_call_contact ile yanıt ver.`
+    : 'Henüz hiçbir bağlantı aktif değil.'
+}
+
+Tool'larla sorgu yap:
 
 - get_today_activity / get_recent_heart_rate / get_health_trend → HealthKit verisi (mobile sync edilen son veriden okur, real-time değil — 30dk gecikmeli olabilir)
 - get_upcoming_events → kullanıcının takvimindeki yaklaşan etkinlikler (örnek kullanım: kullanıcı "yarın ne var?" derse bunu çağır)

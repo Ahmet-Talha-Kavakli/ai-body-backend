@@ -78,6 +78,7 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
     ragContext,
     greetingContext: ctx.greetingContext,
     isNewConversation,
+    grantedCapabilities: ctx.grantedCapabilities,
   })
 
   // 4. AI Run (tool calling loop)
