@@ -22,6 +22,7 @@ import { calendarToolDefs, calendarExecutors } from './calendar'
 import { contactsToolDefs, contactsExecutors } from './contacts'
 import { financeToolDefs, financeExecutors } from './finance'
 import { productivityToolDefs, productivityExecutors } from './productivity'
+import { careerToolDefs, careerExecutors } from './career'
 
 export const ALL_TOOL_DEFS: ToolDefinition[] = [
   ...healthReadToolDefs,
@@ -43,6 +44,7 @@ export const ALL_TOOL_DEFS: ToolDefinition[] = [
   ...contactsToolDefs,
   ...financeToolDefs,
   ...productivityToolDefs,
+  ...careerToolDefs,
 ]
 
 export const ALL_EXECUTORS: Record<string, ToolExecutor> = {
@@ -65,6 +67,7 @@ export const ALL_EXECUTORS: Record<string, ToolExecutor> = {
   ...contactsExecutors,
   ...financeExecutors,
   ...productivityExecutors,
+  ...careerExecutors,
 }
 
 /**
@@ -114,6 +117,7 @@ export function getToolDefsForCategories(categories: string[] | 'all'): ToolDefi
     contacts: ['social'],
     finance: ['tools'],
     productivity: ['tools'],
+    career: ['tools'],
     tools_actions: ['tools'],
   }
 

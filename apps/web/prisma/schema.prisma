@@ -91,6 +91,13 @@ model User {
   timeBlocks              TimeBlock[]              @relation("UserTimeBlocks")
   distractions            Distraction[]            @relation("UserDistractions")
   weeklyReviews           WeeklyReview[]           @relation("UserWeeklyReviews")
+  careerProfile           CareerProfile?           @relation("UserCareerProfile")
+  workProjects            WorkProject[]            @relation("UserWorkProjects")
+  meetingNotes            MeetingNote[]            @relation("UserMeetingNotes")
+  jobApplications         JobApplication[]         @relation("UserJobApplications")
+  achievements            Achievement[]            @relation("UserAchievements")
+  workContacts            WorkContact[]            @relation("UserWorkContacts")
+  careerGoals             CareerGoal[]             @relation("UserCareerGoals")
   people                  Person[]                @relation("UserPeople")
   lifeEvents              LifeEvent[]             @relation("UserLifeEvents")
   environment             EnvironmentContext?     @relation("UserEnvironment")
@@ -2939,4 +2946,156 @@ model WeeklyReview {
 
   @@unique([userId, weekStart])
   @@index([userId, weekStart])
+}
+
+// ────────────────────────────────────────────────────
+// V2 (Faz N): İş & Kariyer
+// ────────────────────────────────────────────────────
+
+model CareerProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation("UserCareerProfile", fields: [userId], references: [id], onDelete: Cascade)
+  currentRole     String?
+  company         String?
+  industry        String?
+  yearsExperience Int?
+  careerStartedAt DateTime?
+  // currency may differ; keep as labels
+  salaryCurrency  String?
+  salaryAmount    Float?
+  // employed | contractor | founder | freelancer | unemployed | student
+  employmentType  String?
+  // remote | hybrid | onsite
+  workMode        String?
+  location        String?
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model WorkProject {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("UserWorkProjects", fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  client      String?
+  description String?   @db.Text
+  // active | paused | done | cancelled | archived
+  status      String    @default("active")
+  startedAt   DateTime?
+  deadline    DateTime?
+  completedAt DateTime?
+  budget      Float?
+  hoursLogged Float     @default(0)
+  notes       String?   @db.Text
+  archived    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, archived])
+}
+
+model MeetingNote {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("UserMeetingNotes", fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  attendees   String[]  @default([])
+  date        DateTime
+  agenda      String?   @db.Text
+  decisions   String[]  @default([])
+  actionItems String[]  @default([])
+  // good | neutral | tense | bad
+  mood        String?
+  // Bağlı CalendarEventShadow (varsa)
+  calendarEventId String?
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, date])
+}
+
+model JobApplication {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("UserJobApplications", fields: [userId], references: [id], onDelete: Cascade)
+  company     String
+  role        String
+  // applied | screening | interview_1 | interview_2 | interview_final | offer | accepted | rejected | withdrawn
+  status      String    @default("applied")
+  appliedAt   DateTime  @default(now())
+  source      String?   // linkedin, referral, cold_apply, recruiter
+  salaryRange String?
+  salaryCurrency String?
+  location    String?
+  workMode    String?
+  link        String?
+  notes       String?   @db.Text
+  archived    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, status])
+}
+
+model Achievement {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("UserAchievements", fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?   @db.Text
+  // recognition | milestone | promotion | award | feature_shipped | revenue | learning | other
+  type        String    @default("milestone")
+  date        DateTime  @default(now())
+  impact      String?
+  evidence    String?   @db.Text  // bağlantı/proof
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, date])
+}
+
+model WorkContact {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation("UserWorkContacts", fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  role            String?
+  company         String?
+  // friend, peer, mentor, manager, ex_colleague, recruiter, client, candidate
+  relation        String    @default("peer")
+  importance      Int       @default(5) // 0-10
+  email           String?
+  linkedin        String?
+  phone           String?
+  lastContactAt   DateTime?
+  notes           String?   @db.Text
+  archived        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, archived])
+  @@index([userId, lastContactAt])
+}
+
+model CareerGoal {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation("UserCareerGoals", fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  targetRole    String?
+  targetSalary  Float?
+  targetCurrency String?
+  // 6-month | 1-year | 3-year | 5-year
+  horizon       String?
+  deadline      DateTime?
+  milestones    String[]  @default([])
+  status        String    @default("active") // active | achieved | abandoned
+  achievedAt    DateTime?
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, status])
 }
