@@ -8,6 +8,7 @@ import { extractAndStoreFacts } from '@/lib/assistant/memory-extractor'
 import { embedAndStoreMessage, searchSimilarMessages } from '@/lib/assistant/rag'
 import { maybeEvolvePersonality } from '@/lib/assistant/personality-evolver'
 import { detectEmergency } from '@/lib/assistant/emergency'
+import { routeMessage, modelForDifficulty, maxTokensForDifficulty } from '@/lib/assistant/router'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -173,6 +174,18 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         return
       }
 
+      // V2 Faz N: Multi-model router — maliyet optimizasyonu
+      const recentContext = conv.messages
+        .slice(-3)
+        .map((m) => `${m.role}: ${m.content.slice(0, 80)}`)
+        .join(' | ')
+      const route = await routeMessage({ message: content, recentContext })
+      const selectedModel = modelForDifficulty(route.difficulty)
+      const selectedMaxTokens = maxTokensForDifficulty(route.difficulty)
+      console.log(
+        `[router] ${route.difficulty} → ${selectedModel} (${route.reasoning}) | tools: ${route.toolCategories.join(',') || 'all'}`
+      )
+
       try {
         await runAssistantStream({
           userId: user.id,
@@ -181,6 +194,9 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
             .filter((m) => m.role === 'user' || m.role === 'assistant')
             .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
           userMessage: content,
+          model: selectedModel,
+          maxTokens: selectedMaxTokens,
+          toolCategories: route.toolCategories.length > 0 ? route.toolCategories : 'all',
           emit: (event) => {
             if (event.type === 'text_delta') {
               finalText += event.text

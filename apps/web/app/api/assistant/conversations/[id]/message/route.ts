@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client'
 import { loadAssistantContext } from '@/lib/assistant/context'
 import { buildSystemPrompt } from '@/lib/assistant/system-prompt'
 import { runAssistant } from '@/lib/assistant/run'
+import { routeMessage, modelForDifficulty, maxTokensForDifficulty } from '@/lib/assistant/router'
 import { extractAndStoreFacts } from '@/lib/assistant/memory-extractor'
 import { embedAndStoreMessage, searchSimilarMessages } from '@/lib/assistant/rag'
 import { maybeEvolvePersonality } from '@/lib/assistant/personality-evolver'
@@ -81,6 +82,18 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
     grantedCapabilities: ctx.grantedCapabilities,
   })
 
+  // V2 Faz N: Multi-model router
+  const recentContext = conv.messages
+    .slice(-3)
+    .map((m) => `${m.role}: ${m.content.slice(0, 80)}`)
+    .join(' | ')
+  const route = await routeMessage({ message: content, recentContext })
+  const selectedModel = modelForDifficulty(route.difficulty)
+  const selectedMaxTokens = maxTokensForDifficulty(route.difficulty)
+  console.log(
+    `[router] ${route.difficulty} → ${selectedModel} (${route.reasoning}) | tools: ${route.toolCategories.join(',') || 'all'}`
+  )
+
   // 4. AI Run (tool calling loop)
   let aiContent = FALLBACK
   let toolCallsLog: unknown = null
@@ -92,6 +105,9 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
         .filter((m) => m.role === 'user' || m.role === 'assistant')
         .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
       userMessage: content,
+      model: selectedModel,
+      maxTokens: selectedMaxTokens,
+      toolCategories: route.toolCategories.length > 0 ? route.toolCategories : 'all',
     })
     aiContent = result.finalText || FALLBACK
     if (result.toolCalls.length) {

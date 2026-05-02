@@ -11,7 +11,7 @@
  */
 
 import OpenAI from 'openai'
-import { ALL_EXECUTORS, toOpenAIFunctions, ToolResult } from './tools'
+import { ALL_EXECUTORS, toOpenAIFunctions, ToolResult, getToolDefsForCategories } from './tools'
 
 const MAX_ITERATIONS = 5
 
@@ -33,11 +33,18 @@ export async function runAssistantStream(args: {
   history: Array<{ role: 'user' | 'assistant'; content: string }>
   userMessage: string
   emit: (event: StreamEvent) => void
+  // V2 Faz N: router parametreleri
+  model?: string // default 'gpt-4o'
+  maxTokens?: number // default 800
+  toolCategories?: string[] | 'all' // default 'all'
 }): Promise<void> {
   const { userId, systemPrompt, history, userMessage, emit } = args
+  const model = args.model ?? 'gpt-4o'
+  const maxTokens = args.maxTokens ?? 800
+  const toolDefs = args.toolCategories ? getToolDefsForCategories(args.toolCategories) : undefined
 
   const openai = new OpenAI()
-  const tools = toOpenAIFunctions()
+  const tools = toOpenAIFunctions(toolDefs)
 
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: 'system', content: systemPrompt },
@@ -54,12 +61,12 @@ export async function runAssistantStream(args: {
   try {
     for (let i = 0; i < MAX_ITERATIONS; i++) {
       const stream = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model,
         messages,
-        tools,
-        tool_choice: 'auto',
+        tools: tools.length > 0 ? tools : undefined,
+        tool_choice: tools.length > 0 ? 'auto' : undefined,
         temperature: 0.8,
-        max_tokens: 800,
+        max_tokens: maxTokens,
         stream: true,
       })
 
