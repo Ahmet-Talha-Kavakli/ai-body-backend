@@ -11,6 +11,11 @@ import { detectEmergency } from '@/lib/assistant/emergency'
 import { routeMessage, modelForDifficulty, maxTokensForDifficulty } from '@/lib/assistant/router'
 import { analyzeTone, toneToPromptHint } from '@/lib/assistant/tone-analyzer'
 import { detectLifeEvent, lifeEventToPromptHint } from '@/lib/assistant/life-event-detector'
+import {
+  maybeCreateLevel1Summary,
+  loadSummaryContext,
+  formatSummaryContextForPrompt,
+} from '@/lib/assistant/summary-builder'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -169,16 +174,18 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         .map((m) => `${m.role}: ${m.content.slice(0, 80)}`)
         .join(' | ')
 
-      // V2 Chunk 4: Router + tone + life event paralel — hepsi tek round
-      const [route, toneAnalysis, lifeEvent] = await Promise.all([
+      // V2 Chunk 4 + V3 Faz A: Router + tone + life event + summary context paralel
+      const [route, toneAnalysis, lifeEvent, summaryCtx] = await Promise.all([
         routeMessage({ message: content, recentContext }),
         analyzeTone(content),
         detectLifeEvent(content),
+        loadSummaryContext(user.id),
       ])
       const selectedModel = modelForDifficulty(route.difficulty)
       const selectedMaxTokens = maxTokensForDifficulty(route.difficulty)
       const tonePromptHint = toneToPromptHint(toneAnalysis)
       const lifeEventHint = lifeEvent ? lifeEventToPromptHint(lifeEvent) : ''
+      const summaryHint = formatSummaryContextForPrompt(summaryCtx)
 
       // Easy/medium → light system prompt (~1500 token), hard → full prompt (~6000 token)
       const profileSafe = ctx.profile!
@@ -205,8 +212,8 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
               isNewConversation,
               grantedCapabilities: ctx.grantedCapabilities,
             })
-      // Ton analizi + yaşam olayı varsa system prompt'a ekle — AI ona göre cevap verir
-      const systemPrompt = baseSystemPrompt + tonePromptHint + lifeEventHint
+      // Ton + yaşam olayı + geçmiş özetleri sistem prompt'a ekle
+      const systemPrompt = baseSystemPrompt + summaryHint + tonePromptHint + lifeEventHint
 
       // Easy + tool-less mesajlarda hiç tool gönderme (büyük tasarruf)
       // Listen modunda veya yaşam olayı varsa tool gönderme — kullanıcı duygusal an yaşıyor
@@ -268,6 +275,8 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         aiMessageId = aiMessage.id
         embedAndStoreMessage(aiMessage.id, finalText).catch(() => {})
         maybeEvolvePersonality(user.id).catch(() => {})
+        // V3 Faz A: hierarchical memory compression Level 1 tetikleyici
+        maybeCreateLevel1Summary(user.id, id).catch(() => {})
 
         await db.assistantConversation.update({
           where: { id },

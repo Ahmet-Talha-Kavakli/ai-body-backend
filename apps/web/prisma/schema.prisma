@@ -75,6 +75,7 @@ model User {
   assistantConversations  AssistantConversation[] @relation("UserAssistantConversations")
   assistantMemoryFacts    AssistantMemoryFact[]   @relation("UserAssistantMemoryFacts")
   assistantPermissions    AssistantPermission[]   @relation("UserAssistantPermissions")
+  conversationSummaries   ConversationSummary[]   @relation("UserConversationSummaries")
   healthKitSnapshots      HealthKitDailySnapshot[] @relation("UserHealthKitSnapshots")
   calendarEvents          CalendarEventShadow[]    @relation("UserCalendarEvents")
   reminderShadows         ReminderShadow[]         @relation("UserReminderShadows")
@@ -1824,8 +1825,56 @@ model AssistantConversation {
   updatedAt DateTime           @updatedAt
   messages  AssistantMessage[]
 
+  // V3 Faz A — Hierarchical memory compression
+  // Level 1 özetlerinden kaç tane üretildiğinin sayacı (rollup için)
+  level1SummaryCount Int @default(0)
+  // Son Level 1 özet hangi mesajdan sonra üretildi (yeni mesajları ondan sonrası özetle)
+  lastSummarizedMessageId String?
+  // Sohbet kalıcılığı — sabitleme & sessize alma
+  pinnedAt   DateTime?
+  mutedUntil DateTime?
+
+  summaries ConversationSummary[]
+
   @@index([userId, updatedAt])
   @@index([userId, archived])
+}
+
+// V3 Faz A — Hierarchical Memory Compression
+// 4 seviyeli özet sistemi: mini (20 mesaj) -> haftalık (5 mini) -> aylık (4 haftalık) -> yıllık (12 aylık)
+model ConversationSummary {
+  id             String                  @id @default(cuid())
+  userId         String
+  user           User                    @relation("UserConversationSummaries", fields: [userId], references: [id], onDelete: Cascade)
+  conversationId String?
+  conversation   AssistantConversation?  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // Hangi seviye? 1=mini, 2=haftalık, 3=aylık, 4=yıllık
+  level   Int
+  content String @db.Text
+
+  // Hangi zaman aralığını kapsıyor
+  coversFromDate DateTime
+  coversToDate   DateTime
+
+  // Level 1 için ham mesaj sayısı; üst seviyelerde kapsanan alt özet sayısı
+  messageCount      Int @default(0)
+  childSummaryCount Int @default(0)
+
+  // Hierarchy — bir üst seviyedeki özete bağlanır
+  parentSummaryId String?
+  parent          ConversationSummary?  @relation("SummaryHierarchy", fields: [parentSummaryId], references: [id])
+  children        ConversationSummary[] @relation("SummaryHierarchy")
+
+  // Semantic search için embedding
+  embedding Unsupported("vector(1536)")?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, level])
+  @@index([userId, coversToDate])
+  @@index([parentSummaryId])
+  @@index([conversationId])
 }
 
 model AssistantMessage {
