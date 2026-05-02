@@ -90,7 +90,14 @@ export async function runAssistantStream(args: {
           const outRate = isMini ? 0.6 / 1_000_000 : 10 / 1_000_000
           const cost = u.prompt_tokens * inRate + u.completion_tokens * outRate
           console.log(
-            `[usage] ${model} | in=${u.prompt_tokens} out=${u.completion_tokens} | ~$${cost.toFixed(5)} | tools=${tools.length}`
+            JSON.stringify({
+              tag: 'cost',
+              cost_usd: parseFloat(cost.toFixed(6)),
+              model,
+              in: u.prompt_tokens,
+              out: u.completion_tokens,
+              tools: tools.length,
+            })
           )
         }
         const delta = chunk.choices[0]?.delta
