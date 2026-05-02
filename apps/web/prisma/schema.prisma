@@ -80,6 +80,11 @@ model User {
   reminderShadows         ReminderShadow[]         @relation("UserReminderShadows")
   contactShadows          ContactShadow[]          @relation("UserContactShadows")
   workoutShadows          WorkoutShadow[]          @relation("UserWorkoutShadows")
+  transactions            Transaction[]            @relation("UserTransactions")
+  financeSubscriptions    FinanceSubscription[]    @relation("UserFinanceSubscriptions")
+  financialAccounts       FinancialAccount[]       @relation("UserFinancialAccounts")
+  financialGoals          FinancialGoal[]          @relation("UserFinancialGoals")
+  bills                   Bill[]                   @relation("UserBills")
   people                  Person[]                @relation("UserPeople")
   lifeEvents              LifeEvent[]             @relation("UserLifeEvents")
   environment             EnvironmentContext?     @relation("UserEnvironment")
@@ -1608,6 +1613,116 @@ model ReminderShadow {
 
   @@unique([userId, externalId])
   @@index([userId, completed])
+}
+
+// ────────────────────────────────────────────────────
+// V2 (Faz N): Para & Finans
+// ────────────────────────────────────────────────────
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("UserTransactions", fields: [userId], references: [id], onDelete: Cascade)
+  // expense | income
+  type        String
+  amount      Float
+  currency    String   @default("TRY")
+  category    String   // yemek, ulaşım, abonelik, kira, eğlence, sağlık, alışveriş, fatura, gelir_maaş, gelir_freelance, diğer
+  merchant    String?
+  note        String?  @db.Text
+  date        DateTime
+  recurring   Boolean  @default(false)
+  source      String   @default("manual") // manual | voice | email_parse | ocr
+  createdAt   DateTime @default(now())
+
+  @@index([userId, date])
+  @@index([userId, category])
+}
+
+model FinanceSubscription {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation("UserFinanceSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  amount        Float
+  currency      String   @default("TRY")
+  // monthly | yearly | weekly | quarterly
+  billingPeriod String   @default("monthly")
+  category      String?  // streaming, software, fitness, news, gym, cloud, education, other
+  nextChargeAt  DateTime?
+  startedAt     DateTime?
+  cancelable    Boolean  @default(true)
+  cancelled     Boolean  @default(false)
+  cancelledAt   DateTime?
+  lastUsedAt    DateTime?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, cancelled])
+}
+
+model FinancialAccount {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserFinancialAccounts", fields: [userId], references: [id], onDelete: Cascade)
+  label     String
+  // checking | savings | credit_card | wallet | investment | crypto
+  type      String
+  currency  String   @default("TRY")
+  balance   Float    @default(0)
+  isPrimary Boolean  @default(false)
+  archived  Boolean  @default(false)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, archived])
+}
+
+model FinancialGoal {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation("UserFinancialGoals", fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  targetAmount  Float
+  currentAmount Float     @default(0)
+  currency      String    @default("TRY")
+  deadline      DateTime?
+  monthlyTarget Float?
+  category      String?   // ev, araba, tatil, acil_fon, emeklilik, eğitim, diğer
+  achieved      Boolean   @default(false)
+  achievedAt    DateTime?
+  archived      Boolean   @default(false)
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, achieved])
+}
+
+model Bill {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation("UserBills", fields: [userId], references: [id], onDelete: Cascade)
+  label        String
+  amount       Float?    // Sabit değilse null
+  currency     String    @default("TRY")
+  // electricity, water, gas, internet, phone, rent, insurance, credit_card, other
+  category     String
+  dueDay       Int?      // Ayın hangi günü (1-31)
+  // monthly | quarterly | yearly
+  period       String    @default("monthly")
+  autoCharge   Boolean   @default(false)
+  lastPaidAt   DateTime?
+  nextDueAt    DateTime?
+  archived     Boolean   @default(false)
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId, archived])
+  @@index([userId, nextDueAt])
 }
 
 // V2 (Faz M): Asistan'ın native sistemlere izinleri (HealthKit, Calendar, vb.)
