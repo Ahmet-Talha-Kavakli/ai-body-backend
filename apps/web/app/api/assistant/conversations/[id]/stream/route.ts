@@ -313,12 +313,18 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         }
 
         // Memory extraction — stream'i bitirmeden önce await et ki UI'a bildirim ulaşsın
+        // Conversation içindeki user mesaj sayısını ver, her 3 mesajda bir çalışacak
         try {
+          const userMsgCount = await db.assistantMessage.count({
+            where: { conversationId: id, role: 'user' },
+          })
           const newFacts = await extractAndStoreFacts({
             userId: user.id,
             userMessage: content,
             aiResponse: finalText,
             sourceMessageId: userMessage.id,
+            conversationId: id,
+            userMessageCountInConversation: userMsgCount,
           })
           if (newFacts && newFacts.length > 0) {
             send({

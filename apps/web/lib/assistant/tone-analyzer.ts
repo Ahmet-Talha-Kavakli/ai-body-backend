@@ -39,11 +39,39 @@ export interface ToneAnalysis {
   supportNeeded: 'listen' | 'advice' | 'neither'
 }
 
+/**
+ * Mesajın duygusal analiz değeri taşıyıp taşımadığını filtreler.
+ * Selam/teşekkür/ok gibi rutin mesajlarda çağrı yapmamak için.
+ */
+function isSkippableForTone(message: string): boolean {
+  const trimmed = message.trim()
+  if (trimmed.length < 12) return true
+  // Sadece emoji veya tek kelime → atla
+  const wordCount = trimmed.split(/\s+/).filter(Boolean).length
+  if (wordCount < 3) return true
+  // Çok bilinen rutin selamlar/teşekkürler
+  const lower = trimmed.toLowerCase()
+  const routine = [
+    'merhaba',
+    'selam',
+    'günaydın',
+    'iyi geceler',
+    'iyi günler',
+    'teşekkürler',
+    'tamam',
+    'olur',
+    'görüşürüz',
+    'sağol',
+  ]
+  // Mesaj rutin selamla başlıyor + çok kısa ise atla
+  if (trimmed.length < 30 && routine.some((r) => lower.startsWith(r))) return true
+  return false
+}
+
 export async function analyzeTone(userMessage: string): Promise<ToneAnalysis> {
   const fallback: ToneAnalysis = { tone: 'neutral', intensity: 0, supportNeeded: 'neither' }
 
-  // Çok kısa mesajlar için API çağrısı yapma
-  if (userMessage.trim().length < 8) return fallback
+  if (isSkippableForTone(userMessage)) return fallback
 
   try {
     const openai = new OpenAI()

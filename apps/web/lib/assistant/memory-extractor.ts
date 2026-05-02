@@ -38,14 +38,30 @@ export interface ExtractedFact {
 /**
  * Kullanıcı + AI mesaj çiftinden fact'leri çıkar ve DB'ye ekle.
  * Arka planda çalışacak şekilde tasarlandı (await yapma!).
+ *
+ * V2 Chunk 6 maliyet optimizasyonu: Her mesajda değil, conversation içinde
+ * her 3 user mesajında bir çalışsın. Bu sayede daha fazla bağlam birikir,
+ * fact'ler daha net çıkar, çağrı maliyeti %66 düşer.
  */
 export async function extractAndStoreFacts(args: {
   userId: string
   userMessage: string
   aiResponse: string
   sourceMessageId: string
+  conversationId?: string
+  userMessageCountInConversation?: number
 }): Promise<ExtractedFact[]> {
-  const { userId, userMessage, aiResponse, sourceMessageId } = args
+  const { userId, userMessage, aiResponse, sourceMessageId, userMessageCountInConversation } = args
+
+  // Her 3 user mesajında bir çalış (1, 4, 7, 10...) — 1. mesaj kaçırılmasın diye %3==1
+  if (
+    typeof userMessageCountInConversation === 'number' &&
+    userMessageCountInConversation > 1 &&
+    userMessageCountInConversation % 3 !== 1
+  ) {
+    return []
+  }
+
   try {
     const openai = new OpenAI()
     const completion = await openai.chat.completions.create({

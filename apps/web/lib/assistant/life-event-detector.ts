@@ -57,9 +57,19 @@ export interface LifeEventDetection {
   severity: 'minor' | 'major' | 'life_changing'
 }
 
+/**
+ * Yaşam olayı tipik olarak uzun bir paylaşım. Kısa mesajlarda çağrı yapma.
+ */
+function isSkippableForLifeEvent(message: string): boolean {
+  const trimmed = message.trim()
+  if (trimmed.length < 18) return true
+  const wordCount = trimmed.split(/\s+/).filter(Boolean).length
+  if (wordCount < 4) return true
+  return false
+}
+
 export async function detectLifeEvent(userMessage: string): Promise<LifeEventDetection | null> {
-  // Çok kısa mesajlar için API çağrısı yapma
-  if (userMessage.trim().length < 10) return null
+  if (isSkippableForLifeEvent(userMessage)) return null
 
   try {
     const openai = new OpenAI()

@@ -153,13 +153,22 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
   // 5.5. AI mesaj embedding (background)
   embedAndStoreMessage(aiMessage.id, aiContent).catch(() => {})
 
-  // 5.7. Memory extraction (background — kullanıcıyı bekletmez)
-  extractAndStoreFacts({
-    userId: user.id,
-    userMessage: content,
-    aiResponse: aiContent,
-    sourceMessageId: userMessage.id,
-  }).catch(() => {})
+  // 5.7. Memory extraction (background — kullanıcıyı bekletmez, her 3 mesajda bir çalışır)
+  ;(async () => {
+    try {
+      const userMsgCount = await db.assistantMessage.count({
+        where: { conversationId: id, role: 'user' },
+      })
+      await extractAndStoreFacts({
+        userId: user.id,
+        userMessage: content,
+        aiResponse: aiContent,
+        sourceMessageId: userMessage.id,
+        conversationId: id,
+        userMessageCountInConversation: userMsgCount,
+      })
+    } catch {}
+  })()
 
   // 5.8. Personality evolution (her 20 mesajda bir tetiklenir)
   maybeEvolvePersonality(user.id).catch(() => {})
