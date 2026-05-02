@@ -6,7 +6,7 @@
 import { db } from '@/lib/db/client'
 import { ToolDefinition, ToolExecutor, ToolResult } from './types'
 
-const CATEGORY = 'tools' as const
+const CATEGORY = 'finance' as const
 
 // Kullanıcının hangi para birimini default kabul ettiğini bul (varsa)
 async function defaultCurrency(userId: string): Promise<string> {

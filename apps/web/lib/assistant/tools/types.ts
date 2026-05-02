@@ -19,6 +19,11 @@ export type ToolCategory =
   | 'people'
   | 'environment'
   | 'subscription'
+  | 'finance'
+  | 'productivity'
+  | 'career'
+  | 'hobby'
+  | 'sports'
 
 export interface ToolDefinition {
   name: string

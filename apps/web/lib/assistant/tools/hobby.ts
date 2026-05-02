@@ -6,7 +6,7 @@
 import { db } from '@/lib/db/client'
 import { ToolDefinition, ToolExecutor, ToolResult } from './types'
 
-const C = 'tools' as const
+const C = 'hobby' as const
 
 export const hobbyToolDefs: ToolDefinition[] = [
   // BOOK

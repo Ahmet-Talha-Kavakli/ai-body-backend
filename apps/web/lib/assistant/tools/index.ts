@@ -96,8 +96,34 @@ export function toOpenAIFunctions(defs: ToolDefinition[] = ALL_TOOL_DEFS) {
  *
  * Not: Bazı tool'lar kritik olduğu için her zaman dahil edilir (memory, people).
  */
+// OpenAI tools array max 128
+const OPENAI_TOOLS_LIMIT = 128
+
+// "all" durumunda gönderilecek varsayılan kategoriler — toplam max ~120 tool
+// Tüm 18 kategori 183 tool'a çıkıyor, OpenAI 128'i kabul etmez.
+const DEFAULT_HARD_CATEGORIES = [
+  'health_read',
+  'water',
+  'sleep',
+  'medication',
+  'nutrition',
+  'activity',
+  'body',
+  'mental',
+  'tools',
+  'bloodwork',
+  'social',
+  'reminder',
+  'knowledge',
+  'people',
+  'environment',
+]
+
 export function getToolDefsForCategories(categories: string[] | 'all'): ToolDefinition[] {
-  if (categories === 'all') return ALL_TOOL_DEFS
+  if (categories === 'all') {
+    const defs = ALL_TOOL_DEFS.filter((t) => DEFAULT_HARD_CATEGORIES.includes(t.category))
+    return defs.slice(0, OPENAI_TOOLS_LIMIT)
+  }
   // Boş array → hiç tool gönderme (easy mesaj için tasarruf)
   if (categories.length === 0) return []
 
@@ -123,11 +149,11 @@ export function getToolDefsForCategories(categories: string[] | 'all'): ToolDefi
     healthkit: ['health_read'],
     calendar: ['social'],
     contacts: ['social'],
-    finance: ['tools'],
-    productivity: ['tools'],
-    career: ['tools'],
-    hobby: ['tools'],
-    sports: ['tools'],
+    finance: ['finance'],
+    productivity: ['productivity'],
+    career: ['career'],
+    hobby: ['hobby'],
+    sports: ['sports'],
     tools_actions: ['tools'],
   }
 
@@ -137,7 +163,7 @@ export function getToolDefsForCategories(categories: string[] | 'all'): ToolDefi
     for (const m of mapped) toolCats.add(m)
   }
 
-  return ALL_TOOL_DEFS.filter((t) => toolCats.has(t.category))
+  return ALL_TOOL_DEFS.filter((t) => toolCats.has(t.category)).slice(0, OPENAI_TOOLS_LIMIT)
 }
 
 /**

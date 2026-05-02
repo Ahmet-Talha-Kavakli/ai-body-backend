@@ -6,7 +6,7 @@
 import { db } from '@/lib/db/client'
 import { ToolDefinition, ToolExecutor, ToolResult } from './types'
 
-const C = 'tools' as const
+const C = 'productivity' as const
 
 function startOfWeek(d: Date): Date {
   const out = new Date(d)

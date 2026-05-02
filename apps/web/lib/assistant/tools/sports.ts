@@ -6,7 +6,7 @@
 import { db } from '@/lib/db/client'
 import { ToolDefinition, ToolExecutor, ToolResult } from './types'
 
-const C = 'tools' as const
+const C = 'sports' as const
 
 // 1RM tahmini (Epley formülü)
 function epley1RM(weight: number, reps: number): number {

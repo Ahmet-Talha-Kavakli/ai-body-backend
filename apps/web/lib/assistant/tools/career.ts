@@ -6,7 +6,7 @@
 import { db } from '@/lib/db/client'
 import { ToolDefinition, ToolExecutor, ToolResult } from './types'
 
-const C = 'tools' as const
+const C = 'career' as const
 
 export const careerToolDefs: ToolDefinition[] = [
   // ── CAREER PROFILE ──
