@@ -76,6 +76,8 @@ model User {
   assistantMemoryFacts    AssistantMemoryFact[]   @relation("UserAssistantMemoryFacts")
   assistantPermissions    AssistantPermission[]   @relation("UserAssistantPermissions")
   conversationSummaries   ConversationSummary[]   @relation("UserConversationSummaries")
+  hostilityEvents         HostilityEvent[]        @relation("UserHostilityEvents")
+  blockEvents             BlockEvent[]            @relation("UserBlockEvents")
   healthKitSnapshots      HealthKitDailySnapshot[] @relation("UserHealthKitSnapshots")
   calendarEvents          CalendarEventShadow[]    @relation("UserCalendarEvents")
   reminderShadows         ReminderShadow[]         @relation("UserReminderShadows")
@@ -1862,6 +1864,42 @@ model AssistantConversation {
 
   @@index([userId, updatedAt])
   @@index([userId, archived])
+}
+
+// V3 Faz A — Hostility & Block Sistemi
+// Kullanıcı hakaret/iğneleme yapınca tetiklenir. Eskalasyon: hafif -> orta -> uyarı -> engelleme.
+model HostilityEvent {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation("UserHostilityEvents", fields: [userId], references: [id], onDelete: Cascade)
+
+  severity        String   // 'mild' | 'moderate' | 'severe'
+  detectionMethod String   // 'keyword' | 'ai' | 'both'
+  triggerMessageId String?
+  triggerSnippet  String?  @db.Text  // tetikleyen mesajın özeti
+
+  resultedInState String?  // bu olay sonucunda profile.relationshipState ne oldu
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// Engelleme olayları — kullanıcı bir süre AI tarafından engellenir
+model BlockEvent {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation("UserBlockEvents", fields: [userId], references: [id], onDelete: Cascade)
+
+  reason          String?   @db.Text
+  durationHours   Int       // 24 = 1 gün, 48 = 2 gün, 168 = 1 hafta
+  startedAt       DateTime  @default(now())
+  endsAt          DateTime
+  endedAt         DateTime? // gerçekten bittiğinde (kullanıcı erken döndüyse vs)
+
+  triggerHostilityEventId String?
+
+  @@index([userId, startedAt])
 }
 
 // V3 Faz A — Hierarchical Memory Compression

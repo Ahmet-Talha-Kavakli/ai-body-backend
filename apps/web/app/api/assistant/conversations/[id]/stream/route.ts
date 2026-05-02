@@ -17,6 +17,14 @@ import {
   formatSummaryContextForPrompt,
 } from '@/lib/assistant/summary-builder'
 import { moodToPromptHint, maybeShiftMood, Mood } from '@/lib/assistant/mood-engine'
+import { detectHostility } from '@/lib/assistant/hostility-detector'
+import {
+  processHostility,
+  checkAndResetExpiredBlock,
+  relationshipStateToPromptHint,
+  isBlocked,
+  RelationshipState,
+} from '@/lib/assistant/relationship-engine'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -58,11 +66,48 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
     return new Response('not_found', { status: 404 })
   }
 
+  // V3 Faz A: Engelleme süresi dolmuş mu? Doluysa state'i hafiflet
+  await checkAndResetExpiredBlock(user.id).catch(() => {})
+
   // Kullanıcı mesajını hemen kaydet
   const userMessage = await db.assistantMessage.create({
     data: { conversationId: id, role: 'user', content },
   })
   embedAndStoreMessage(userMessage.id, content).catch(() => {})
+
+  // V3 Faz A: Hostility tespit ve eskalasyon (kullanıcı mesajı kaydedildikten sonra)
+  const hostility = await detectHostility(content).catch(() => null)
+  if (hostility?.isHostile) {
+    await processHostility({
+      userId: user.id,
+      hostility,
+      triggerMessageId: userMessage.id,
+    }).catch(() => null)
+  }
+
+  // Mevcut ilişki durumu — engellendiyse cevap verme
+  const currentProfile = await db.assistantProfile.findUnique({
+    where: { userId: user.id },
+    select: { relationshipState: true, blockedUntil: true },
+  })
+  const currentState = (currentProfile?.relationshipState ?? 'normal') as RelationshipState
+
+  if (isBlocked(currentState)) {
+    // Mesaj kaydedildi ama AI cevap vermeyecek — stream kapatılır
+    // Kullanıcı UI'dan "engellenmiş" durumu görür (Faz B'de)
+    return new Response(
+      `data: ${JSON.stringify({
+        type: 'blocked',
+        blockedUntil: currentProfile?.blockedUntil?.toISOString() ?? null,
+      })}\n\n`,
+      {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+        },
+      }
+    )
+  }
 
   // Title güncelle (ilk gerçek mesajsa)
   if (conv.messages.filter((m) => m.role === 'user').length === 0) {
@@ -217,10 +262,19 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
       const moodHint = profileSafe.currentMood
         ? moodToPromptHint(profileSafe.currentMood as Mood, profileSafe.moodReason ?? null)
         : ''
+      // V3 Faz A: relationship hint (cold / silent / warning / normal)
+      const relationshipHint = relationshipStateToPromptHint(
+        (profileSafe.relationshipState ?? 'normal') as RelationshipState
+      )
 
-      // Ton + yaşam olayı + geçmiş özetleri + mood sistem prompt'a ekle
+      // Sistem prompt'a tüm hint'leri ekle
       const systemPrompt =
-        baseSystemPrompt + moodHint + summaryHint + tonePromptHint + lifeEventHint
+        baseSystemPrompt +
+        moodHint +
+        relationshipHint +
+        summaryHint +
+        tonePromptHint +
+        lifeEventHint
 
       // Easy + tool-less mesajlarda hiç tool gönderme (büyük tasarruf)
       // Listen modunda veya yaşam olayı varsa tool gönderme — kullanıcı duygusal an yaşıyor
