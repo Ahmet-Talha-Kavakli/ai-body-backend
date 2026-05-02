@@ -1,21 +1,71 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '@clerk/expo';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+
+const ALLERGENS = [
+  { key: 'Gluten', emoji: '🌾' },
+  { key: 'Laktoz', emoji: '🥛' },
+  { key: 'Soya', emoji: '🫘' },
+  { key: 'Fıstık', emoji: '🥜' },
+  { key: 'Ağaç Kabukluları', emoji: '🌰' },
+  { key: 'Yumurta', emoji: '🥚' },
+  { key: 'Kabuklu Deniz Ürünleri', emoji: '🦐' },
+  { key: 'Balık', emoji: '🐟' },
+  { key: 'Susam', emoji: '🌿' },
+  { key: 'Mısır', emoji: '🌽' },
+  { key: 'Kafein', emoji: '☕' },
+  { key: 'Yapay Tatlandırıcılar', emoji: '🍬' },
+  { key: 'Jelatin', emoji: '🧪' },
+  { key: 'Magnezyum Stearat', emoji: '💊' },
+  { key: 'Titanyum Dioksit', emoji: '⚗️' },
+  { key: 'Kükürt Dioksit', emoji: '🌫️' },
+];
+
+const TOTAL_STEPS = 6;
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { getToken } = useAuth();
   const [step, setStep] = useState(1);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     age: '',
     fitnessLevel: 'beginner',
     goal: 'muscle_gain',
+    allergies: [] as string[],
   });
 
-  const handleNext = () => {
-    if (step < 5) {
+  const toggleAllergen = (key: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      allergies: prev.allergies.includes(key)
+        ? prev.allergies.filter((a) => a !== key)
+        : [...prev.allergies, key],
+    }));
+  };
+
+  const handleNext = async () => {
+    if (step < TOTAL_STEPS) {
       setStep(step + 1);
     } else {
+      setSaving(true);
+      try {
+        const token = await getToken();
+        if (formData.allergies.length > 0) {
+          await fetch(`${API_URL}/api/user/allergies`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ allergies: formData.allergies }),
+          });
+        }
+      } catch {}
       router.replace('/(app)/home');
     }
   };
@@ -68,9 +118,7 @@ export default function OnboardingScreen() {
               }`}
             >
               <Text
-                className={`font-bold text-base ${
-                  formData.fitnessLevel === level.id ? 'text-white' : 'text-text-primary'
-                }`}
+                className={`font-bold text-base ${formData.fitnessLevel === level.id ? 'text-white' : 'text-text-primary'}`}
               >
                 {level.label}
               </Text>
@@ -100,14 +148,47 @@ export default function OnboardingScreen() {
               }`}
             >
               <Text
-                className={`font-bold text-base ${
-                  formData.goal === g.id ? 'text-white' : 'text-text-primary'
-                }`}
+                className={`font-bold text-base ${formData.goal === g.id ? 'text-white' : 'text-text-primary'}`}
               >
                 {g.label}
               </Text>
             </TouchableOpacity>
           ))}
+        </View>
+      ),
+    },
+    {
+      title: 'Alerji & Hassasiyetler',
+      desc: 'AI supplement önerilerini buna göre kişiselleştirecek. Varsa seç, yoksa geç.',
+      content: (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+          {ALLERGENS.map((a) => {
+            const sel = formData.allergies.includes(a.key);
+            return (
+              <TouchableOpacity
+                key={a.key}
+                onPress={() => toggleAllergen(a.key)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  borderRadius: 20,
+                  borderWidth: 1.5,
+                  backgroundColor: sel ? '#FF3B3015' : '#F2F2F7',
+                  borderColor: sel ? '#FF3B30' : '#E5E5EA',
+                }}
+              >
+                <Text style={{ fontSize: 16 }}>{a.emoji}</Text>
+                <Text
+                  style={{ fontSize: 13, fontWeight: '600', color: sel ? '#FF3B30' : '#636366' }}
+                >
+                  {a.key}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       ),
     },
@@ -135,31 +216,37 @@ export default function OnboardingScreen() {
       contentContainerStyle={{ padding: 24, flexGrow: 1, justifyContent: 'center' }}
     >
       <View className="mb-8">
-        {/* Progress Bar */}
         <View className="flex-row items-center gap-1 mb-4">
-          {[1, 2, 3, 4, 5].map((i) => (
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
             <View
               key={i}
-              className={`h-2 flex-1 rounded-full ${
-                i <= step ? 'bg-accent-primary' : 'bg-bg-surface'
-              }`}
+              className={`h-2 flex-1 rounded-full ${i + 1 <= step ? 'bg-accent-primary' : 'bg-bg-surface'}`}
             />
           ))}
         </View>
-        <Text className="text-text-secondary text-xs text-center">Adım {step} / 5</Text>
+        <Text className="text-text-secondary text-xs text-center">
+          Adım {step} / {TOTAL_STEPS}
+        </Text>
       </View>
 
-      {/* Content */}
-      <Text className="text-text-primary text-3xl font-bold mb-2">{current.title}</Text>
-      <Text className="text-text-secondary mb-8 text-base">{current.desc}</Text>
+      <Text className="text-text-primary text-3xl font-bold mb-2">{current!.title}</Text>
+      <Text className="text-text-secondary mb-8 text-base">{current!.desc}</Text>
 
-      <View className="mb-8">{current.content}</View>
+      <View className="mb-8">{current!.content}</View>
 
-      {/* Buttons */}
       <View className="gap-3">
-        <TouchableOpacity onPress={handleNext} className="bg-accent-primary rounded-lg p-4">
+        <TouchableOpacity
+          onPress={saving ? undefined : handleNext}
+          className="bg-accent-primary rounded-lg p-4"
+        >
           <Text className="text-white text-center font-bold text-lg">
-            {step === 5 ? 'Başla' : 'İleri'}
+            {step === TOTAL_STEPS
+              ? saving
+                ? 'Kaydediliyor...'
+                : 'Başla'
+              : step === 5 && formData.allergies.length === 0
+                ? 'Alerji Yok, Geç'
+                : 'İleri'}
           </Text>
         </TouchableOpacity>
 
@@ -173,7 +260,6 @@ export default function OnboardingScreen() {
         )}
       </View>
 
-      {/* Footer spacing */}
       <View style={{ height: 40 }} />
     </ScrollView>
   );

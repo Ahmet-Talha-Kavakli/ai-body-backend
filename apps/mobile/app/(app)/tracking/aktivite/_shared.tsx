@@ -415,6 +415,7 @@ export function CalendarModal({
   onSelect,
   onClose,
   fetchMonthly,
+  accent,
 }: {
   visible: boolean;
   current: Date;
@@ -430,7 +431,9 @@ export function CalendarModal({
     >;
     userCreatedAt: string;
   }>;
+  accent?: string;
 }) {
+  const ACTIVE_ACCENT = accent ?? ACCENT;
   const [viewYear, setViewYear] = useState(current.getFullYear());
   const [viewMonth, setViewMonth] = useState(current.getMonth());
   const [mounted, setMounted] = useState(false);
@@ -705,8 +708,8 @@ export function CalendarModal({
                             justifyContent: 'center',
                             overflow: 'hidden',
                           },
-                          sel && { backgroundColor: col ?? ACCENT },
-                          tod && !sel && { borderWidth: 1.5, borderColor: col ?? ACCENT },
+                          sel && { backgroundColor: col ?? ACTIVE_ACCENT },
+                          tod && !sel && { borderWidth: 1.5, borderColor: col ?? ACTIVE_ACCENT },
                         ]}
                       >
                         {imgUrl && !sel && (
@@ -736,7 +739,7 @@ export function CalendarModal({
                           style={[
                             { fontSize: 14, fontWeight: '500', color: '#1C1C1E' },
                             sel && { color: '#fff', fontWeight: '700' },
-                            tod && !sel && { color: col ?? ACCENT, fontWeight: '700' },
+                            tod && !sel && { color: col ?? ACTIVE_ACCENT, fontWeight: '700' },
                             fut && { color: '#C7C7CC' },
                             !sel && !tod && !fut && col && { color: col, fontWeight: '600' },
                             imgUrl && !sel && { color: '#fff', fontWeight: '700' },
@@ -751,7 +754,7 @@ export function CalendarModal({
                               position: 'absolute',
                               bottom: 2,
                               right: 2,
-                              backgroundColor: ACCENT,
+                              backgroundColor: ACTIVE_ACCENT,
                               borderRadius: 6,
                               paddingHorizontal: 3,
                               paddingVertical: 1,
@@ -785,13 +788,16 @@ export function CalendarModal({
             })}
           </View>
           <Pressable
-            style={cm.todayBtn}
+            style={[
+              cm.todayBtn,
+              { backgroundColor: ACTIVE_ACCENT + '1A', borderColor: ACTIVE_ACCENT + '33' },
+            ]}
             onPress={() => {
               onSelect(new Date());
               onClose();
             }}
           >
-            <Text style={cm.todayTxt}>Bugüne Git</Text>
+            <Text style={[cm.todayTxt, { color: ACTIVE_ACCENT }]}>Bugüne Git</Text>
           </Pressable>
         </Animated.View>
       </Animated.View>

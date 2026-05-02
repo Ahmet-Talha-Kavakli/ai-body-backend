@@ -138,3 +138,81 @@ export interface HistoryStats {
   mealTiming: MealTimingStats
   streakCalendar: Record<string, boolean> // YYYY-MM-DD -> logged?
 }
+
+// ──────────────────────────────────────────
+// FATSECRET INTEGRATION TYPES
+// ──────────────────────────────────────────
+
+export interface NormalizedFoodItem {
+  fatSecretId: string
+  name: string
+  nametr?: string
+  servingSize: number
+  servingUnit: string
+  calories: number
+  proteinG: number
+  carbsG: number
+  fatG: number
+  fiberG: number
+  sugarG: number
+  saturatedFatG: number
+  transFatG: number
+  cholesterolMg: number
+  sodiumMg: number
+  saltMg: number
+  waterG: number
+  alcoholG: number
+  vitaminAMcg: number
+  vitaminCMg: number
+  vitaminDMcg: number
+  vitaminEMg: number
+  vitaminKMcg: number
+  calciumMg: number
+  ironMg: number
+  magnesiumMg: number
+  phosphorusMg: number
+  potassiumMg: number
+  zincMg: number
+  createdAt?: Date
+  updatedAt?: Date
+}
+
+export interface FoodSearchResponse {
+  query: string
+  results: NormalizedFoodItem[]
+  count: number
+  cached: boolean
+}
+
+export interface AnalyzedFood {
+  name: string
+  calories: number
+  proteinG: number
+  carbsG: number
+  fatG: number
+  servingSize: number
+  servingUnit: string
+  confidence: number // 0-100
+}
+
+export interface MealAnalysisResponse {
+  success: boolean
+  analysis: {
+    detectedFoods: AnalyzedFood[]
+    totalCalories: number
+    totalProteinG: number
+    totalCarbsG: number
+    totalFatG: number
+    notes: string
+    confidence: number
+  }
+  processingTimeMs: number
+  tokensUsed: number
+}
+
+export interface APIError {
+  error: string
+  details?: string
+  required?: string[]
+  retryAfter?: number
+}

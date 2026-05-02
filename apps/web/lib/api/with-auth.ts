@@ -1,14 +1,12 @@
 /**
  * withAuth — eliminates the repeated auth boilerplate in every API route.
- *
- * Usage:
- *   export const GET = withAuth(async (req, { user }) => {
- *     return NextResponse.json({ id: user.id })
- *   })
+ * Supports both:
+ *   - Web (session cookie via Clerk auth())
+ *   - Mobile (Bearer token via Authorization header)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth, verifyToken } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
 import type { User } from '@prisma/client'
 
@@ -21,13 +19,30 @@ type AuthenticatedHandler<C extends RouteContext = RouteContext> = (
   context: { user: User } & C
 ) => Promise<NextResponse> | NextResponse
 
-/**
- * Wraps a route handler with auth + user lookup.
- * Returns 401 if not authenticated, 404 if user not in DB.
- */
+async function resolveClerkId(req: NextRequest): Promise<string | null> {
+  // 1. Try Bearer token from mobile
+  const authHeader = req.headers.get('authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim()
+    try {
+      const payload = await verifyToken(token, {
+        secretKey: process.env.CLERK_SECRET_KEY!,
+      })
+      return payload.sub ?? null
+    } catch (e) {
+      console.error('[withAuth] verifyToken error:', e)
+      return null
+    }
+  }
+
+  // 2. Fall back to session cookie (web)
+  const { userId } = await auth()
+  return userId
+}
+
 export function withAuth<C extends RouteContext = RouteContext>(handler: AuthenticatedHandler<C>) {
   return async (req: NextRequest, ctx: any): Promise<NextResponse> => {
-    const { userId: clerkId } = await auth()
+    const clerkId = await resolveClerkId(req)
 
     if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -36,21 +51,19 @@ export function withAuth<C extends RouteContext = RouteContext>(handler: Authent
     const user = await db.user.findUnique({ where: { clerkId } })
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      console.error(`[withAuth] clerkId=${clerkId} token verified but no DB user found`)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     return handler(req, { ...ctx, user })
   }
 }
 
-/**
- * withAuth variant that also includes the subscription in the user query.
- */
 export function withAuthAndSubscription<C extends RouteContext = RouteContext>(
   handler: AuthenticatedHandler<C>
 ) {
   return async (req: NextRequest, ctx: C): Promise<NextResponse> => {
-    const { userId: clerkId } = await auth()
+    const clerkId = await resolveClerkId(req)
 
     if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -62,7 +75,8 @@ export function withAuthAndSubscription<C extends RouteContext = RouteContext>(
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      console.error(`[withAuth] clerkId=${clerkId} token verified but no DB user found`)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     return handler(req, { ...ctx, user: user as User })

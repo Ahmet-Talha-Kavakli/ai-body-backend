@@ -7,7 +7,7 @@ export default function AktiviteLayout() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <AktiviteProvider>
-        <NativeTabs>
+        <NativeTabs iconColor="#FF6B35" indicatorColor="#FF6B35" labelStyle={{ color: '#FF6B35' }}>
           <NativeTabs.Trigger name="kesif">
             <NativeTabs.Trigger.Label>Keşfet</NativeTabs.Trigger.Label>
             <NativeTabs.Trigger.Icon sf={{ default: 'safari', selected: 'safari.fill' }} />

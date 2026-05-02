@@ -23,7 +23,12 @@ function BlockedScreen() {
 }
 
 function getSecurityStatus(): SecurityStatus {
-  return JailMonkey.isJailBroken() || JailMonkey.canMockLocation() ? 'compromised' : 'safe';
+  if (__DEV__) return 'safe';
+  try {
+    return JailMonkey.isJailBroken() || JailMonkey.canMockLocation() ? 'compromised' : 'safe';
+  } catch {
+    return 'safe';
+  }
 }
 
 export function SecurityProvider({ children }: { children: React.ReactNode }) {

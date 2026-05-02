@@ -1,0 +1,182 @@
+{
+  "rain_light": {
+    "id": "rain_light",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/rain_light.mp3",
+    "durationSec": 120,
+    "source": "Light Rain with Voices"
+  },
+  "rain_storm": {
+    "id": "rain_storm",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/rain_storm.mp3",
+    "durationSec": 230,
+    "source": "Distant Thunder at dawn"
+  },
+  "rain_roof": {
+    "id": "rain_roof",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/rain_roof.mp3",
+    "durationSec": 32,
+    "source": "rain-on-tent-01.flac"
+  },
+  "rain_forest": {
+    "id": "rain_forest",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/rain_forest.mp3",
+    "durationSec": 124,
+    "source": "ANMLAmph-EXT_ATMOSPHERE-Ambience Of Coqui Frogs On Big Island Of Hawaii And Slight Rain Falling From The House Gutters_YMLT_NONE_94711331"
+  },
+  "forest": {
+    "id": "forest",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/forest.mp3",
+    "durationSec": 257,
+    "source": "Birdsong in Kabaty"
+  },
+  "ocean": {
+    "id": "ocean",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/ocean.mp3",
+    "durationSec": 215,
+    "source": "Waves Close-Up"
+  },
+  "stream": {
+    "id": "stream",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/stream.mp3",
+    "durationSec": 87,
+    "source": "Small Brook Flowing Around Rocks"
+  },
+  "wind": {
+    "id": "wind",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/wind.mp3",
+    "durationSec": 301,
+    "source": "Quiet breeze with bird singing softly, insect noises, a horse neighs far sometimes recorded at the desert near Tres Bellotas road"
+  },
+  "birds": {
+    "id": "birds",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/birds.mp3",
+    "durationSec": 434,
+    "source": "Toucans singing in the Amazonian Rainforest (Brazil)"
+  },
+  "fireplace": {
+    "id": "fireplace",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/fireplace.mp3",
+    "durationSec": 102,
+    "source": "Fire in the stove 2"
+  },
+  "white": {
+    "id": "white",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/white.mp3",
+    "durationSec": 62,
+    "source": "SDRSharp_20210407_172348Z_115199600Hz_AF"
+  },
+  "pink": {
+    "id": "pink",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/pink.mp3",
+    "durationSec": 508,
+    "source": "Journey To The Interweb"
+  },
+  "brown": {
+    "id": "brown",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/brown.mp3",
+    "durationSec": 30,
+    "source": "Desert ambient.wav"
+  },
+  "fan": {
+    "id": "fan",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/fan.mp3",
+    "durationSec": 60,
+    "source": "PC fans and hard drive closeup"
+  },
+  "piano": {
+    "id": "piano",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/piano.mp3",
+    "durationSec": 86,
+    "source": "Memories - Nostalgic Simple Piano Melody"
+  },
+  "lofi": {
+    "id": "lofi",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/lofi.mp3",
+    "durationSec": 128,
+    "source": "Dusty Lofi Song Thingy"
+  },
+  "ambient": {
+    "id": "ambient",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/ambient.mp3",
+    "durationSec": 88,
+    "source": "Kinesis Stellae - Lead"
+  },
+  "guitar": {
+    "id": "guitar",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/guitar.mp3",
+    "durationSec": 70,
+    "source": "flangy D to F and more chords.wav"
+  },
+  "harp": {
+    "id": "harp",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/harp.mp3",
+    "durationSec": 110,
+    "source": "relaxation music #37.mp3"
+  },
+  "clock": {
+    "id": "clock",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/clock.mp3",
+    "durationSec": 55,
+    "source": "10oclock.wav"
+  },
+  "washer": {
+    "id": "washer",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/washer.mp3",
+    "durationSec": 33,
+    "source": "Laundry Room Ambience"
+  },
+  "ac": {
+    "id": "ac",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/ac.mp3",
+    "durationSec": 43,
+    "source": "vent air conditioner clean rattle hum.flac"
+  },
+  "whisper": {
+    "id": "whisper",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/whisper.mp3",
+    "durationSec": 408,
+    "source": "Winter Ambience In A Small American Town"
+  },
+  "paper": {
+    "id": "paper",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/paper.mp3",
+    "durationSec": 55,
+    "source": "Digging through a pile of paper"
+  },
+  "purring": {
+    "id": "purring",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/purring.mp3",
+    "durationSec": 533,
+    "source": "Male cat purring.wav"
+  },
+  "train": {
+    "id": "train",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/train.mp3",
+    "durationSec": 158,
+    "source": "London Underground: full train journey through tunnel"
+  },
+  "cafe": {
+    "id": "cafe",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/cafe.mp3",
+    "durationSec": 143,
+    "source": "Ambiente bar Bizietes viernes hora del almuerzo .wav"
+  },
+  "heartbeat": {
+    "id": "heartbeat",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/heartbeat.mp3",
+    "durationSec": 38,
+    "source": "Heartbeat.mp3"
+  },
+  "lullaby": {
+    "id": "lullaby",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/lullaby.mp3",
+    "durationSec": 60,
+    "source": "Lullaby | Hiphop Instrumental"
+  },
+  "cradle": {
+    "id": "cradle",
+    "url": "https://bollxgwrevnwjhnzdwcb.supabase.co/storage/v1/object/public/sleep-sounds/cradle.mp3",
+    "durationSec": 20,
+    "source": "Rock-a-Bye Baby Excerpt.wav"
+  }
+}

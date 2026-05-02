@@ -1,0 +1,52 @@
+// OpenFoodFacts dedicated DB (Neon Postgres)
+// Ana DB'den ayrı; import + arama için kullanılır.
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../node_modules/.prisma/off-client"
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("OFF_DATABASE_URL")
+}
+
+model OffFood {
+  /// Barcode (EAN/UPC) — Open Food Facts unique key
+  code String @id
+
+  // Names
+  name      String
+  nameTr    String?
+  brand     String?
+  imageUrl  String?
+
+  // Serving
+  servingSize Float  @default(100)
+  servingUnit String @default("g")
+
+  // Macros (per 100 g)
+  calories      Float @default(0)
+  proteinG      Float @default(0)
+  carbsG        Float @default(0)
+  fatG          Float @default(0)
+  fiberG        Float @default(0)
+  sugarG        Float @default(0)
+  saturatedFatG Float @default(0)
+  transFatG     Float @default(0)
+  cholesterolMg Float @default(0)
+  sodiumMg      Float @default(0)
+  saltMg        Float @default(0)
+
+  // Country tags (lowercase comma-separated for cheap LIKE filtering)
+  countries String?
+
+  // Last sync from OFF dump
+  syncedAt DateTime @default(now())
+
+  @@index([name])
+  @@index([nameTr])
+  @@index([brand])
+  @@map("off_foods")
+}

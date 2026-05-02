@@ -12,9 +12,9 @@
       "backgroundColor": "#0A0A0F"
     },
     "updates": {
-      "enabled": true,
-      "checkOnLaunch": "ALWAYS",
-      "fallbackToCacheTimeout": 30000
+      "enabled": false,
+      "checkOnLaunch": "NEVER",
+      "fallbackToCacheTimeout": 0
     },
     "plugins": [
       "expo-secure-store",
@@ -25,6 +25,13 @@
         {
           "RNMapboxMapsDownloadToken": "sk.eyJ1IjoiYWhtZXR0YWxoYTEyIiwiYSI6ImNtb2ZhNG5obDBnaGsydXM3NG15cmhyaDQifQ.eXH4oB5VFHPRr6Lj0MJalw"
         }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Sesli sohbet için mikrofon gerekli.",
+          "speechRecognitionPermission": "Konuşmanı metne çevirmek için izin gerekli."
+        }
       ]
     ],
     "extra": {
@@ -32,22 +39,31 @@
       "GOOGLE_PLACES_KEY": "AIzaSyArKjcnXPHpydnc_DjSAFsnU7FgOIbApoM"
     },
     "ios": {
-      "bundleIdentifier": "com.fitai.app",
+      "bundleIdentifier": "com.talhakavakli.fitai",
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Egzersiz form analizi i\u00e7in kamera gerekli.",
-        "NSMicrophoneUsageDescription": "Sesli ko\u00e7 i\u00e7in mikrofon gerekli.",
+        "NSMicrophoneUsageDescription": "Sesli ko\u00e7 ve uyku takibinde horlama / ses analizi i\u00e7in mikrofon gerekli.",
+        "NSSpeechRecognitionUsageDescription": "Konu\u015fman\u0131 yaz\u0131ya d\u00f6kmek i\u00e7in gerekli.",
         "NSHealthShareUsageDescription": "Sa\u011fl\u0131k verilerinizi analiz etmek i\u00e7in.",
         "NSLocationWhenInUseUsageDescription": "Antrenman takibi i\u00e7in konum gerekli.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Antrenman bittiğinde bile rotanı kaydedebilelim diye konum gerekli.",
         "NSLocationAlwaysUsageDescription": "Antrenman bittiğinde bile rotanı kaydedebilelim diye konum gerekli.",
         "NSMotionUsageDescription": "Adım sayını ve aktiviteni hesaplayabilmemiz için hareket verisi gerekli.",
         "NSPhotoLibraryAddUsageDescription": "Antrenman videon Fotoğraflar uygulamasına kaydedilebilsin diye gerekli.",
-        "UIBackgroundModes": ["location", "fetch"]
+        "NSHealthUpdateUsageDescription": "Asistanın sağlık ipuçları için verini okur.",
+        "NSCalendarsUsageDescription": "Asistan etkinliklerini görsün ve ekleyebilsin diye gerekli.",
+        "NSCalendarsFullAccessUsageDescription": "Asistan etkinliklerini görsün ve ekleyebilsin diye gerekli.",
+        "NSRemindersUsageDescription": "Asistan görevlerini görsün ve ekleyebilsin diye gerekli.",
+        "NSRemindersFullAccessUsageDescription": "Asistan görevlerini görsün ve ekleyebilsin diye gerekli.",
+        "NSContactsUsageDescription": "Asistan rehberden bir kişiyi bulup arayabilsin diye gerekli.",
+        "NSPhotoLibraryUsageDescription": "Asistana göndermek için fotoğraf kütüphanesinden seçim yapabilmek için gerekli.",
+        "NSAppleMusicUsageDescription": "Asistanın dinleme alışkanlıklarına göre öneri yapabilmesi için.",
+        "UIBackgroundModes": ["location", "fetch", "audio", "processing"]
       }
     },
     "android": {
-      "package": "com.fitai.app",
+      "package": "com.talhakavakli.fitai",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

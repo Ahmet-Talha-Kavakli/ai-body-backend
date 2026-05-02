@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import '../global.css';
 import '../src/lib/tracking/backgroundTask';
@@ -19,6 +20,7 @@ try {
 }
 
 export default function RootLayout() {
+  // RootProviders zaten GestureHandlerRootView içeriyor — burada ikinci kat sarmalama yok.
   return (
     <RootProviders>
       <Stack screenOptions={{ headerShown: false }}>

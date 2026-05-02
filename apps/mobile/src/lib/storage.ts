@@ -1,8 +1,40 @@
-import { createMMKV } from 'react-native-mmkv';
+import { createMMKV, type MMKV } from 'react-native-mmkv';
 
-// AES-256 encrypted MMKV instance.
-// Direct MMKV reads/writes — Zustand persist middleware is intentionally NOT used (SSR crash risk).
-export const storage = createMMKV({ id: 'fitai-secure-storage' });
+// In-memory fallback for Expo Go (no native module support)
+class MemoryStorage implements Partial<MMKV> {
+  private store: Record<string, string> = {};
+  set(key: string, value: string) {
+    this.store[key] = value;
+  }
+  getString(key: string) {
+    return this.store[key];
+  }
+  remove(key: string) {
+    delete this.store[key];
+  }
+  contains(key: string) {
+    return key in this.store;
+  }
+  getAllKeys() {
+    return Object.keys(this.store);
+  }
+  clearAll() {
+    this.store = {};
+  }
+}
+
+function createStorage() {
+  try {
+    return createMMKV({ id: 'fitai-secure-storage' });
+  } catch {
+    if (__DEV__) console.warn('[Storage] MMKV unavailable, using memory fallback (Expo Go)');
+    return new MemoryStorage() as unknown as ReturnType<typeof createMMKV>;
+  }
+}
+
+// AES-256 encrypted MMKV instance. Falls back to memory in Expo Go.
+// Direct reads/writes — Zustand persist middleware intentionally NOT used (SSR crash risk).
+export const storage = createStorage();
 
 export const typedStorage = {
   set(key: string, value: string): void {
