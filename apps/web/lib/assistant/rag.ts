@@ -16,27 +16,62 @@ const TOP_K = 6
 /**
  * Bir mesajın embedding'ini üret ve DB'ye yaz.
  * Arka planda çalışsın diye fire-and-forget.
+ *
+ * Hata olursa 1 kez yeniden dener (embedding API geçici hata atabilir).
  */
 export async function embedAndStoreMessage(messageId: string, content: string): Promise<void> {
   if (!content?.trim()) return
-  try {
-    const openai = new OpenAI()
-    const res = await openai.embeddings.create({
-      model: EMBED_MODEL,
-      input: content.slice(0, 8000),
-    })
-    const vector = res.data[0]?.embedding
-    if (!vector) return
-    const literal = '[' + vector.join(',') + ']'
-    // Prisma vector type desteklemiyor, raw query kullan
-    await db.$executeRawUnsafe(
-      `UPDATE "AssistantMessage" SET embedding = $1::vector WHERE id = $2`,
-      literal,
-      messageId
-    )
-  } catch (e) {
-    console.error('[rag/embed]', e)
+  const trimmed = content.slice(0, 8000)
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const openai = new OpenAI()
+      const res = await openai.embeddings.create({ model: EMBED_MODEL, input: trimmed })
+      const vector = res.data[0]?.embedding
+      if (!vector) return
+      const literal = '[' + vector.join(',') + ']'
+      await db.$executeRawUnsafe(
+        `UPDATE "AssistantMessage" SET embedding = $1::vector WHERE id = $2`,
+        literal,
+        messageId
+      )
+      return
+    } catch (e) {
+      if (attempt === 0) {
+        // 800ms bekle ve tekrar dene
+        await new Promise((r) => setTimeout(r, 800))
+        continue
+      }
+      console.error('[rag/embed/failed-after-retry]', e)
+    }
   }
+}
+
+/**
+ * Embedding'i olmayan mesajları topluca tamamlamak için (background fallback).
+ * Cron veya admin endpoint'ten çağrılabilir.
+ */
+export async function backfillMissingEmbeddings(userId: string, limit = 50): Promise<number> {
+  const rows = await db.$queryRawUnsafe<Array<{ id: string; content: string }>>(
+    `
+    SELECT m.id, m.content
+    FROM "AssistantMessage" m
+    JOIN "AssistantConversation" c ON c.id = m."conversationId"
+    WHERE c."userId" = $1 AND m.embedding IS NULL AND m.content IS NOT NULL AND m.content <> ''
+    ORDER BY m."createdAt" DESC
+    LIMIT $2
+    `,
+    userId,
+    limit
+  )
+  let done = 0
+  for (const r of rows) {
+    try {
+      await embedAndStoreMessage(r.id, r.content)
+      done++
+    } catch {}
+  }
+  return done
 }
 
 /**
@@ -104,7 +139,7 @@ export async function searchSimilarMessages(args: {
         createdAt: r.createdAt,
         score: 1 - r.distance, // similarity (0..1)
       }))
-      .filter((r) => r.score > 0.3) // çok düşük benzerlik atla
+      .filter((r) => r.score > 0.6) // 0.3 çok geniştı, alakasız mesajlar geliyordu
   } catch (e) {
     console.error('[rag/search]', e)
     return []

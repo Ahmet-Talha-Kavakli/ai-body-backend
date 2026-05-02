@@ -11,6 +11,7 @@
 
 import OpenAI from 'openai'
 import { db } from '@/lib/db/client'
+import { userLocalNow } from './timezone'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -49,10 +50,15 @@ export interface BriefingContext {
 
 /**
  * Sabah saatleri & yeterli zaman geçtiyse mi kontrol et
+ * Kullanıcının yerel saatine göre (UTC değil).
  */
-export function shouldShowBriefing(now: Date, lastMessageAt: Date | null): boolean {
-  const hour = now.getHours()
-  if (hour < 5 || hour >= 12) return false
+export function shouldShowBriefing(
+  now: Date,
+  lastMessageAt: Date | null,
+  timezone?: string | null
+): boolean {
+  const local = userLocalNow(timezone)
+  if (local.hour < 5 || local.hour >= 12) return false
   if (!lastMessageAt) return true // hiç mesaj yoksa göster
   const hoursSince = (now.getTime() - lastMessageAt.getTime()) / 3600000
   return hoursSince >= 6
@@ -75,7 +81,7 @@ export async function loadBriefingContext(userId: string): Promise<BriefingConte
     }),
     db.user.findUnique({
       where: { id: userId },
-      select: { name: true },
+      select: { name: true, timezone: true },
     }),
     db.sleepSession.findFirst({
       where: { userId, status: 'completed' },
@@ -93,10 +99,11 @@ export async function loadBriefingContext(userId: string): Promise<BriefingConte
   ])
 
   const userName = profile?.name || user?.name || 'dostum'
+  const local = userLocalNow(user?.timezone)
 
   return {
     userName,
-    hour: now.getHours(),
+    hour: local.hour,
     lastSleep: lastSleep
       ? {
           totalMinutes: lastSleep.totalMinutes ?? 0,

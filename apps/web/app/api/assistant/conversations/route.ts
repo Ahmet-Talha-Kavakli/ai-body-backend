@@ -34,13 +34,16 @@ export const POST = withAuth(async (_req: NextRequest, { user }) => {
   // Sabah briefing — saat 5-12 arası ve son mesajdan 6+ saat geçtiyse,
   // AI ilk mesajı kendi atar (gerçek arkadaş hissi için).
   try {
-    const lastMessage = await db.assistantMessage.findFirst({
-      where: { conversation: { userId: user.id } },
-      orderBy: { createdAt: 'desc' },
-      select: { createdAt: true },
-    })
+    const [lastMessage, userRow] = await Promise.all([
+      db.assistantMessage.findFirst({
+        where: { conversation: { userId: user.id } },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      }),
+      db.user.findUnique({ where: { id: user.id }, select: { timezone: true } }),
+    ])
     const now = new Date()
-    if (shouldShowBriefing(now, lastMessage?.createdAt ?? null)) {
+    if (shouldShowBriefing(now, lastMessage?.createdAt ?? null, userRow?.timezone)) {
       const ctx = await loadBriefingContext(user.id)
       if (ctx) {
         const briefingText = await generateBriefing(ctx)

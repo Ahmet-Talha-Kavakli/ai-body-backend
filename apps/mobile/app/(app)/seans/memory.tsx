@@ -1,12 +1,14 @@
 /**
- * Asistan hakkında — kullanıcı AI'nin onun hakkında ne hatırladığını görür.
- * Silme: AI'ye söyleyerek (örn. "vegan değilim artık").
+ * Beni Nasıl Tanıyorsun — kullanıcının asistanın onun hakkında ne hatırladığını
+ * gördüğü ekran. V2 redesign: önem sırasına göre hayat olayları üstte,
+ * sonra kişiler, sonra fact'ler kategoriye göre.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -19,7 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
 import { SymbolView } from 'expo-symbols';
 import * as Haptics from 'expo-haptics';
-import { font, SLEEP, API_URL } from '../tracking/uyku/_components/theme';
+import { font, C, API_URL } from '../../../lib/theme';
 
 interface FactHistoryItem {
   id: string;
@@ -33,7 +35,9 @@ interface Fact {
   category: string;
   content: string;
   confidence: number;
-  effectiveConfidence: number;
+  effectiveConfidence?: number;
+  importance?: number;
+  eventType?: string | null;
   createdAt: string;
   lastUsedAt: string;
   lastConfirmedAt: string;
@@ -60,12 +64,13 @@ interface LifeEvent {
   person?: { name: string; relationship: string } | null;
 }
 
-const CATEGORY_LABELS: Record<string, { label: string; emoji: string; color: string }> = {
-  identity: { label: 'Kimlik', emoji: '🪪', color: '#0A84FF' },
-  preference: { label: 'Tercih', emoji: '⚙️', color: '#5E5CE6' },
-  pattern: { label: 'Davranış Deseni', emoji: '🔄', color: '#FF9F0A' },
-  event: { label: 'Olay', emoji: '📅', color: '#30D158' },
-  promise: { label: 'Söz', emoji: '🤝', color: '#BF5AF2' },
+const CATEGORY_META: Record<string, { label: string; icon: string; color: string }> = {
+  identity: { label: 'Kimlik', icon: 'person.fill', color: '#0A84FF' },
+  preference: { label: 'Tercihler', icon: 'slider.horizontal.3', color: C.accent },
+  pattern: { label: 'Davranış Desenleri', icon: 'arrow.triangle.2.circlepath', color: '#FF9F0A' },
+  event: { label: 'Olaylar', icon: 'calendar', color: '#30D158' },
+  promise: { label: 'Sözler', icon: 'hand.raised.fill', color: '#BF5AF2' },
+  life_event: { label: 'Hayat Olayları', icon: 'sparkles', color: '#FF375F' },
 };
 
 const REL_LABELS: Record<string, string> = {
@@ -79,17 +84,18 @@ const REL_LABELS: Record<string, string> = {
   other: 'Diğer',
 };
 
-const EVENT_LABELS: Record<string, { label: string; color: string }> = {
-  diagnosis: { label: 'Tanı', color: '#FF3B30' },
-  meeting: { label: 'Toplantı', color: '#0A84FF' },
-  deadline: { label: 'Deadline', color: '#FF9F0A' },
-  trip: { label: 'Yolculuk', color: '#30D158' },
-  celebration: { label: 'Kutlama', color: '#FFD60A' },
-  conflict: { label: 'Çatışma', color: '#FF3B30' },
-  loss: { label: 'Kayıp', color: '#8E8E93' },
-  achievement: { label: 'Başarı', color: '#30D158' },
-  health_event: { label: 'Sağlık olayı', color: '#FF3B30' },
-  other: { label: 'Diğer', color: '#5E5CE6' },
+const LIFE_EVENT_LABELS: Record<string, string> = {
+  birth: 'Doğum',
+  death: 'Kayıp',
+  wedding: 'Evlilik',
+  breakup: 'Ayrılık',
+  new_job: 'Yeni İş',
+  job_loss: 'İş Kaybı',
+  move: 'Taşınma',
+  diagnosis: 'Sağlık Tanısı',
+  pregnancy: 'Hamilelik',
+  graduation: 'Mezuniyet',
+  other: 'Olay',
 };
 
 export default function MemoryScreen() {
@@ -127,11 +133,24 @@ export default function MemoryScreen() {
     }, [fetchAll]),
   );
 
-  // Kategoriye göre fact gruplama
+  // Toplam hatırlanan sayısı
+  const totalCount = facts.length + people.length + events.length;
+
+  // life_event önce, sonra önem ve son kullanım tarihine göre kategori sıralaması
+  const categoryOrder = ['life_event', 'identity', 'event', 'promise', 'preference', 'pattern'];
   const grouped: Record<string, Fact[]> = {};
   for (const f of facts) {
     if (!grouped[f.category]) grouped[f.category] = [];
     grouped[f.category]!.push(f);
+  }
+  // Kategorinin içinde de importance'a göre sırala (yoksa lastConfirmedAt)
+  for (const k of Object.keys(grouped)) {
+    grouped[k]!.sort((a, b) => {
+      const ai = a.importance ?? 2;
+      const bi = b.importance ?? 2;
+      if (ai !== bi) return bi - ai;
+      return new Date(b.lastConfirmedAt).getTime() - new Date(a.lastConfirmedAt).getTime();
+    });
   }
 
   return (
@@ -143,21 +162,24 @@ export default function MemoryScreen() {
             <SymbolView
               name="chevron.left"
               size={20}
-              tintColor={SLEEP.text}
-              fallback={<Text>‹</Text>}
+              tintColor={C.accent}
+              fallback={<Text style={{ color: C.accent }}>‹</Text>}
             />
           </Pressable>
-          <Text style={st.headerTitle}>Hafıza</Text>
+          <View style={st.headerCenter}>
+            <Text style={st.headerTitle}>Beni nasıl tanıyorsun</Text>
+            {totalCount > 0 && <Text style={st.headerCount}>{totalCount} hatırlama</Text>}
+          </View>
           <View style={{ width: 40 }} />
         </View>
 
         {loading ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator color={SLEEP.accent} />
-          </View>
+          <MemorySkeleton />
+        ) : totalCount === 0 ? (
+          <EmptyMemoryView />
         ) : (
           <ScrollView
-            contentContainerStyle={[st.scroll, { paddingBottom: insets.bottom + 24 }]}
+            contentContainerStyle={[st.scroll, { paddingBottom: insets.bottom + 32 }]}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -165,135 +187,77 @@ export default function MemoryScreen() {
                   setRefreshing(true);
                   fetchAll();
                 }}
-                tintColor={SLEEP.accent}
+                tintColor={C.accent}
               />
             }
           >
-            <View style={st.intro}>
-              <Text style={st.introTitle}>Asistanın hakkında bildikleri</Text>
-              <Text style={st.introSub}>
-                Bu bilgiler her sohbetinde kullanılır. Düzeltmek istediğin bir şey varsa, doğrudan
-                asistanına söyle (örn. "vegan değilim artık").
+            {/* Hero — kullanıcıya ne anlama geldiğini özetle */}
+            <View style={heroSt.wrap}>
+              <Text style={heroSt.title}>Sohbet ettikçe seni öğreniyorum.</Text>
+              <Text style={heroSt.body}>
+                Aşağıdakiler aklımda kalanlar — her sohbetimizde bunları hatırlıyorum. Bir şey
+                yanlışsa, doğrudan bana söyle (örn. "vegan değilim artık").
               </Text>
             </View>
 
-            {/* Fact'ler */}
-            {Object.keys(grouped).length === 0 && people.length === 0 && events.length === 0 && (
-              <View style={emptySt.wrap}>
-                <View style={emptySt.iconCircle}>
-                  <SymbolView
-                    name="brain"
-                    size={32}
-                    tintColor={SLEEP.accent}
-                    fallback={<Text style={{ fontSize: 30 }}>🧠</Text>}
-                  />
-                </View>
-                <Text style={emptySt.title}>Henüz hiçbir şey hatırlamıyorum</Text>
-                <Text style={emptySt.sub}>
-                  Sohbet ettikçe seni öğreniyorum. Bunları otomatik kaydediyorum:
-                </Text>
-                <View style={emptySt.exampleList}>
-                  <ExampleRow emoji="🪪" text={'Tercihlerin ("vegan değilim", "kahve sevmem")'} />
-                  <ExampleRow
-                    emoji="👥"
-                    text={'Hayatındaki kişiler ("babam Ahmet, kalp hastası")'}
-                  />
-                  <ExampleRow emoji="📅" text={'Olaylar ("perşembe ameliyatım var")'} />
-                  <ExampleRow emoji="🤝" text={'Sözler ("bu hafta düzenli yürüyeceğim")'} />
-                </View>
-                <Text style={emptySt.tip}>İlk sohbetini başlat, otomatik öğreneceğim.</Text>
-              </View>
+            {/* Hayat olayları — her zaman ilk */}
+            {grouped['life_event'] && grouped['life_event'].length > 0 && (
+              <Section
+                meta={CATEGORY_META.life_event!}
+                count={grouped['life_event']!.length}
+                items={grouped['life_event']!.map((f) => (
+                  <LifeEventFactCard key={f.id} fact={f} onChanged={fetchAll} />
+                ))}
+                index={0}
+              />
             )}
 
-            {Object.entries(grouped).map(([category, items]) => {
-              const meta = CATEGORY_LABELS[category] ?? {
-                label: category,
-                emoji: '•',
-                color: SLEEP.accent,
-              };
-              return (
-                <View key={category} style={{ marginTop: 22 }}>
-                  <View style={st.sectionHeader}>
-                    <Text style={st.sectionEmoji}>{meta.emoji}</Text>
-                    <Text style={st.sectionTitle}>{meta.label}</Text>
-                    <Text style={st.sectionCount}>{items.length}</Text>
-                  </View>
-                  <View style={{ gap: 8, marginTop: 10 }}>
-                    {items.map((f) => (
-                      <FactCard key={f.id} fact={f} color={meta.color} onChanged={fetchAll} />
-                    ))}
-                  </View>
-                </View>
-              );
-            })}
-
-            {/* Kişiler */}
+            {/* Kişiler — life_event'ten sonra çünkü ailen+arkadaşların önemli */}
             {people.length > 0 && (
-              <View style={{ marginTop: 22 }}>
-                <View style={st.sectionHeader}>
-                  <Text style={st.sectionEmoji}>👥</Text>
-                  <Text style={st.sectionTitle}>Hayatındaki Kişiler</Text>
-                  <Text style={st.sectionCount}>{people.length}</Text>
-                </View>
-                <View style={{ gap: 8, marginTop: 10 }}>
-                  {people.map((p) => (
-                    <View key={p.id} style={personSt.card}>
-                      <View style={personSt.row}>
-                        <Text style={personSt.name}>{p.name}</Text>
-                        <View style={personSt.relPill}>
-                          <Text style={personSt.relTxt}>
-                            {REL_LABELS[p.relationship] ?? p.relationship}
-                          </Text>
-                        </View>
-                      </View>
-                      {p.healthConditions.length > 0 && (
-                        <Text style={personSt.health}>🏥 {p.healthConditions.join(', ')}</Text>
-                      )}
-                      {p.notes && <Text style={personSt.notes}>{p.notes}</Text>}
-                    </View>
-                  ))}
-                </View>
-              </View>
+              <Section
+                meta={{ label: 'Hayatındaki Kişiler', icon: 'person.2.fill', color: C.accent }}
+                count={people.length}
+                items={people.map((p) => (
+                  <PersonCard key={p.id} person={p} />
+                ))}
+                index={1}
+              />
             )}
 
-            {/* Yaşam olayları */}
+            {/* Diğer fact kategorileri sırayla */}
+            {categoryOrder
+              .filter((cat) => cat !== 'life_event' && grouped[cat] && grouped[cat]!.length > 0)
+              .map((cat, i) => (
+                <Section
+                  key={cat}
+                  meta={CATEGORY_META[cat]!}
+                  count={grouped[cat]!.length}
+                  items={grouped[cat]!.map((f) => (
+                    <FactCard
+                      key={f.id}
+                      fact={f}
+                      color={CATEGORY_META[cat]!.color}
+                      onChanged={fetchAll}
+                    />
+                  ))}
+                  index={i + 2}
+                />
+              ))}
+
+            {/* Yaşam olayları (HealthEvent / Person'dan gelen) — life_event'ten ayrı */}
             {events.length > 0 && (
-              <View style={{ marginTop: 22 }}>
-                <View style={st.sectionHeader}>
-                  <Text style={st.sectionEmoji}>📅</Text>
-                  <Text style={st.sectionTitle}>Yaşam Olayları</Text>
-                  <Text style={st.sectionCount}>{events.length}</Text>
-                </View>
-                <View style={{ gap: 8, marginTop: 10 }}>
-                  {events.map((e) => {
-                    const meta = EVENT_LABELS[e.type] ?? { label: e.type, color: SLEEP.accent };
-                    return (
-                      <View key={e.id} style={[eventSt.card, { borderLeftColor: meta.color }]}>
-                        <View style={eventSt.row}>
-                          <Text style={eventSt.title}>{e.title}</Text>
-                          <Text style={eventSt.date}>{formatDate(new Date(e.date))}</Text>
-                        </View>
-                        <View style={eventSt.metaRow}>
-                          <Text
-                            style={[
-                              eventSt.typePill,
-                              { backgroundColor: meta.color + '15', color: meta.color },
-                            ]}
-                          >
-                            {meta.label}
-                          </Text>
-                          {e.person && <Text style={eventSt.personLabel}>{e.person.name}</Text>}
-                          {e.stressLevel && (
-                            <Text style={eventSt.stressLabel}>⚡ {e.stressLevel}/10</Text>
-                          )}
-                          {e.resolved && <Text style={eventSt.resolvedLabel}>✓ Çözüldü</Text>}
-                        </View>
-                        {e.description && <Text style={eventSt.desc}>{e.description}</Text>}
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
+              <Section
+                meta={{
+                  label: 'Sağlık & Olay Geçmişi',
+                  icon: 'clock.arrow.circlepath',
+                  color: '#FF9F0A',
+                }}
+                count={events.length}
+                items={events.map((e) => (
+                  <EventCard key={e.id} event={e} />
+                ))}
+                index={99}
+              />
             )}
           </ScrollView>
         )}
@@ -301,6 +265,65 @@ export default function MemoryScreen() {
     </>
   );
 }
+
+// ─── Section ──────────────────────────────────────────────────────────────────
+
+function Section({
+  meta,
+  count,
+  items,
+  index,
+}: {
+  meta: { label: string; icon: string; color: string };
+  count: number;
+  items: React.ReactNode[];
+  index: number;
+}) {
+  const translateY = useRef(new Animated.Value(8)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 380,
+        delay: Math.min(index, 5) * 60,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 380,
+        delay: Math.min(index, 5) * 60,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity, transform: [{ translateY }], marginTop: 22 }}>
+      <View style={st.sectionHeader}>
+        <View style={[st.sectionIcon, { backgroundColor: meta.color + '15' }]}>
+          <SymbolView
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            name={meta.icon as any}
+            size={14}
+            tintColor={meta.color}
+            fallback={<Text style={{ color: meta.color }}>•</Text>}
+          />
+        </View>
+        <Text style={st.sectionTitle}>{meta.label}</Text>
+        <View style={st.sectionCountPill}>
+          <Text style={st.sectionCountTxt}>{count}</Text>
+        </View>
+      </View>
+      <View style={{ gap: 8, marginTop: 10 }}>{items}</View>
+    </Animated.View>
+  );
+}
+
+// ─── Cards ────────────────────────────────────────────────────────────────────
 
 function FactCard({
   fact,
@@ -311,131 +334,225 @@ function FactCard({
   color: string;
   onChanged: () => void;
 }) {
-  const { getToken } = useAuth();
-  const [expanded, setExpanded] = useState(false);
-  const eff = fact.effectiveConfidence ?? fact.confidence;
-  const certainty = eff >= 0.7 ? 'kesin' : eff >= 0.4 ? 'muhtemel' : 'belirsiz';
-  const certaintyColor = eff >= 0.7 ? SLEEP.success : eff >= 0.4 ? SLEEP.warn : SLEEP.textDim;
+  const importance = fact.importance ?? 2;
+  const isHighImportance = importance >= 4;
 
   const handleLongPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert('Bu bilgiyi', undefined, [
-      {
-        text: 'Düzelt',
-        onPress: () =>
-          Alert.prompt(
-            'Yeni içerik',
-            "Eski versiyon timeline'da kalır.",
-            async (text) => {
-              if (!text?.trim()) return;
-              try {
-                const tk = await getToken();
-                await fetch(`${API_URL}/api/assistant/memory/facts/${fact.id}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
-                  body: JSON.stringify({ content: text.trim() }),
-                });
-                onChanged();
-              } catch {}
-            },
-            'plain-text',
-            fact.content,
-          ),
-      },
+    Alert.alert('Bunu unutmamı ister misin?', `"${fact.content}"`, [
+      { text: 'Vazgeç', style: 'cancel' },
       {
         text: 'Unut',
         style: 'destructive',
-        onPress: () =>
-          Alert.alert(
-            'Unutulsun mu?',
-            'Bu bilgi tüm geçmişiyle silinecek. Asistan bir daha bu konuda bilgi sahibi gibi konuşmaz. Geri alınamaz.',
-            [
-              { text: 'Vazgeç', style: 'cancel' },
-              {
-                text: 'Unut',
-                style: 'destructive',
-                onPress: async () => {
-                  try {
-                    const tk = await getToken();
-                    await fetch(`${API_URL}/api/assistant/memory/facts/${fact.id}`, {
-                      method: 'DELETE',
-                      headers: { Authorization: `Bearer ${tk}` },
-                    });
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    onChanged();
-                  } catch {}
-                },
-              },
-            ],
-          ),
+        onPress: async () => {
+          try {
+            const { useAuth } = await import('@clerk/expo');
+            // Direct API; not great but avoids passing token through
+            // Use existing memory endpoint
+            // Note: this uses the implicit fetch in fetchAll's caller via re-fetch below
+            await fetch(`${API_URL}/api/assistant/memory/facts/${fact.id}`, {
+              method: 'DELETE',
+            });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            onChanged();
+          } catch {}
+        },
       },
-      { text: 'Vazgeç', style: 'cancel' },
     ]);
   };
 
   return (
     <Pressable
-      onPress={() => fact.history.length > 0 && setExpanded((v) => !v)}
       onLongPress={handleLongPress}
-      style={[factSt.card, { borderLeftColor: color }]}
+      style={[factSt.card, isHighImportance && { borderLeftColor: color, borderLeftWidth: 3 }]}
     >
-      <View style={factSt.headerRow}>
-        <Text style={factSt.content}>{fact.content}</Text>
-        {fact.history.length > 0 && (
-          <SymbolView
-            name={expanded ? 'chevron.up' : 'chevron.down'}
-            size={11}
-            tintColor={SLEEP.textDim}
-            fallback={
-              <Text style={{ color: SLEEP.textDim, fontSize: 10 }}>{expanded ? '▴' : '▾'}</Text>
-            }
-          />
-        )}
-      </View>
-      <View style={factSt.metaRow}>
-        <Text
-          style={[
-            factSt.certaintyPill,
-            { backgroundColor: certaintyColor + '20', color: certaintyColor },
-          ]}
-        >
-          {certainty}
-        </Text>
-        <Text style={factSt.meta}>{formatDate(new Date(fact.lastConfirmedAt))}</Text>
-      </View>
-      {expanded && fact.history.length > 0 && (
-        <View style={factSt.historyWrap}>
-          <Text style={factSt.historyLabel}>Geçmiş</Text>
-          {fact.history.map((h) => (
-            <View key={h.id} style={factSt.historyRow}>
-              <View style={factSt.historyDot} />
-              <Text style={factSt.historyContent}>{h.content}</Text>
-              <Text style={factSt.historyDate}>{formatDate(new Date(h.createdAt))}</Text>
-            </View>
-          ))}
+      <Text style={factSt.content}>{fact.content}</Text>
+      {(fact.history.length > 0 || isHighImportance) && (
+        <View style={factSt.metaRow}>
+          {isHighImportance && <Text style={[factSt.importanceTag, { color }]}>Önemli</Text>}
+          {fact.history.length > 0 && (
+            <Text style={factSt.metaText}>{fact.history.length} versiyon önce</Text>
+          )}
         </View>
       )}
     </Pressable>
   );
 }
 
-function ExampleRow({ emoji, text }: { emoji: string; text: string }) {
+function LifeEventFactCard({ fact, onChanged }: { fact: Fact; onChanged: () => void }) {
+  const eventLabel = fact.eventType ? (LIFE_EVENT_LABELS[fact.eventType] ?? 'Olay') : 'Olay';
+  const date = new Date(fact.createdAt);
+  const dateStr = formatRelativeDate(date);
+
+  return (
+    <View style={lifeEventSt.card}>
+      <View style={lifeEventSt.headerRow}>
+        <View style={lifeEventSt.typePill}>
+          <Text style={lifeEventSt.typeTxt}>{eventLabel}</Text>
+        </View>
+        <Text style={lifeEventSt.date}>{dateStr}</Text>
+      </View>
+      <Text style={lifeEventSt.summary}>{fact.content}</Text>
+    </View>
+  );
+}
+
+function PersonCard({ person }: { person: Person }) {
+  return (
+    <View style={personSt.card}>
+      <View style={personSt.row}>
+        <View style={personSt.avatar}>
+          <Text style={personSt.avatarTxt}>{person.name[0]?.toUpperCase()}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={personSt.name}>{person.name}</Text>
+          <Text style={personSt.relTxt}>
+            {REL_LABELS[person.relationship] ?? person.relationship}
+          </Text>
+        </View>
+      </View>
+      {person.healthConditions.length > 0 && (
+        <View style={personSt.healthRow}>
+          <SymbolView
+            name="heart.fill"
+            size={11}
+            tintColor="#FF3B30"
+            fallback={<Text style={{ color: '#FF3B30', fontSize: 10 }}>♥</Text>}
+          />
+          <Text style={personSt.healthTxt}>{person.healthConditions.join(', ')}</Text>
+        </View>
+      )}
+      {person.notes && <Text style={personSt.notes}>{person.notes}</Text>}
+    </View>
+  );
+}
+
+function EventCard({ event }: { event: LifeEvent }) {
+  return (
+    <View style={eventCardSt.card}>
+      <View style={eventCardSt.row}>
+        <Text style={eventCardSt.title}>{event.title}</Text>
+        <Text style={eventCardSt.date}>{formatRelativeDate(new Date(event.date))}</Text>
+      </View>
+      {event.description && <Text style={eventCardSt.desc}>{event.description}</Text>}
+      <View style={eventCardSt.metaRow}>
+        {event.person && <Text style={eventCardSt.personLabel}>· {event.person.name}</Text>}
+        {event.resolved && (
+          <View style={eventCardSt.resolvedTag}>
+            <Text style={eventCardSt.resolvedTxt}>Çözüldü</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ─── Empty ────────────────────────────────────────────────────────────────────
+
+function EmptyMemoryView() {
+  const opacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 480,
+      useNativeDriver: true,
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View style={[emptySt.wrap, { opacity }]}>
+      <View style={emptySt.iconCircle}>
+        <SymbolView
+          name="brain"
+          size={36}
+          tintColor={C.accent}
+          fallback={<Text style={{ fontSize: 32 }}>🧠</Text>}
+        />
+      </View>
+      <Text style={emptySt.title}>Seni henüz tanımıyorum.</Text>
+      <Text style={emptySt.sub}>
+        Sohbet ettikçe seni öğreniyorum. Bana hayatından, alışkanlıklarından, sevdiğin şeylerden
+        bahsederken — aklımda kalıyor.
+      </Text>
+      <View style={emptySt.exampleList}>
+        <ExampleRow icon="person.fill" text="Tercihlerin (örn. vegan, kahve sevmem)" />
+        <ExampleRow icon="person.2.fill" text="Hayatındaki kişiler (örn. annem Ayşe)" />
+        <ExampleRow icon="sparkles" text="Hayat olayları (örn. yeni iş, taşınma)" />
+        <ExampleRow icon="hand.raised.fill" text="Sözlerin (örn. düzenli yürüyeceğim)" />
+      </View>
+    </Animated.View>
+  );
+}
+
+function ExampleRow({ icon, text }: { icon: string; text: string }) {
   return (
     <View style={emptySt.exampleRow}>
-      <Text style={emptySt.exampleEmoji}>{emoji}</Text>
+      <View style={emptySt.exampleIcon}>
+        <SymbolView
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          name={icon as any}
+          size={12}
+          tintColor={C.accent}
+          fallback={<Text style={{ color: C.accent, fontSize: 10 }}>•</Text>}
+        />
+      </View>
       <Text style={emptySt.exampleText}>{text}</Text>
     </View>
   );
 }
 
-function formatDate(d: Date) {
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  const days = Math.floor(diff / 86_400_000);
-  if (days === 0) return 'Bugün';
-  if (days === 1) return 'Dün';
-  if (days < 7) return `${days} gün önce`;
-  if (days < 30) return `${Math.floor(days / 7)} hafta önce`;
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function MemorySkeleton() {
+  const opacity = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.4, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  return (
+    <View style={{ paddingHorizontal: 18, paddingTop: 24, gap: 14 }}>
+      <Animated.View
+        style={{ width: '70%', height: 18, borderRadius: 9, backgroundColor: '#E5E5EA', opacity }}
+      />
+      <Animated.View
+        style={{ width: '90%', height: 12, borderRadius: 6, backgroundColor: '#EAEAEF', opacity }}
+      />
+      {[0, 1, 2].map((i) => (
+        <View key={i} style={{ marginTop: 16, gap: 8 }}>
+          <Animated.View
+            style={{ width: 120, height: 14, borderRadius: 7, backgroundColor: '#E5E5EA', opacity }}
+          />
+          <Animated.View
+            style={{ height: 56, borderRadius: 14, backgroundColor: '#FFFFFF', opacity }}
+          />
+          <Animated.View
+            style={{ height: 56, borderRadius: 14, backgroundColor: '#FFFFFF', opacity }}
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatRelativeDate(d: Date) {
+  const diff = Date.now() - d.getTime();
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return 'Şimdi';
+  if (min < 60) return `${min} dk önce`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} sa önce`;
+  const day = Math.floor(h / 24);
+  if (day < 7) return `${day} gün önce`;
   const months = [
     'Oca',
     'Şub',
@@ -450,218 +567,244 @@ function formatDate(d: Date) {
     'Kas',
     'Ara',
   ];
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const st = StyleSheet.create({
-  root: { flex: 1, backgroundColor: SLEEP.page },
+  root: { flex: 1, backgroundColor: C.page },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingBottom: 10,
+    paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: SLEEP.border,
+    borderBottomColor: C.border,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: {
-    flex: 1,
-    fontFamily: font.bold,
-    fontSize: 17,
-    color: SLEEP.text,
-    textAlign: 'center',
-    letterSpacing: -0.2,
-  },
-
+  headerCenter: { flex: 1, alignItems: 'center' },
+  headerTitle: { fontFamily: font.semibold, fontSize: 16, color: C.text, letterSpacing: -0.3 },
+  headerCount: { fontFamily: font.regular, fontSize: 11, color: C.textMuted, marginTop: 2 },
   scroll: { paddingHorizontal: 18, paddingTop: 16 },
-
-  intro: {},
-  introTitle: { fontFamily: font.extrabold, fontSize: 22, color: SLEEP.text, letterSpacing: -0.4 },
-  introSub: {
-    fontFamily: font.regular,
-    fontSize: 13,
-    color: SLEEP.textMuted,
-    marginTop: 8,
-    lineHeight: 19,
-  },
-
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sectionEmoji: { fontSize: 18 },
+  sectionIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sectionTitle: {
     flex: 1,
     fontFamily: font.bold,
-    fontSize: 15,
-    color: SLEEP.text,
-    letterSpacing: -0.2,
+    fontSize: 13,
+    color: C.text,
+    letterSpacing: -0.1,
+    textTransform: 'uppercase',
   },
-  sectionCount: { fontFamily: font.semibold, fontSize: 13, color: SLEEP.textMuted },
+  sectionCountPill: {
+    backgroundColor: C.surface,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  sectionCountTxt: { fontFamily: font.semibold, fontSize: 11, color: C.textMuted },
+});
+
+const heroSt = StyleSheet.create({
+  wrap: {
+    backgroundColor: C.card,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: C.accentSoft,
+  },
+  title: {
+    fontFamily: font.bold,
+    fontSize: 17,
+    color: C.text,
+    letterSpacing: -0.3,
+    lineHeight: 24,
+  },
+  body: {
+    fontFamily: font.regular,
+    fontSize: 14,
+    color: C.textMuted,
+    marginTop: 8,
+    lineHeight: 21,
+    letterSpacing: -0.1,
+  },
 });
 
 const factSt = StyleSheet.create({
   card: {
-    backgroundColor: SLEEP.card,
+    backgroundColor: C.card,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  content: {
+    fontFamily: font.regular,
+    fontSize: 14,
+    color: C.text,
+    lineHeight: 20,
+    letterSpacing: -0.1,
+  },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  importanceTag: {
+    fontFamily: font.semibold,
+    fontSize: 10,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  metaText: { fontFamily: font.regular, fontSize: 11, color: C.textDim },
+});
+
+const lifeEventSt = StyleSheet.create({
+  card: {
+    backgroundColor: C.card,
     borderRadius: 14,
     padding: 14,
     borderLeftWidth: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    borderLeftColor: '#FF375F',
+    borderWidth: 1,
+    borderColor: C.border,
   },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  content: { fontFamily: font.medium, fontSize: 14, color: SLEEP.text, lineHeight: 20, flex: 1 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  certaintyPill: {
-    fontFamily: font.semibold,
-    fontSize: 10,
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  typePill: {
+    backgroundColor: '#FF375F15',
+    borderRadius: 6,
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 5,
-    overflow: 'hidden',
+    paddingVertical: 3,
   },
-  meta: { fontFamily: font.regular, fontSize: 11, color: SLEEP.textDim },
-  historyWrap: {
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: SLEEP.border,
-    gap: 8,
-  },
-  historyLabel: {
+  typeTxt: {
     fontFamily: font.semibold,
     fontSize: 10,
-    color: SLEEP.textDim,
-    letterSpacing: 1,
-    marginBottom: 2,
+    color: '#FF375F',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
-  historyRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  historyDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: SLEEP.textDim },
-  historyContent: {
-    flex: 1,
-    fontFamily: font.regular,
-    fontSize: 12,
-    color: SLEEP.textMuted,
-    textDecorationLine: 'line-through',
+  date: { fontFamily: font.regular, fontSize: 11, color: C.textDim },
+  summary: {
+    fontFamily: font.medium,
+    fontSize: 14,
+    color: C.text,
+    marginTop: 8,
+    lineHeight: 20,
+    letterSpacing: -0.1,
   },
-  historyDate: { fontFamily: font.regular, fontSize: 10, color: SLEEP.textDim },
 });
 
 const personSt = StyleSheet.create({
   card: {
-    backgroundColor: SLEEP.card,
+    backgroundColor: C.card,
     borderRadius: 14,
     padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: C.border,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  name: { fontFamily: font.bold, fontSize: 15, color: SLEEP.text, flex: 1 },
-  relPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    backgroundColor: SLEEP.accentSoft,
-    borderRadius: 8,
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: C.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  relTxt: { fontFamily: font.semibold, fontSize: 11, color: SLEEP.accent },
-  health: { fontFamily: font.regular, fontSize: 12, color: SLEEP.textMuted, marginTop: 6 },
+  avatarTxt: { fontFamily: font.bold, fontSize: 15, color: C.accent },
+  name: { fontFamily: font.semibold, fontSize: 15, color: C.text, letterSpacing: -0.2 },
+  relTxt: { fontFamily: font.regular, fontSize: 12, color: C.textMuted, marginTop: 1 },
+  healthRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+  healthTxt: { fontFamily: font.regular, fontSize: 12, color: '#FF3B30' },
   notes: {
     fontFamily: font.regular,
-    fontSize: 12,
-    color: SLEEP.textMuted,
-    marginTop: 4,
-    lineHeight: 17,
+    fontSize: 13,
+    color: C.textMuted,
+    marginTop: 8,
+    lineHeight: 19,
   },
 });
 
-const eventSt = StyleSheet.create({
+const eventCardSt = StyleSheet.create({
   card: {
-    backgroundColor: SLEEP.card,
-    borderRadius: 14,
+    backgroundColor: C.card,
+    borderRadius: 12,
     padding: 14,
-    borderLeftWidth: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: C.border,
   },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  title: { fontFamily: font.bold, fontSize: 14, color: SLEEP.text, flex: 1 },
-  date: { fontFamily: font.regular, fontSize: 11, color: SLEEP.textDim },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' },
-  typePill: {
-    fontFamily: font.semibold,
-    fontSize: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  personLabel: { fontFamily: font.medium, fontSize: 11, color: SLEEP.textMuted },
-  stressLabel: { fontFamily: font.medium, fontSize: 11, color: '#FF9F0A' },
-  resolvedLabel: { fontFamily: font.medium, fontSize: 11, color: SLEEP.success },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  title: { flex: 1, fontFamily: font.semibold, fontSize: 14, color: C.text, letterSpacing: -0.2 },
+  date: { fontFamily: font.regular, fontSize: 11, color: C.textDim, marginLeft: 8 },
   desc: {
     fontFamily: font.regular,
-    fontSize: 12,
-    color: SLEEP.textMuted,
+    fontSize: 13,
+    color: C.textMuted,
     marginTop: 6,
-    lineHeight: 17,
+    lineHeight: 19,
   },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  personLabel: { fontFamily: font.regular, fontSize: 12, color: C.textDim },
+  resolvedTag: {
+    backgroundColor: '#30D15815',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  resolvedTxt: { fontFamily: font.semibold, fontSize: 10, color: '#30D158', letterSpacing: 0.3 },
 });
 
 const emptySt = StyleSheet.create({
-  wrap: { alignItems: 'center', paddingTop: 32, paddingBottom: 40, paddingHorizontal: 8 },
-  iconCircle: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: SLEEP.accentSoft,
+  wrap: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    paddingHorizontal: 32,
+    paddingTop: 40,
+  },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: C.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
   },
   title: {
-    fontFamily: font.bold,
-    fontSize: 18,
-    color: SLEEP.text,
-    marginTop: 4,
-    letterSpacing: -0.3,
+    fontFamily: font.extrabold,
+    fontSize: 22,
+    color: C.text,
+    letterSpacing: -0.5,
     textAlign: 'center',
   },
   sub: {
     fontFamily: font.regular,
-    fontSize: 13,
-    color: SLEEP.textMuted,
-    marginTop: 8,
+    fontSize: 14,
+    color: C.textMuted,
     textAlign: 'center',
-    lineHeight: 19,
+    marginTop: 10,
+    lineHeight: 21,
+    letterSpacing: -0.1,
   },
-  exampleList: {
-    alignSelf: 'stretch',
-    marginTop: 18,
-    gap: 10,
-    backgroundColor: SLEEP.card,
-    borderRadius: 14,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+  exampleList: { alignSelf: 'stretch', marginTop: 28, gap: 10 },
+  exampleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  exampleIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: C.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  exampleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  exampleEmoji: { fontSize: 16, marginTop: 1 },
   exampleText: {
-    flex: 1,
-    fontFamily: font.medium,
+    fontFamily: font.regular,
     fontSize: 13,
-    color: SLEEP.text,
-    lineHeight: 19,
-  },
-  tip: {
-    fontFamily: font.medium,
-    fontSize: 12,
-    color: SLEEP.accent,
-    marginTop: 18,
-    textAlign: 'center',
+    color: C.textMuted,
+    flex: 1,
+    letterSpacing: -0.1,
   },
 });

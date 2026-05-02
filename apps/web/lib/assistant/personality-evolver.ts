@@ -1,6 +1,6 @@
 /**
  * Personality Evolver V2 (Faz L2) — kullanıcı iletişim stiline göre asistan kişiliğini günceller.
- * Her 20 user mesajında bir tetiklenir (background, kullanıcıyı bekletmez).
+ * Her 10 user mesajında bir tetiklenir (background, kullanıcıyı bekletmez).
  *
  * 6 boyut:
  *  - formality (0=samimi, 1=resmi)
@@ -83,7 +83,8 @@ Yanıtın SADECE JSON formatında:
 
 Sadece JSON dön, başka açıklama yok.`
 
-const TRIGGER_EVERY_N_MESSAGES = 20
+// V2 Chunk 6: 20 → 10. AI kişiliği daha hızlı uyarlasın diye sıklığı yarıya düşürdük.
+const TRIGGER_EVERY_N_MESSAGES = 10
 
 export async function maybeEvolvePersonality(userId: string): Promise<void> {
   try {
