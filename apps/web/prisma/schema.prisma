@@ -1848,9 +1848,13 @@ model AssistantMemoryFact {
   id              String    @id @default(cuid())
   userId          String
   user            User      @relation("UserAssistantMemoryFacts", fields: [userId], references: [id], onDelete: Cascade)
-  category        String // identity | preference | pattern | event | promise
+  category        String // identity | preference | pattern | event | promise | life_event
   content         String    @db.Text
   confidence      Float     @default(1.0)
+  // V2 Chunk 4: Önem seviyesi (1-5). Yaşam olayları için 4-5, sıradan tercihler 1-2.
+  importance      Int       @default(2) // 1=trivial, 2=normal, 3=notable, 4=big, 5=life-defining
+  // Yaşam olayı tipi (sadece life_event kategorisinde dolu)
+  eventType       String? // birth | death | wedding | breakup | new_job | job_loss | move | diagnosis | pregnancy | graduation | other
   archived        Boolean   @default(false)
   archivedAt      DateTime?
   lastUsedAt      DateTime  @default(now())

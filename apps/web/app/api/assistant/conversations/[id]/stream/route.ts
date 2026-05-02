@@ -10,6 +10,7 @@ import { maybeEvolvePersonality } from '@/lib/assistant/personality-evolver'
 import { detectEmergency } from '@/lib/assistant/emergency'
 import { routeMessage, modelForDifficulty, maxTokensForDifficulty } from '@/lib/assistant/router'
 import { analyzeTone, toneToPromptHint } from '@/lib/assistant/tone-analyzer'
+import { detectLifeEvent, lifeEventToPromptHint } from '@/lib/assistant/life-event-detector'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -168,14 +169,16 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         .map((m) => `${m.role}: ${m.content.slice(0, 80)}`)
         .join(' | ')
 
-      // V2 Chunk 4: Router + tone analyzer paralel — toplam ~150ms gecikme yerine 1 round
-      const [route, toneAnalysis] = await Promise.all([
+      // V2 Chunk 4: Router + tone + life event paralel — hepsi tek round
+      const [route, toneAnalysis, lifeEvent] = await Promise.all([
         routeMessage({ message: content, recentContext }),
         analyzeTone(content),
+        detectLifeEvent(content),
       ])
       const selectedModel = modelForDifficulty(route.difficulty)
       const selectedMaxTokens = maxTokensForDifficulty(route.difficulty)
       const tonePromptHint = toneToPromptHint(toneAnalysis)
+      const lifeEventHint = lifeEvent ? lifeEventToPromptHint(lifeEvent) : ''
 
       // Easy/medium → light system prompt (~1500 token), hard → full prompt (~6000 token)
       const profileSafe = ctx.profile!
@@ -202,26 +205,28 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
               isNewConversation,
               grantedCapabilities: ctx.grantedCapabilities,
             })
-      // Ton analizi varsa system prompt'a ekle — AI ona göre cevap verir
-      const systemPrompt = baseSystemPrompt + tonePromptHint
+      // Ton analizi + yaşam olayı varsa system prompt'a ekle — AI ona göre cevap verir
+      const systemPrompt = baseSystemPrompt + tonePromptHint + lifeEventHint
 
       // Easy + tool-less mesajlarda hiç tool gönderme (büyük tasarruf)
-      // Listen modunda da tool gönderme — kullanıcı duygusal, çözüm değil dinleme istiyor
+      // Listen modunda veya yaşam olayı varsa tool gönderme — kullanıcı duygusal an yaşıyor
       const isListenMode =
         toneAnalysis.supportNeeded === 'listen' ||
         (toneAnalysis.tone !== 'neutral' &&
           toneAnalysis.tone !== 'happy' &&
           toneAnalysis.intensity > 0.6)
-      const toolCategoriesParam = isListenMode
-        ? []
-        : route.difficulty === 'easy' && route.toolCategories.length === 0
+      const isLifeEventMode = !!lifeEvent && lifeEvent.severity !== 'minor'
+      const toolCategoriesParam =
+        isListenMode || isLifeEventMode
           ? []
-          : route.toolCategories.length > 0
-            ? route.toolCategories
-            : 'all'
+          : route.difficulty === 'easy' && route.toolCategories.length === 0
+            ? []
+            : route.toolCategories.length > 0
+              ? route.toolCategories
+              : 'all'
 
       console.log(
-        `[router] ${route.difficulty} → ${selectedModel} | tone: ${toneAnalysis.tone}(${toneAnalysis.intensity.toFixed(1)},${toneAnalysis.supportNeeded}) | tools: ${Array.isArray(toolCategoriesParam) ? toolCategoriesParam.join(',') || 'NONE' : 'all'}`
+        `[router] ${route.difficulty} → ${selectedModel} | tone: ${toneAnalysis.tone}(${toneAnalysis.intensity.toFixed(1)},${toneAnalysis.supportNeeded}) | event: ${lifeEvent?.event ?? 'none'} | tools: ${Array.isArray(toolCategoriesParam) ? toolCategoriesParam.join(',') || 'NONE' : 'all'}`
       )
 
       try {
@@ -276,6 +281,36 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
           aiMessageId,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any)
+
+        // Yaşam olayı varsa yüksek importance ile DB'ye kaydet
+        if (lifeEvent) {
+          try {
+            await db.assistantMemoryFact.create({
+              data: {
+                userId: user.id,
+                category: 'life_event',
+                content: lifeEvent.summary,
+                eventType: lifeEvent.event,
+                importance: lifeEvent.severity === 'life_changing' ? 5 : 4,
+                confidence: 0.95,
+                sourceMessageId: userMessage.id,
+              },
+            })
+            send({
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              type: 'memory_saved' as any,
+              facts: [
+                {
+                  category: 'life_event',
+                  content: lifeEvent.summary,
+                },
+              ],
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any)
+          } catch (e) {
+            console.error('[life-event-save]', e)
+          }
+        }
 
         // Memory extraction — stream'i bitirmeden önce await et ki UI'a bildirim ulaşsın
         try {
