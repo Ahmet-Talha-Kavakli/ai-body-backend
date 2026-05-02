@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { auth, verifyToken } from '@clerk/nextjs/server'
 import { db } from '@/lib/db/client'
 import { loadAssistantContext } from '@/lib/assistant/context'
-import { buildSystemPrompt } from '@/lib/assistant/system-prompt'
+import { buildSystemPrompt, buildLightSystemPrompt } from '@/lib/assistant/system-prompt'
 import { runAssistantStream, StreamEvent } from '@/lib/assistant/run-stream'
 import { extractAndStoreFacts } from '@/lib/assistant/memory-extractor'
 import { embedAndStoreMessage, searchSimilarMessages } from '@/lib/assistant/rag'
@@ -93,19 +93,6 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
   // V2 (Faz L3): yeni sohbet mi (kullanıcının ilk mesajı)?
   const isNewConversation = conv.messages.filter((m) => m.role === 'user').length === 0
 
-  const systemPrompt = buildSystemPrompt({
-    profile: ctx.profile,
-    user: ctx.user,
-    facts: ctx.facts,
-    people: ctx.people,
-    recentEvents: ctx.recentEvents,
-    environment: ctx.environment,
-    ragContext,
-    greetingContext: ctx.greetingContext,
-    isNewConversation,
-    grantedCapabilities: ctx.grantedCapabilities,
-  })
-
   // SSE stream başlat
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
@@ -182,21 +169,58 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
       const route = await routeMessage({ message: content, recentContext })
       const selectedModel = modelForDifficulty(route.difficulty)
       const selectedMaxTokens = maxTokensForDifficulty(route.difficulty)
+
+      // Easy/medium → light system prompt (~1500 token), hard → full prompt (~6000 token)
+      const profileSafe = ctx.profile!
+      const systemPrompt =
+        route.difficulty === 'hard'
+          ? buildSystemPrompt({
+              profile: profileSafe,
+              user: ctx.user,
+              facts: ctx.facts,
+              people: ctx.people,
+              recentEvents: ctx.recentEvents,
+              environment: ctx.environment,
+              ragContext,
+              greetingContext: ctx.greetingContext,
+              isNewConversation,
+              grantedCapabilities: ctx.grantedCapabilities,
+            })
+          : buildLightSystemPrompt({
+              profile: profileSafe,
+              user: ctx.user,
+              facts: ctx.facts,
+              people: ctx.people,
+              greetingContext: ctx.greetingContext,
+              isNewConversation,
+              grantedCapabilities: ctx.grantedCapabilities,
+            })
+
+      // Easy + tool-less mesajlarda hiç tool gönderme (büyük tasarruf)
+      const toolCategoriesParam =
+        route.difficulty === 'easy' && route.toolCategories.length === 0
+          ? []
+          : route.toolCategories.length > 0
+            ? route.toolCategories
+            : 'all'
+
       console.log(
-        `[router] ${route.difficulty} → ${selectedModel} (${route.reasoning}) | tools: ${route.toolCategories.join(',') || 'all'}`
+        `[router] ${route.difficulty} → ${selectedModel} (${route.reasoning}) | tools: ${Array.isArray(toolCategoriesParam) ? toolCategoriesParam.join(',') || 'NONE' : 'all'} | prompt: ${route.difficulty === 'hard' ? 'full' : 'light'}`
       )
 
       try {
         await runAssistantStream({
           userId: user.id,
           systemPrompt,
+          // V2 Faz N: history limit — son 12 mesaj yeter (eski hep gidiyordu)
           history: conv.messages
             .filter((m) => m.role === 'user' || m.role === 'assistant')
+            .slice(-12)
             .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
           userMessage: content,
           model: selectedModel,
           maxTokens: selectedMaxTokens,
-          toolCategories: route.toolCategories.length > 0 ? route.toolCategories : 'all',
+          toolCategories: toolCategoriesParam,
           emit: (event) => {
             if (event.type === 'text_delta') {
               finalText += event.text

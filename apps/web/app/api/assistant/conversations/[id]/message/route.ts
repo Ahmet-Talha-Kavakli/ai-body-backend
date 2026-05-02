@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { db } from '@/lib/db/client'
 import { loadAssistantContext } from '@/lib/assistant/context'
-import { buildSystemPrompt } from '@/lib/assistant/system-prompt'
+import { buildSystemPrompt, buildLightSystemPrompt } from '@/lib/assistant/system-prompt'
 import { runAssistant } from '@/lib/assistant/run'
 import { routeMessage, modelForDifficulty, maxTokensForDifficulty } from '@/lib/assistant/router'
 import { extractAndStoreFacts } from '@/lib/assistant/memory-extractor'
@@ -69,18 +69,6 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
   })
 
   const isNewConversation = conv.messages.filter((m) => m.role === 'user').length === 0
-  const systemPrompt = buildSystemPrompt({
-    profile: ctx.profile,
-    user: ctx.user,
-    facts: ctx.facts,
-    people: ctx.people,
-    recentEvents: ctx.recentEvents,
-    environment: ctx.environment,
-    ragContext,
-    greetingContext: ctx.greetingContext,
-    isNewConversation,
-    grantedCapabilities: ctx.grantedCapabilities,
-  })
 
   // V2 Faz N: Multi-model router
   const recentContext = conv.messages
@@ -90,8 +78,40 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
   const route = await routeMessage({ message: content, recentContext })
   const selectedModel = modelForDifficulty(route.difficulty)
   const selectedMaxTokens = maxTokensForDifficulty(route.difficulty)
+
+  const systemPrompt =
+    route.difficulty === 'hard'
+      ? buildSystemPrompt({
+          profile: ctx.profile,
+          user: ctx.user,
+          facts: ctx.facts,
+          people: ctx.people,
+          recentEvents: ctx.recentEvents,
+          environment: ctx.environment,
+          ragContext,
+          greetingContext: ctx.greetingContext,
+          isNewConversation,
+          grantedCapabilities: ctx.grantedCapabilities,
+        })
+      : buildLightSystemPrompt({
+          profile: ctx.profile,
+          user: ctx.user,
+          facts: ctx.facts,
+          people: ctx.people,
+          greetingContext: ctx.greetingContext,
+          isNewConversation,
+          grantedCapabilities: ctx.grantedCapabilities,
+        })
+
+  const toolCategoriesParam =
+    route.difficulty === 'easy' && route.toolCategories.length === 0
+      ? []
+      : route.toolCategories.length > 0
+        ? route.toolCategories
+        : 'all'
+
   console.log(
-    `[router] ${route.difficulty} → ${selectedModel} (${route.reasoning}) | tools: ${route.toolCategories.join(',') || 'all'}`
+    `[router] ${route.difficulty} → ${selectedModel} (${route.reasoning}) | tools: ${Array.isArray(toolCategoriesParam) ? toolCategoriesParam.join(',') || 'NONE' : 'all'} | prompt: ${route.difficulty === 'hard' ? 'full' : 'light'}`
   )
 
   // 4. AI Run (tool calling loop)
@@ -103,11 +123,12 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
       systemPrompt,
       history: conv.messages
         .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .slice(-12)
         .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
       userMessage: content,
       model: selectedModel,
       maxTokens: selectedMaxTokens,
-      toolCategories: route.toolCategories.length > 0 ? route.toolCategories : 'all',
+      toolCategories: toolCategoriesParam,
     })
     aiContent = result.finalText || FALLBACK
     if (result.toolCalls.length) {

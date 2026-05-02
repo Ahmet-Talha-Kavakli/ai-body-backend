@@ -91,11 +91,13 @@ export function toOpenAIFunctions(defs: ToolDefinition[] = ALL_TOOL_DEFS) {
  * Not: Bazı tool'lar kritik olduğu için her zaman dahil edilir (memory, people).
  */
 export function getToolDefsForCategories(categories: string[] | 'all'): ToolDefinition[] {
-  if (categories === 'all' || categories.length === 0) return ALL_TOOL_DEFS
+  if (categories === 'all') return ALL_TOOL_DEFS
+  // Boş array → hiç tool gönderme (easy mesaj için tasarruf)
+  if (categories.length === 0) return []
 
-  // Always-on tools (memory, people, mood — duygusal sürekli kullanılır)
-  const ALWAYS_ON_CATEGORIES = ['memory', 'people', 'mood']
-  const merged = new Set([...categories, ...ALWAYS_ON_CATEGORIES])
+  // Sadece kullanıcı bir kategori istediğinde memory'i de ekle (recall için)
+  // Always-on listesi sıkılaştırıldı: artık her medium'da memory + people gönderilmiyor
+  const merged = new Set([...categories])
 
   // Bizim ToolCategory enum'u (types.ts) ile router kategorileri farklı isimde olabilir.
   // Mapping: router category → ToolCategory[]

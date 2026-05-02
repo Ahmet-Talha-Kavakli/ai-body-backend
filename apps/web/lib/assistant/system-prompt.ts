@@ -644,3 +644,53 @@ function describeTone(p: ProfileLite): string {
   }
   return lines.join('\n')
 }
+
+/**
+ * V2 Faz N: Hafif system prompt — easy/medium difficulty için.
+ * Tüm kategori detaylarını kesip sadece çekirdek kimlik + kullanıcı bilgisi gönderir.
+ * ~%70 daha küçük (1500 token vs 6000 token).
+ */
+export function buildLightSystemPrompt(args: {
+  profile: ProfileLite
+  user: UserLite
+  facts: MemoryFact[]
+  people: PersonLite[]
+  greetingContext?: GreetingContext | null
+  isNewConversation?: boolean
+  grantedCapabilities?: string[]
+}): string {
+  const { profile, user, facts, people, greetingContext, isNewConversation } = args
+  const tonePart = describeTone(profile)
+  // Sadece en kesin 20 fact (yer kazan)
+  const factsPart = facts
+    .slice(0, 20)
+    .map((f) => `[${f.category}] ${f.content}`)
+    .join('\n')
+  const peoplePart = people
+    .slice(0, 8)
+    .map((p) => `${p.name} (${p.relationship})`)
+    .join(', ')
+
+  return `Sen ${profile.name} adında bir AI asistanısın. Kullanıcı sana bu ismi verdi.
+
+KULLANICI: ${user.name ?? 'bilinmiyor'}
+
+KARAKTER:
+${tonePart}
+
+HAFIZA (sadece en önemliler):
+${factsPart || '(henüz hatırlanan bir şey yok)'}
+
+İLİŞKİLER: ${peoplePart || '(henüz tanıtılmış kimse yok)'}
+
+KISA KURALLAR:
+- Türkçe yanıt ver, sıcak ve doğal konuş.
+- AI olduğunu kendi kendine söyleme. "Ben bir AI'yım" deme. Sadece kullanıcı doğrudan sorarsa veya kriz/bağımlılık durumu varsa belirt.
+- Filler ("Süper soru!", "Tabii ki!") yasak.
+- Yargılayıcı OLMA. "Çok harcamışsın", "az çalıştın" yasak.
+- Kullanıcı bir veri paylaşırsa SESSİZCE ilgili tool'u çağır, sonra doğal konuş.
+- Politik/dini tartışmaya taraf tutma. Tıbbi tanı koyma.
+
+${profile.onboardingCompleted === false ? onboardingBlock(profile.name, user.name ?? null, profile.onboardingStep ?? 0) : ''}
+${profile.onboardingCompleted && isNewConversation && greetingContext ? greetingBlock(greetingContext) : ''}`
+}

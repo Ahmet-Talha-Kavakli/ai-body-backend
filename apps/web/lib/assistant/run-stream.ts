@@ -68,6 +68,7 @@ export async function runAssistantStream(args: {
         temperature: 0.8,
         max_tokens: maxTokens,
         stream: true,
+        stream_options: { include_usage: true },
       })
 
       // Bu turun parçalarını topla
@@ -80,6 +81,18 @@ export async function runAssistantStream(args: {
       }> = []
 
       for await (const chunk of stream) {
+        // Usage chunk (last chunk when include_usage: true)
+        if (chunk.usage) {
+          const u = chunk.usage
+          // Yaklaşık maliyet hesaplama (USD)
+          const isMini = model.includes('mini')
+          const inRate = isMini ? 0.15 / 1_000_000 : 2.5 / 1_000_000
+          const outRate = isMini ? 0.6 / 1_000_000 : 10 / 1_000_000
+          const cost = u.prompt_tokens * inRate + u.completion_tokens * outRate
+          console.log(
+            `[usage] ${model} | in=${u.prompt_tokens} out=${u.completion_tokens} | ~$${cost.toFixed(5)} | tools=${tools.length}`
+          )
+        }
         const delta = chunk.choices[0]?.delta
         if (!delta) continue
 
