@@ -35,6 +35,8 @@ export type ToolCategory =
   | 'sports'
   | 'travel'
   | 'home'
+  | 'social'
+  | 'shopping'
   | 'tools_actions'
 
 export interface RouteDecision {
@@ -141,7 +143,7 @@ Difficulty seviyeleri:
 - "hard": Duygusal destek, kriz, çok adımlı reasoning, yorumlama, "neden", "ne yapmalıyım", uzun analiz, plan yapma
 
 Tool kategorileri (gerekenleri seç, JSON array):
-- health, water, sleep, medication, nutrition, activity, body, mood, memory, people, reminder, environment, healthkit, calendar, contacts, finance, productivity, career, hobby, sports, travel, home, tools_actions
+- health, water, sleep, medication, nutrition, activity, body, mood, memory, people, reminder, environment, healthkit, calendar, contacts, finance, productivity, career, hobby, sports, travel, home, social, shopping, tools_actions
 
 needsMemoryRecall: Eğer kullanıcının geçmişinden bir bilgiyi hatırlamak gerekirse true ("annemden bahsetmiştim", "önceden..." gibi).
 

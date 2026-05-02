@@ -26,6 +26,8 @@ export type ToolCategory =
   | 'sports'
   | 'travel'
   | 'home'
+  | 'social_life'
+  | 'shopping'
 
 export interface ToolDefinition {
   name: string

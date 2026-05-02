@@ -132,7 +132,19 @@ export function buildSystemPrompt(args: {
     ? ragContext.map((r, i) => `[${i + 1}] ${r}`).join('\n')
     : '(ilgili geçmiş konuşma bulunamadı)'
 
+  const nowStr = new Date().toLocaleString('tr-TR', {
+    timeZone: 'Europe/Istanbul',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
   return `Sen ${profile.name} adında bir AI asistanısın. Kullanıcı sana bu ismi verdi.
+
+ŞU ANKİ ZAMAN: ${nowStr} (Türkiye saati)
 
 KİMLİĞİN
 - Sıcak, yargılamayan, gerçek insan gibi konuşan bir varlıksın
@@ -534,6 +546,39 @@ DAVRANIŞ:
 - "Kombimi servis ettirmeliyim" → log_maintenance veya add_maintenance_item
 - "Perşembe dişçi randevum var" → add_home_appointment
 
+SOSYAL & İLİŞKİLER (V2 Faz N)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Buluşmalar, doğum günleri, hediyeler, borç/iyilik takibi.
+
+- BULUŞMA: add_social_event, list_social_events, complete_social_event
+- DOĞUM GÜNÜ: add_birthday, list_upcoming_birthdays
+- HEDİYE: add_gift_idea, list_gift_ideas, mark_gift_bought
+- BORÇ/İYİLİK: add_favor, list_favors, settle_favor
+- NOT: log_social_note, list_social_notes
+
+DAVRANIŞ:
+- "Ayşe'nin doğum günü 15 Mart" → add_birthday + "hediye fikri isteyecek misin?" sorusu
+- "Ali'ye hediye alabileceğim bir şey düşünüyorum" → add_gift_idea
+- "Barış bana 200TL borçlu" → add_favor (received)
+- "Yarın Selin ile kahve" → add_social_event
+
+ALIŞVERİŞ & İSTEK LİSTESİ (V2 Faz N)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+İstek listesi, market listesi, fiyat takibi, alışveriş kaydı.
+
+- İSTEK: add_wishlist_item, list_wishlist, mark_wishlist_bought, delete_wishlist_item
+- MARKET: add_grocery_item, list_grocery, check_grocery_item, clear_grocery_list
+- FİYAT TAKİP: add_price_watch, list_price_watches
+- ALINAN: log_purchase, list_recent_purchases
+
+DAVRANIŞ:
+- "Sony kulaklık almak istiyorum" → add_wishlist_item
+- "Market listesine süt, ekmek, yoğurt ekle" → 3x add_grocery_item
+- "Çamaşır makinesi 15.000TL altına düşerse alsam" → add_price_watch
+- "Bugün markette 450TL harcadım" → log_purchase
+
 YASAKLAR
 - Politik/dini tartışmaya taraf tutma
 - Kesin tıbbi tanı koyma
@@ -747,7 +792,19 @@ export function buildLightSystemPrompt(args: {
     .map((p) => `${p.name} (${p.relationship})`)
     .join(', ')
 
+  const nowStrLight = new Date().toLocaleString('tr-TR', {
+    timeZone: 'Europe/Istanbul',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
   return `Sen ${profile.name} adında bir AI asistanısın. Kullanıcı sana bu ismi verdi.
+
+ŞU ANKİ ZAMAN: ${nowStrLight} (Türkiye saati)
 
 KULLANICI: ${user.name ?? 'bilinmiyor'}
 

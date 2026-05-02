@@ -124,6 +124,15 @@ model User {
   userPets                UserPet[]                @relation("UserPets")
   userPetEvents           UserPetEvent[]           @relation("UserPetEvents")
   homeAppointments        HomeAppointment[]        @relation("UserHomeAppointments")
+  socialEvents            SocialEvent[]            @relation("UserSocialEvents")
+  birthdays               Birthday[]               @relation("UserBirthdays")
+  giftIdeas               GiftIdea[]               @relation("UserGiftIdeas")
+  favors                  Favor[]                  @relation("UserFavors")
+  socialNotes             SocialNote[]             @relation("UserSocialNotes")
+  wishlistItems           WishlistItem[]           @relation("UserWishlistItems")
+  groceryItems            GroceryItem[]            @relation("UserGroceryItems")
+  priceWatches            PriceWatch[]             @relation("UserPriceWatches")
+  purchases               Purchase[]               @relation("UserPurchases")
   people                  Person[]                @relation("UserPeople")
   lifeEvents              LifeEvent[]             @relation("UserLifeEvents")
   environment             EnvironmentContext?     @relation("UserEnvironment")
@@ -3650,4 +3659,156 @@ model HomeAppointment {
 
   @@index([userId])
   @@index([userId, scheduledAt])
+}
+
+// ──────────────────────────────────────────
+// SOSYAL & İLİŞKİLER
+// ──────────────────────────────────────────
+
+model SocialEvent {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("UserSocialEvents", fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  personName  String?
+  scheduledAt DateTime?
+  location    String?
+  completed   Boolean   @default(false)
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, scheduledAt])
+}
+
+model Birthday {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation("UserBirthdays", fields: [userId], references: [id], onDelete: Cascade)
+  personName   String
+  birthDate    DateTime
+  relationship String?
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+model GiftIdea {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation("UserGiftIdeas", fields: [userId], references: [id], onDelete: Cascade)
+  personName     String
+  idea           String
+  estimatedPrice Float?
+  actualPrice    Float?
+  occasion       String?
+  bought         Boolean   @default(false)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, personName])
+}
+
+model Favor {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("UserFavors", fields: [userId], references: [id], onDelete: Cascade)
+  personName  String
+  description String
+  direction   String    // gave | received
+  amount      Float?
+  settled     Boolean   @default(false)
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, personName])
+}
+
+model SocialNote {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation("UserSocialNotes", fields: [userId], references: [id], onDelete: Cascade)
+  personName String
+  note       String
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, personName])
+}
+
+// ──────────────────────────────────────────
+// ALIŞVERİŞ & İSTEK LİSTESİ
+// ──────────────────────────────────────────
+
+model WishlistItem {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation("UserWishlistItems", fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  category       String?
+  estimatedPrice Float?
+  actualPrice    Float?
+  currency       String    @default("TRY")
+  url            String?
+  priority       String    @default("medium")
+  bought         Boolean   @default(false)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, bought])
+}
+
+model GroceryItem {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation("UserGroceryItems", fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  quantity  Float     @default(1)
+  unit      String?
+  listName  String    @default("Market")
+  checked   Boolean   @default(false)
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, listName])
+}
+
+model PriceWatch {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("UserPriceWatches", fields: [userId], references: [id], onDelete: Cascade)
+  productName String
+  targetPrice Float
+  currency    String    @default("TRY")
+  active      Boolean   @default(true)
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Purchase {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation("UserPurchases", fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  price     Float
+  currency  String    @default("TRY")
+  store     String?
+  category  String?
+  notes     String?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([userId, category])
 }

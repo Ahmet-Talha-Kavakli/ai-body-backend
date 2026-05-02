@@ -27,6 +27,8 @@ import { hobbyToolDefs, hobbyExecutors } from './hobby'
 import { sportsToolDefs, sportsExecutors } from './sports'
 import { travelToolDefs, travelExecutors } from './travel'
 import { homeToolDefs, homeExecutors } from './home'
+import { socialToolDefs, socialExecutors } from './social'
+import { shoppingToolDefs, shoppingExecutors } from './shopping'
 
 export const ALL_TOOL_DEFS: ToolDefinition[] = [
   ...healthReadToolDefs,
@@ -53,6 +55,8 @@ export const ALL_TOOL_DEFS: ToolDefinition[] = [
   ...sportsToolDefs,
   ...travelToolDefs,
   ...homeToolDefs,
+  ...socialToolDefs,
+  ...shoppingToolDefs,
 ]
 
 export const ALL_EXECUTORS: Record<string, ToolExecutor> = {
@@ -80,6 +84,8 @@ export const ALL_EXECUTORS: Record<string, ToolExecutor> = {
   ...sportsExecutors,
   ...travelExecutors,
   ...homeExecutors,
+  ...socialExecutors,
+  ...shoppingExecutors,
 }
 
 /**
@@ -162,6 +168,8 @@ export function getToolDefsForCategories(categories: string[] | 'all'): ToolDefi
     sports: ['sports'],
     travel: ['travel'],
     home: ['home'],
+    social: ['social_life'],
+    shopping: ['shopping'],
     tools_actions: ['tools'],
   }
 
