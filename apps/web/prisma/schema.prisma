@@ -1811,6 +1811,30 @@ model AssistantProfile {
   onboardingCompleted  Boolean  @default(false)
   onboardingCompletedAt DateTime?
   onboardingStep       Int      @default(0) // 0=başlamadı, 1-5=adım, 6=tamam (skip de buraya ulaşır)
+
+  // V3 Faz A — Karakter & Mood
+  archetype            String   @default("warm_friend") // 'comedian' | 'philosopher' | 'street' | 'princess' | 'artist' | 'soldier' | 'sage' | 'rebel' | 'warm_friend'
+  swearProfile         String   @default("never")       // 'never' | 'mirror_user' | 'casual'
+  addressStyle         String   @default("mixed")       // 'name_only' | 'mixed' | 'nickname_heavy'
+  verbalTics           String[] @default([])            // ["valla", "abi", "bence" gibi karakter ifadeleri]
+  worldview            String?  @db.Text                // hayata bakışı, kısa paragraf
+  coreSecret           String?  @db.Text                // yıllar boyu kilitli kalan ana sır
+
+  // Yaşlanma — AI gerçek zamanla yaşlanır
+  bornAt               DateTime?                        // AI'nın "doğum" tarihi
+  ageAtCreation        Int?                             // hesap açıldığında AI'nın yaşı
+
+  // Mood
+  currentMood          String   @default("calm")        // 'calm' | 'energetic' | 'thoughtful' | 'tired'
+  moodReason           String?  @db.Text                // sistem prompt'a girer: neden bu moodda
+  moodSetAt            DateTime @default(now())
+  moodLastChangeReason String?                          // 'morning_baseline' | 'user_event' | 'surprise_arc' | 'fatigue' | 'hostility'
+
+  // İlişki durumu
+  relationshipState    String   @default("normal")      // 'normal' | 'cold' | 'silent' | 'blocked'
+  relationshipStateChangedAt DateTime?
+  blockedUntil         DateTime?
+
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }

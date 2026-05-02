@@ -41,6 +41,10 @@
     {
       "path": "/api/cron/summary-rollup",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/mood-rotation",
+      "schedule": "0 3 * * *"
     }
   ]
 }

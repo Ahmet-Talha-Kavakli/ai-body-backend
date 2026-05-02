@@ -16,6 +16,7 @@ import {
   loadSummaryContext,
   formatSummaryContextForPrompt,
 } from '@/lib/assistant/summary-builder'
+import { moodToPromptHint, maybeShiftMood, Mood } from '@/lib/assistant/mood-engine'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -212,8 +213,14 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
               isNewConversation,
               grantedCapabilities: ctx.grantedCapabilities,
             })
-      // Ton + yaşam olayı + geçmiş özetleri sistem prompt'a ekle
-      const systemPrompt = baseSystemPrompt + summaryHint + tonePromptHint + lifeEventHint
+      // V3 Faz A: mood hint
+      const moodHint = profileSafe.currentMood
+        ? moodToPromptHint(profileSafe.currentMood as Mood, profileSafe.moodReason ?? null)
+        : ''
+
+      // Ton + yaşam olayı + geçmiş özetleri + mood sistem prompt'a ekle
+      const systemPrompt =
+        baseSystemPrompt + moodHint + summaryHint + tonePromptHint + lifeEventHint
 
       // Easy + tool-less mesajlarda hiç tool gönderme (büyük tasarruf)
       // Listen modunda veya yaşam olayı varsa tool gönderme — kullanıcı duygusal an yaşıyor
@@ -305,6 +312,14 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
                 sourceMessageId: userMessage.id,
               },
             })
+            // V3 Faz A: gün içi mood kayma — life event mood'u değiştirir
+            const negativeEvents = ['death', 'job_loss', 'breakup', 'diagnosis']
+            const positiveEvents = ['birth', 'wedding', 'new_job', 'pregnancy', 'graduation']
+            if (negativeEvents.includes(lifeEvent.event)) {
+              maybeShiftMood({ userId: user.id, trigger: 'life_event_negative' }).catch(() => {})
+            } else if (positiveEvents.includes(lifeEvent.event)) {
+              maybeShiftMood({ userId: user.id, trigger: 'life_event_positive' }).catch(() => {})
+            }
             send({
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               type: 'memory_saved' as any,

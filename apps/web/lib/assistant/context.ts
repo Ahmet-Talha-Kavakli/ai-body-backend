@@ -34,6 +34,11 @@ export async function loadAssistantContext(userId: string) {
         needsAdvice: true,
         onboardingCompleted: true,
         onboardingStep: true,
+        // V3 Faz A — mood + karakter
+        archetype: true,
+        currentMood: true,
+        moodReason: true,
+        relationshipState: true,
       },
     }),
     db.user.findUnique({
