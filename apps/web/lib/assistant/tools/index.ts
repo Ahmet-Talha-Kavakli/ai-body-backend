@@ -21,6 +21,7 @@ import { healthkitToolDefs, healthkitExecutors } from './healthkit'
 import { calendarToolDefs, calendarExecutors } from './calendar'
 import { contactsToolDefs, contactsExecutors } from './contacts'
 import { financeToolDefs, financeExecutors } from './finance'
+import { productivityToolDefs, productivityExecutors } from './productivity'
 
 export const ALL_TOOL_DEFS: ToolDefinition[] = [
   ...healthReadToolDefs,
@@ -41,6 +42,7 @@ export const ALL_TOOL_DEFS: ToolDefinition[] = [
   ...calendarToolDefs,
   ...contactsToolDefs,
   ...financeToolDefs,
+  ...productivityToolDefs,
 ]
 
 export const ALL_EXECUTORS: Record<string, ToolExecutor> = {
@@ -62,6 +64,7 @@ export const ALL_EXECUTORS: Record<string, ToolExecutor> = {
   ...calendarExecutors,
   ...contactsExecutors,
   ...financeExecutors,
+  ...productivityExecutors,
 }
 
 /**

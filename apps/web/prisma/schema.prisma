@@ -85,6 +85,12 @@ model User {
   financialAccounts       FinancialAccount[]       @relation("UserFinancialAccounts")
   financialGoals          FinancialGoal[]          @relation("UserFinancialGoals")
   bills                   Bill[]                   @relation("UserBills")
+  focusSessions           FocusSession[]           @relation("UserFocusSessions")
+  taskItems               TaskItem[]               @relation("UserTaskItems")
+  taskProjects            TaskProject[]            @relation("UserTaskProjects")
+  timeBlocks              TimeBlock[]              @relation("UserTimeBlocks")
+  distractions            Distraction[]            @relation("UserDistractions")
+  weeklyReviews           WeeklyReview[]           @relation("UserWeeklyReviews")
   people                  Person[]                @relation("UserPeople")
   lifeEvents              LifeEvent[]             @relation("UserLifeEvents")
   environment             EnvironmentContext?     @relation("UserEnvironment")
@@ -2799,4 +2805,138 @@ model HealthEvent {
 
   @@index([userId])
   @@index([userId, isActive])
+}
+
+// ────────────────────────────────────────────────────
+// V2 (Faz N): Verim & Odak
+// ────────────────────────────────────────────────────
+
+model TaskProject {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation("UserTaskProjects", fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?    @db.Text
+  color       String     @default("#5E5CE6")
+  status      String     @default("active") // active | paused | done | archived
+  deadline    DateTime?
+  archived    Boolean    @default(false)
+  notes       String?    @db.Text
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  tasks       TaskItem[] @relation("ProjectTasks")
+
+  @@index([userId, archived])
+}
+
+model TaskItem {
+  id                String         @id @default(cuid())
+  userId            String
+  user              User           @relation("UserTaskItems", fields: [userId], references: [id], onDelete: Cascade)
+  projectId         String?
+  project           TaskProject?   @relation("ProjectTasks", fields: [projectId], references: [id], onDelete: SetNull)
+  parentTaskId      String?
+  parentTask        TaskItem?      @relation("SubTasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  subTasks          TaskItem[]     @relation("SubTasks")
+  title             String
+  description       String?        @db.Text
+  status            String         @default("todo") // todo | in_progress | done | cancelled
+  priority          String         @default("medium") // low | medium | high | urgent
+  dueDate           DateTime?
+  estimatedMinutes  Int?
+  actualMinutes     Int?
+  tags              String[]       @default([])
+  completedAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  focusSessions     FocusSession[] @relation("FocusOnTask")
+  timeBlocks        TimeBlock[]    @relation("BlockOnTask")
+
+  @@index([userId, status])
+  @@index([userId, dueDate])
+}
+
+model FocusSession {
+  id                String         @id @default(cuid())
+  userId            String
+  user              User           @relation("UserFocusSessions", fields: [userId], references: [id], onDelete: Cascade)
+  taskId            String?
+  task              TaskItem?      @relation("FocusOnTask", fields: [taskId], references: [id], onDelete: SetNull)
+  taskTitle         String?        // Task yoksa direkt isim
+  startedAt         DateTime       @default(now())
+  endedAt           DateTime?
+  plannedMinutes    Int            @default(25)
+  actualMinutes     Int?
+  // pomodoro | deep_work | review | reading | meeting | learning
+  type              String         @default("pomodoro")
+  completed         Boolean        @default(false)
+  cancelled         Boolean        @default(false)
+  distractionCount  Int            @default(0)
+  environment       String?        // ev, ofis, kafe, kütüphane vb.
+  energyBefore      Int?           // 1-5
+  energyAfter       Int?           // 1-5
+  note              String?        @db.Text
+  createdAt         DateTime       @default(now())
+
+  distractions      Distraction[]  @relation("SessionDistractions")
+
+  @@index([userId, startedAt])
+}
+
+model Distraction {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation("UserDistractions", fields: [userId], references: [id], onDelete: Cascade)
+  sessionId   String?
+  session     FocusSession? @relation("SessionDistractions", fields: [sessionId], references: [id], onDelete: Cascade)
+  source      String        // twitter, instagram, sms, telefon, kişi, diğer
+  note        String?
+  durationSec Int?
+  createdAt   DateTime      @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model TimeBlock {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation("UserTimeBlocks", fields: [userId], references: [id], onDelete: Cascade)
+  taskId    String?
+  task      TaskItem? @relation("BlockOnTask", fields: [taskId], references: [id], onDelete: SetNull)
+  label     String
+  startTime DateTime
+  endTime   DateTime
+  // deep_work | meeting | break | exercise | meal | personal | other
+  category  String    @default("deep_work")
+  notes     String?
+  iosEventId String?  // Eğer iOS Calendar'a da yazıldıysa
+  createdAt DateTime  @default(now())
+
+  @@index([userId, startTime])
+}
+
+model WeeklyReview {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation("UserWeeklyReviews", fields: [userId], references: [id], onDelete: Cascade)
+  weekStart           DateTime
+  weekEnd             DateTime
+  productivityScore   Int?     // 0-100, AI auto-compute
+  totalFocusMinutes   Int      @default(0)
+  completedTasks      Int      @default(0)
+  overdueTasks        Int      @default(0)
+  totalDistractions   Int      @default(0)
+  bestDay             String?  // monday, tuesday vb.
+  worstDay            String?
+  wins                String[] @default([])
+  losses              String[] @default([])
+  blockers            String[] @default([])
+  userNotes           String?  @db.Text
+  aiSummary           String?  @db.Text
+  createdAt           DateTime @default(now())
+
+  @@unique([userId, weekStart])
+  @@index([userId, weekStart])
 }
