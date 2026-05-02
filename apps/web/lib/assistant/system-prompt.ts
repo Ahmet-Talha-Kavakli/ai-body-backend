@@ -132,19 +132,30 @@ export function buildSystemPrompt(args: {
     ? ragContext.map((r, i) => `[${i + 1}] ${r}`).join('\n')
     : '(ilgili geçmiş konuşma bulunamadı)'
 
-  const nowStr = new Date().toLocaleString('tr-TR', {
-    timeZone: 'Europe/Istanbul',
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  // Vercel UTC'de çalışır; +3 manuel ekle
+  const nowUtc = new Date()
+  const nowTr = new Date(nowUtc.getTime() + 3 * 60 * 60 * 1000)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
+  const MONTHS = [
+    'Ocak',
+    'Şubat',
+    'Mart',
+    'Nisan',
+    'Mayıs',
+    'Haziran',
+    'Temmuz',
+    'Ağustos',
+    'Eylül',
+    'Ekim',
+    'Kasım',
+    'Aralık',
+  ]
+  const nowStr = `${DAYS[nowTr.getUTCDay()]}, ${nowTr.getUTCDate()} ${MONTHS[nowTr.getUTCMonth()]} ${nowTr.getUTCFullYear()} — ${pad(nowTr.getUTCHours())}:${pad(nowTr.getUTCMinutes())}`
 
   return `Sen ${profile.name} adında bir AI asistanısın. Kullanıcı sana bu ismi verdi.
 
-ŞU ANKİ ZAMAN: ${nowStr} (Türkiye saati)
+ŞU ANKİ ZAMAN: ${nowStr} (Türkiye saati, UTC+3)
 
 KİMLİĞİN
 - Sıcak, yargılamayan, gerçek insan gibi konuşan bir varlıksın
@@ -792,19 +803,29 @@ export function buildLightSystemPrompt(args: {
     .map((p) => `${p.name} (${p.relationship})`)
     .join(', ')
 
-  const nowStrLight = new Date().toLocaleString('tr-TR', {
-    timeZone: 'Europe/Istanbul',
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  const nowUtcL = new Date()
+  const nowTrL = new Date(nowUtcL.getTime() + 3 * 60 * 60 * 1000)
+  const padL = (n: number) => String(n).padStart(2, '0')
+  const DAYS_L = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
+  const MONTHS_L = [
+    'Ocak',
+    'Şubat',
+    'Mart',
+    'Nisan',
+    'Mayıs',
+    'Haziran',
+    'Temmuz',
+    'Ağustos',
+    'Eylül',
+    'Ekim',
+    'Kasım',
+    'Aralık',
+  ]
+  const nowStrLight = `${DAYS_L[nowTrL.getUTCDay()]}, ${nowTrL.getUTCDate()} ${MONTHS_L[nowTrL.getUTCMonth()]} ${nowTrL.getUTCFullYear()} — ${padL(nowTrL.getUTCHours())}:${padL(nowTrL.getUTCMinutes())}`
 
   return `Sen ${profile.name} adında bir AI asistanısın. Kullanıcı sana bu ismi verdi.
 
-ŞU ANKİ ZAMAN: ${nowStrLight} (Türkiye saati)
+ŞU ANKİ ZAMAN: ${nowStrLight} (Türkiye saati, UTC+3)
 
 KULLANICI: ${user.name ?? 'bilinmiyor'}
 
