@@ -98,6 +98,19 @@ model User {
   achievements            Achievement[]            @relation("UserAchievements")
   workContacts            WorkContact[]            @relation("UserWorkContacts")
   careerGoals             CareerGoal[]             @relation("UserCareerGoals")
+  books                   Book[]                   @relation("UserBooks")
+  mediaItems              MediaItem[]              @relation("UserMediaItems")
+  courses                 Course[]                 @relation("UserCourses")
+  hobbies                 Hobby[]                  @relation("UserHobbies")
+  hobbySessions           HobbySession[]           @relation("UserHobbySessions")
+  learningGoals           LearningGoal[]           @relation("UserLearningGoals")
+  freeNotes               FreeNote[]               @relation("UserFreeNotes")
+  workoutPlans            WorkoutPlan[]            @relation("UserWorkoutPlans")
+  trainingSessions        TrainingSession[]        @relation("UserTrainingSessions")
+  exerciseSets            ExerciseSet[]            @relation("UserExerciseSets")
+  personalRecords         PersonalRecord[]         @relation("UserPersonalRecords")
+  races                   Race[]                   @relation("UserRaces")
+  gearItems               GearItem[]               @relation("UserGearItems")
   people                  Person[]                @relation("UserPeople")
   lifeEvents              LifeEvent[]             @relation("UserLifeEvents")
   environment             EnvironmentContext?     @relation("UserEnvironment")
@@ -3098,4 +3111,265 @@ model CareerGoal {
   updatedAt     DateTime  @updatedAt
 
   @@index([userId, status])
+}
+
+// ────────────────────────────────────────────────────
+// V2 (Faz N): Hobi & Öğrenme
+// ────────────────────────────────────────────────────
+
+model Book {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation("UserBooks", fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  author       String?
+  status       String    @default("reading") // wishlist | reading | finished | abandoned
+  currentPage  Int       @default(0)
+  totalPages   Int?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  rating       Int?      // 1-5
+  genre        String?
+  notes        String?   @db.Text
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId, status])
+}
+
+model MediaItem {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation("UserMediaItems", fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  // movie | tv | anime | podcast | documentary | youtube_channel
+  kind            String
+  // wishlist | watching | finished | dropped
+  status          String    @default("watching")
+  currentEpisode  Int?
+  currentSeason   Int?
+  totalEpisodes   Int?
+  rating          Int?
+  platform        String?  // netflix, prime, spotify, youtube
+  genre           String?
+  notes           String?  @db.Text
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, kind])
+}
+
+model Course {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation("UserCourses", fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  provider       String?   // udemy, coursera, school, youtube
+  status         String    @default("active") // active | paused | completed | abandoned
+  progress       Int       @default(0) // 0-100
+  hoursSpent     Float     @default(0)
+  deadline       DateTime?
+  certificateUrl String?
+  notes          String?   @db.Text
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId, status])
+}
+
+model Hobby {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation("UserHobbies", fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  category        String?        // music, art, craft, gaming, photography, writing, cooking, other
+  startedAt       DateTime       @default(now())
+  hoursLogged     Float          @default(0)
+  lastPracticedAt DateTime?
+  skillLevel      String?        // beginner, intermediate, advanced, expert
+  notes           String?        @db.Text
+  archived        Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  sessions        HobbySession[] @relation("HobbySessions")
+
+  @@index([userId, archived])
+}
+
+model HobbySession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("UserHobbySessions", fields: [userId], references: [id], onDelete: Cascade)
+  hobbyId     String
+  hobby       Hobby    @relation("HobbySessions", fields: [hobbyId], references: [id], onDelete: Cascade)
+  startedAt   DateTime @default(now())
+  durationMin Int
+  note        String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, startedAt])
+}
+
+model LearningGoal {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation("UserLearningGoals", fields: [userId], references: [id], onDelete: Cascade)
+  skill        String
+  targetLevel  String?   // C1, advanced, expert vb.
+  currentLevel String?
+  deadline     DateTime?
+  milestones   String[]  @default([])
+  status       String    @default("active") // active | achieved | abandoned
+  achievedAt   DateTime?
+  notes        String?   @db.Text
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId, status])
+}
+
+model FreeNote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserFreeNotes", fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  content   String   @db.Text
+  source    String?  // book, podcast, article, conversation, idea
+  sourceRef String?  // kitap/podcast adı
+  tags      String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+// ────────────────────────────────────────────────────
+// V2 (Faz N): Spor & Fitness
+// ────────────────────────────────────────────────────
+
+model WorkoutPlan {
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation("UserWorkoutPlans", fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  type          String           // strength, hypertrophy, endurance, mixed, sport_specific
+  daysPerWeek   Int              @default(4)
+  durationWeeks Int?
+  status        String           @default("active") // active | paused | completed | archived
+  notes         String?          @db.Text
+  startedAt     DateTime         @default(now())
+  endedAt       DateTime?
+  archived      Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  sessions      TrainingSession[] @relation("PlanSessions")
+
+  @@index([userId, archived])
+}
+
+model TrainingSession {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation("UserTrainingSessions", fields: [userId], references: [id], onDelete: Cascade)
+  planId      String?
+  plan        WorkoutPlan?  @relation("PlanSessions", fields: [planId], references: [id], onDelete: SetNull)
+  // strength, run, ride, swim, yoga, hiit, mobility, sport, other
+  type        String
+  date        DateTime      @default(now())
+  durationMin Int?
+  intensity   Int?          // 1-10 RPE
+  location    String?
+  distanceKm  Float?
+  pace        String?       // 5:30/km
+  notes       String?       @db.Text
+  createdAt   DateTime      @default(now())
+
+  sets        ExerciseSet[] @relation("SessionSets")
+
+  @@index([userId, date])
+}
+
+model ExerciseSet {
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation("UserExerciseSets", fields: [userId], references: [id], onDelete: Cascade)
+  workoutId     String
+  workout       TrainingSession @relation("SessionSets", fields: [workoutId], references: [id], onDelete: Cascade)
+  exerciseName  String         // "deadlift", "squat", "bench press"
+  setNumber     Int
+  weight        Float?         // kg
+  reps          Int?
+  rpe           Int?           // 1-10
+  durationSec   Int?           // for time-based
+  distanceM     Float?         // for distance-based
+  notes         String?
+  createdAt     DateTime       @default(now())
+
+  @@index([userId, exerciseName])
+}
+
+model PersonalRecord {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation("UserPersonalRecords", fields: [userId], references: [id], onDelete: Cascade)
+  exerciseName String
+  // 1RM | max_reps | max_distance | min_time | max_weight_for_reps
+  type         String
+  value        Float
+  unit         String?  // kg, km, sec
+  reps         Int?     // varsa hangi rep aralığında
+  date         DateTime @default(now())
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, exerciseName])
+  @@index([userId, date])
+}
+
+model Race {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation("UserRaces", fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  date      DateTime
+  // 5k, 10k, half_marathon, marathon, ultra, triathlon, cycling, swim, other
+  category  String?
+  distance  Float?
+  unit      String?  // km, mi
+  time      String?  // hh:mm:ss
+  position  Int?
+  bib       String?
+  notes     String?  @db.Text
+  status    String   @default("upcoming") // upcoming | completed | cancelled
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+model GearItem {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation("UserGearItems", fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  // shoe, bike, racket, ski, watch, helmet, other
+  type          String
+  brand         String?
+  purchaseDate  DateTime?
+  retiredAt     DateTime?
+  kmLogged      Float     @default(0)
+  hoursLogged   Float     @default(0)
+  retired       Boolean   @default(false)
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, retired])
 }
