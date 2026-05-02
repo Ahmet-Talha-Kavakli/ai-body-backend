@@ -78,6 +78,8 @@ model User {
   healthKitSnapshots      HealthKitDailySnapshot[] @relation("UserHealthKitSnapshots")
   calendarEvents          CalendarEventShadow[]    @relation("UserCalendarEvents")
   reminderShadows         ReminderShadow[]         @relation("UserReminderShadows")
+  contactShadows          ContactShadow[]          @relation("UserContactShadows")
+  workoutShadows          WorkoutShadow[]          @relation("UserWorkoutShadows")
   people                  Person[]                @relation("UserPeople")
   lifeEvents              LifeEvent[]             @relation("UserLifeEvents")
   environment             EnvironmentContext?     @relation("UserEnvironment")
@@ -1554,6 +1556,39 @@ model CalendarEventShadow {
   endDate     DateTime
   allDay      Boolean  @default(false)
   syncedAt    DateTime @default(now())
+
+  @@unique([userId, externalId])
+  @@index([userId, startDate])
+}
+
+// V2 (Faz M): Contact shadow — rehberi sync edip AI'nın okuması için
+model ContactShadow {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation("UserContactShadows", fields: [userId], references: [id], onDelete: Cascade)
+  externalId    String   // iOS contact id
+  name          String
+  phoneNumbers  String[] @default([])
+  emails        String[] @default([])
+  syncedAt      DateTime @default(now())
+
+  @@unique([userId, externalId])
+  @@index([userId, name])
+}
+
+// V2 (Faz M): Workout shadow — antrenman geçmişi
+model WorkoutShadow {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation("UserWorkoutShadows", fields: [userId], references: [id], onDelete: Cascade)
+  externalId    String   // HealthKit workout id
+  workoutType   String   // running, cycling, walking, strength, yoga, etc.
+  startDate     DateTime
+  endDate       DateTime
+  durationMin   Int
+  totalEnergyKcal Float?
+  totalDistanceM  Float?
+  syncedAt      DateTime @default(now())
 
   @@unique([userId, externalId])
   @@index([userId, startDate])

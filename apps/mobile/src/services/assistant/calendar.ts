@@ -57,13 +57,17 @@ export async function createEvent(args: {
 }
 
 export async function getActiveReminders() {
+  const { status } = await Calendar.getRemindersPermissionsAsync();
+  if (status !== 'granted') return [];
   const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.REMINDER);
   if (cals.length === 0) return [];
+  const start = new Date(0);
+  const end = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365);
   const reminders = await Calendar.getRemindersAsync(
     cals.map((c) => c.id),
     Calendar.ReminderStatus.INCOMPLETE,
-    null,
-    null,
+    start,
+    end,
   );
   return reminders.map((r) => ({
     id: r.id,
@@ -92,4 +96,61 @@ export async function createReminder(args: {
     dueDate: args.dueDate,
   });
   return id;
+}
+
+export async function updateEvent(
+  eventId: string,
+  updates: {
+    title?: string;
+    startDate?: Date;
+    endDate?: Date;
+    notes?: string;
+    location?: string;
+  },
+): Promise<boolean> {
+  try {
+    await Calendar.updateEventAsync(eventId, updates);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteEvent(eventId: string): Promise<boolean> {
+  try {
+    await Calendar.deleteEventAsync(eventId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function updateReminder(
+  reminderId: string,
+  updates: {
+    title?: string;
+    notes?: string;
+    dueDate?: Date;
+    completed?: boolean;
+  },
+): Promise<boolean> {
+  try {
+    await Calendar.updateReminderAsync(reminderId, updates);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function completeReminder(reminderId: string): Promise<boolean> {
+  return updateReminder(reminderId, { completed: true });
+}
+
+export async function deleteReminder(reminderId: string): Promise<boolean> {
+  try {
+    await Calendar.deleteReminderAsync(reminderId);
+    return true;
+  } catch {
+    return false;
+  }
 }

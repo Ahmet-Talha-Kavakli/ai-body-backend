@@ -45,6 +45,35 @@ export const healthkitToolDefs: ToolDefinition[] = [
       required: ['metric'],
     },
   },
+  {
+    name: 'get_sleep_summary',
+    category: 'health_read',
+    description:
+      'Son N gün uyku özeti: ortalama süre, derin/REM dağılımı. "Bu hafta nasıl uyudum?" gibi.',
+    parameters: {
+      type: 'object',
+      properties: { days: { type: 'number', default: 7 } },
+    },
+  },
+  {
+    name: 'get_workout_history',
+    category: 'health_read',
+    description:
+      'Son N gün antrenman geçmişi (koşu, bisiklet, ağırlık vb.). "Bu hafta kaç kez spor yaptım?"',
+    parameters: {
+      type: 'object',
+      properties: { days: { type: 'number', default: 14 } },
+    },
+  },
+  {
+    name: 'get_weight_trend',
+    category: 'health_read',
+    description: 'Kilo değişimi son N gün. Trend ve son ölçümü döner.',
+    parameters: {
+      type: 'object',
+      properties: { days: { type: 'number', default: 30 } },
+    },
+  },
 ]
 
 export const healthkitExecutors: Record<string, ToolExecutor> = {
@@ -121,6 +150,103 @@ export const healthkitExecutors: Record<string, ToolExecutor> = {
             : 'Veri kısıtlı',
           icon: 'heart.fill',
           color: '#FF3B30',
+        },
+      } satisfies ToolResult
+    },
+  },
+
+  get_sleep_summary: {
+    name: 'get_sleep_summary',
+    execute: async ({ userId, params }) => {
+      const p = params as { days?: number }
+      const days = p?.days ?? 7
+      const since = new Date()
+      since.setDate(since.getDate() - days)
+      since.setUTCHours(0, 0, 0, 0)
+      const rows = await db.healthKitDailySnapshot.findMany({
+        where: { userId, date: { gte: since } },
+        orderBy: { date: 'desc' },
+        select: { date: true, sleepMinutes: true, sleepDeepMin: true, sleepRemMin: true },
+      })
+      if (!rows.length) return { ok: false, error: 'no_data' }
+      const sleeps = rows.map((r) => r.sleepMinutes).filter((v): v is number => v != null)
+      const avgMin = sleeps.length ? sleeps.reduce((a, b) => a + b, 0) / sleeps.length : null
+      return {
+        ok: true,
+        data: {
+          days,
+          rowCount: rows.length,
+          avgMinutes: avgMin,
+          avgHours: avgMin != null ? avgMin / 60 : null,
+          rows,
+        },
+        display: {
+          title: `Son ${days} gün uyku`,
+          subtitle: avgMin != null ? `Ortalama ${(avgMin / 60).toFixed(1)} saat` : 'Veri kısıtlı',
+          icon: 'bed.double.fill',
+          color: '#5E5CE6',
+        },
+      } satisfies ToolResult
+    },
+  },
+
+  get_workout_history: {
+    name: 'get_workout_history',
+    execute: async ({ userId, params }) => {
+      const p = params as { days?: number }
+      const days = p?.days ?? 14
+      const since = new Date()
+      since.setDate(since.getDate() - days)
+      const workouts = await db.workoutShadow.findMany({
+        where: { userId, startDate: { gte: since } },
+        orderBy: { startDate: 'desc' },
+        take: 50,
+      })
+      const byType: Record<string, number> = {}
+      for (const w of workouts) byType[w.workoutType] = (byType[w.workoutType] ?? 0) + 1
+      return {
+        ok: true,
+        data: {
+          days,
+          count: workouts.length,
+          byType,
+          workouts,
+        },
+        display: {
+          title: `Son ${days} gün antrenman`,
+          subtitle: workouts.length ? `${workouts.length} seans` : 'Henüz yok',
+          icon: 'figure.run',
+          color: '#30D158',
+        },
+      } satisfies ToolResult
+    },
+  },
+
+  get_weight_trend: {
+    name: 'get_weight_trend',
+    execute: async ({ userId, params }) => {
+      const p = params as { days?: number }
+      const days = p?.days ?? 30
+      const since = new Date()
+      since.setDate(since.getDate() - days)
+      since.setUTCHours(0, 0, 0, 0)
+      const rows = await db.healthKitDailySnapshot.findMany({
+        where: { userId, date: { gte: since }, weightKg: { not: null } },
+        orderBy: { date: 'asc' },
+        select: { date: true, weightKg: true },
+      })
+      if (!rows.length) return { ok: false, error: 'no_data' }
+      const first = rows[0]!.weightKg!
+      const last = rows[rows.length - 1]!.weightKg!
+      const change = last - first
+      return {
+        ok: true,
+        data: { days, first, last, change, rows },
+        display: {
+          title: 'Kilo trendi',
+          subtitle: `${last.toFixed(1)} kg (${change >= 0 ? '+' : ''}${change.toFixed(1)})`,
+          icon: 'scalemass.fill',
+          color: '#5856D6',
         },
       } satisfies ToolResult
     },

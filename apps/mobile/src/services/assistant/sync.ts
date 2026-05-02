@@ -11,6 +11,7 @@ import {
   requestCalendarAuth,
   requestRemindersAuth,
 } from './calendar';
+import { getAllContacts } from './contacts';
 
 interface SyncArgs {
   apiUrl: string;
@@ -110,6 +111,30 @@ export async function runAllAssistantSyncs(args: SyncArgs): Promise<void> {
   // Reminders
   if (permsRes.reminders_read === 'granted') {
     syncRemindersToBackend(args).catch(() => {});
+  }
+  // Contacts
+  if (permsRes.contacts === 'granted') {
+    syncContactsToBackend(args).catch(() => {});
+  }
+}
+
+export async function syncContactsToBackend(
+  args: SyncArgs,
+): Promise<{ ok: boolean; count?: number }> {
+  try {
+    const contacts = await getAllContacts();
+    const token = await args.getToken();
+    if (!token) return { ok: false };
+    const res = await fetch(`${args.apiUrl}/api/assistant/contacts/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ contacts }),
+    });
+    if (!res.ok) return { ok: false };
+    return { ok: true, count: contacts.length };
+  } catch (e) {
+    console.error('[sync/contacts]', e);
+    return { ok: false };
   }
 }
 

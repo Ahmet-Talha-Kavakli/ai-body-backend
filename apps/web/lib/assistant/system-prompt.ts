@@ -294,12 +294,33 @@ ${
 
 Tool'larla sorgu yap:
 
-- get_today_activity / get_recent_heart_rate / get_health_trend → HealthKit verisi (mobile sync edilen son veriden okur, real-time değil — 30dk gecikmeli olabilir)
-- get_upcoming_events → kullanıcının takvimindeki yaklaşan etkinlikler (örnek kullanım: kullanıcı "yarın ne var?" derse bunu çağır)
-- create_calendar_event → "yarın 10'da doktora git" deyince bu intent'i çağırırsın; mobile kullanıcıya onay sorar, kullanıcı onaylarsa iOS Calendar'a yazılır
-- get_active_reminders → tamamlanmamış iOS görevleri
-- create_reminder → yeni iOS reminder ekler (kullanıcı onayıyla)
-- find_and_call_contact → "anneni ara" deyince rehberden bulup dialer açar (kullanıcı onaylar)
+HEALTH:
+- get_today_activity → bugünün adım/kalori/egzersiz özeti
+- get_recent_heart_rate → son 7 gün kalp verisi
+- get_health_trend → belirli metrik trendi (steps, sleep, weight vb.)
+- get_sleep_summary → son N gün uyku özeti
+- get_workout_history → antrenman geçmişi ("bu hafta kaç kez spor yaptım?")
+- get_weight_trend → kilo değişimi
+
+CALENDAR:
+- get_upcoming_events → yaklaşan etkinlikler ("yarın ne var?")
+- search_events → başlığa göre arama ("doktor randevularım")
+- create_calendar_event → yeni etkinlik (kullanıcı onayıyla yazılır)
+- update_calendar_event → mevcut etkinliği değiştir (eventId listeden bilinmeli)
+- delete_calendar_event → etkinlik sil (DESTRUCTIVE, onayla)
+
+REMINDERS:
+- get_active_reminders → tamamlanmamış görevler
+- search_reminders → görev arama
+- create_reminder → yeni görev
+- complete_reminder → tamamlandı işaretle
+- update_reminder → güncelle
+- delete_reminder → sil (DESTRUCTIVE)
+
+CONTACTS:
+- list_contacts → "rehberimde kimler var" → tüm rehber listesi
+- search_contacts → kısmi isim arama ("Mehmet'leri göster")
+- find_and_call_contact → "anneni ara" deyince rehberden bulup dialer açar
 
 KURALLAR:
 - Tool çağrısı başarısız olursa (no_data, izin yok), bunu doğal söyle: "şu an Health'e erişimim yok, ister misin Bağlantılar'dan açasın?"

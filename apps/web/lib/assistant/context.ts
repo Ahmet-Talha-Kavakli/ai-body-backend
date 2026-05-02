@@ -17,8 +17,8 @@ export async function loadAssistantContext(userId: string) {
     recentEvents,
     environment,
     lastConversation,
-    recentMoods,
     permissions,
+    recentMoods,
   ] = await Promise.all([
     db.assistantProfile.findUnique({
       where: { userId },

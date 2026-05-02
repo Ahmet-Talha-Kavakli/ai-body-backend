@@ -181,5 +181,72 @@ export async function runFullHealthKitSync(args: {
   if (!granted) return { ok: false };
   const snapshots = await collectRecentSnapshots(7);
   const result = await syncSnapshotsToBackend({ ...args, snapshots });
+  // Workout'ları da senkronize et
+  await syncWorkouts(args).catch(() => {});
   return { ok: result.ok, daysSynced: result.upserted };
+}
+
+interface WorkoutItem {
+  externalId: string;
+  workoutType: string;
+  startDate: string;
+  endDate: string;
+  durationMin: number;
+  totalEnergyKcal?: number | null;
+  totalDistanceM?: number | null;
+}
+
+export async function getRecentWorkouts(daysBack = 30): Promise<WorkoutItem[]> {
+  if (!AppleHealthKit) return [];
+  const start = new Date();
+  start.setDate(start.getDate() - daysBack);
+  return new Promise((resolve) => {
+    const fn = AppleHealthKit.getAnchoredWorkouts ?? AppleHealthKit.getSamples;
+    if (typeof fn !== 'function') {
+      resolve([]);
+      return;
+    }
+    AppleHealthKit.getAnchoredWorkouts?.(
+      { startDate: start.toISOString(), type: 'Workout' },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (err: string | null, results: any) => {
+        if (err || !results?.data) {
+          resolve([]);
+          return;
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const items: WorkoutItem[] = results.data.map((w: any) => ({
+          externalId: w.id ?? `${w.start}-${w.activityName}`,
+          workoutType: (w.activityName ?? 'other').toLowerCase(),
+          startDate: w.start,
+          endDate: w.end,
+          durationMin: Math.round(
+            (new Date(w.end).getTime() - new Date(w.start).getTime()) / 60000,
+          ),
+          totalEnergyKcal: w.calories ?? null,
+          totalDistanceM: w.distance ?? null,
+        }));
+        resolve(items);
+      },
+    );
+  });
+}
+
+export async function syncWorkouts(args: {
+  apiUrl: string;
+  getToken: () => Promise<string | null>;
+}): Promise<{ ok: boolean; count?: number }> {
+  try {
+    const workouts = await getRecentWorkouts(30);
+    const token = await args.getToken();
+    if (!token) return { ok: false };
+    const res = await fetch(`${args.apiUrl}/api/assistant/workouts/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ workouts }),
+    });
+    return { ok: res.ok, count: workouts.length };
+  } catch {
+    return { ok: false };
+  }
 }

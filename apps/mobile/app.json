@@ -27,6 +27,19 @@
         }
       ],
       [
+        "expo-calendar",
+        {
+          "calendarPermission": "Asistan etkinliklerini görsün ve ekleyebilsin diye gerekli.",
+          "remindersPermission": "Asistan görevlerini görsün ve ekleyebilsin diye gerekli."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Asistan rehberden bir kişiyi bulup arayabilsin diye gerekli."
+        }
+      ],
+      [
         "expo-speech-recognition",
         {
           "microphonePermission": "Sesli sohbet için mikrofon gerekli.",

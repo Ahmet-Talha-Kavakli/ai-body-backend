@@ -34,6 +34,7 @@ import { requestContactsAuth } from '../../../src/services/assistant/contacts';
 import {
   syncCalendarToBackend,
   syncRemindersToBackend,
+  syncContactsToBackend,
   requestAndStorePermission,
 } from '../../../src/services/assistant/sync';
 
@@ -141,6 +142,9 @@ export default function ConnectionsScreen() {
       icon: 'person.crop.circle.fill',
       color: '#30D158',
       request: () => requestContactsAuth(),
+      postGrant: async () => {
+        await syncContactsToBackend({ apiUrl: API_URL, getToken });
+      },
     },
   ];
 

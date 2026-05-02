@@ -24,6 +24,11 @@ import {
   createReminder,
   requestCalendarAuth,
   requestRemindersAuth,
+  updateEvent,
+  deleteEvent,
+  updateReminder,
+  completeReminder,
+  deleteReminder,
 } from '../../../src/services/assistant/calendar';
 import { searchContacts, requestContactsAuth } from '../../../src/services/assistant/contacts';
 import { font, SLEEP, API_URL } from '../tracking/uyku/_components/theme';
@@ -517,6 +522,82 @@ function MessageBubble({ message, previous }: { message: Message; previous?: Mes
     ]);
   };
 
+  const handleUpdateCalendarEvent = async (data: Record<string, unknown>) => {
+    const eventId = data.eventId as string | undefined;
+    if (!eventId) return;
+    Alert.alert('Etkinliği güncelle', (data.title as string) ?? 'Onayla', [
+      { text: 'Vazgeç', style: 'cancel' },
+      {
+        text: 'Güncelle',
+        onPress: async () => {
+          const ok = await updateEvent(eventId, {
+            title: data.title as string | undefined,
+            startDate: data.startISO ? new Date(data.startISO as string) : undefined,
+            endDate: data.endISO ? new Date(data.endISO as string) : undefined,
+            notes: data.notes as string | undefined,
+            location: data.location as string | undefined,
+          });
+          if (ok) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        },
+      },
+    ]);
+  };
+
+  const handleDeleteCalendarEvent = async (data: { eventId?: string }) => {
+    if (!data.eventId) return;
+    Alert.alert('Etkinliği sil', 'Geri alınamaz', [
+      { text: 'Vazgeç', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: async () => {
+          const ok = await deleteEvent(data.eventId!);
+          if (ok) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        },
+      },
+    ]);
+  };
+
+  const handleCompleteReminder = async (data: { reminderId?: string }) => {
+    if (!data.reminderId) return;
+    const ok = await completeReminder(data.reminderId);
+    if (ok) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const handleUpdateReminder = async (data: Record<string, unknown>) => {
+    const reminderId = data.reminderId as string | undefined;
+    if (!reminderId) return;
+    Alert.alert('Görevi güncelle', (data.title as string) ?? 'Onayla', [
+      { text: 'Vazgeç', style: 'cancel' },
+      {
+        text: 'Güncelle',
+        onPress: async () => {
+          const ok = await updateReminder(reminderId, {
+            title: data.title as string | undefined,
+            notes: data.notes as string | undefined,
+            dueDate: data.dueISO ? new Date(data.dueISO as string) : undefined,
+          });
+          if (ok) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        },
+      },
+    ]);
+  };
+
+  const handleDeleteReminder = async (data: { reminderId?: string }) => {
+    if (!data.reminderId) return;
+    Alert.alert('Görevi sil', 'Geri alınamaz', [
+      { text: 'Vazgeç', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: async () => {
+          const ok = await deleteReminder(data.reminderId!);
+          if (ok) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        },
+      },
+    ]);
+  };
+
   const handleFindAndCallContact = async (data: { name?: string }) => {
     if (!data.name) return;
     const granted = await requestContactsAuth();
@@ -586,6 +667,16 @@ function MessageBubble({ message, previous }: { message: Message; previous?: Mes
       );
     } else if (nav === 'find_and_call_contact') {
       handleFindAndCallContact(data as { name?: string });
+    } else if (nav === 'update_calendar_event') {
+      handleUpdateCalendarEvent(data as Record<string, unknown>);
+    } else if (nav === 'delete_calendar_event') {
+      handleDeleteCalendarEvent(data as { eventId?: string });
+    } else if (nav === 'complete_reminder') {
+      handleCompleteReminder(data as { reminderId?: string });
+    } else if (nav === 'update_reminder') {
+      handleUpdateReminder(data as Record<string, unknown>);
+    } else if (nav === 'delete_reminder') {
+      handleDeleteReminder(data as { reminderId?: string });
     }
     void data;
   };
