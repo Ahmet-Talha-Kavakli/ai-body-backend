@@ -9,6 +9,7 @@ import { embedAndStoreMessage, searchSimilarMessages } from '@/lib/assistant/rag
 import { maybeEvolvePersonality } from '@/lib/assistant/personality-evolver'
 import { detectEmergency } from '@/lib/assistant/emergency'
 import { routeMessage, modelForDifficulty, maxTokensForDifficulty } from '@/lib/assistant/router'
+import { analyzeTone, toneToPromptHint } from '@/lib/assistant/tone-analyzer'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -166,13 +167,19 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         .slice(-3)
         .map((m) => `${m.role}: ${m.content.slice(0, 80)}`)
         .join(' | ')
-      const route = await routeMessage({ message: content, recentContext })
+
+      // V2 Chunk 4: Router + tone analyzer paralel — toplam ~150ms gecikme yerine 1 round
+      const [route, toneAnalysis] = await Promise.all([
+        routeMessage({ message: content, recentContext }),
+        analyzeTone(content),
+      ])
       const selectedModel = modelForDifficulty(route.difficulty)
       const selectedMaxTokens = maxTokensForDifficulty(route.difficulty)
+      const tonePromptHint = toneToPromptHint(toneAnalysis)
 
       // Easy/medium → light system prompt (~1500 token), hard → full prompt (~6000 token)
       const profileSafe = ctx.profile!
-      const systemPrompt =
+      const baseSystemPrompt =
         route.difficulty === 'hard'
           ? buildSystemPrompt({
               profile: profileSafe,
@@ -195,17 +202,26 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
               isNewConversation,
               grantedCapabilities: ctx.grantedCapabilities,
             })
+      // Ton analizi varsa system prompt'a ekle — AI ona göre cevap verir
+      const systemPrompt = baseSystemPrompt + tonePromptHint
 
       // Easy + tool-less mesajlarda hiç tool gönderme (büyük tasarruf)
-      const toolCategoriesParam =
-        route.difficulty === 'easy' && route.toolCategories.length === 0
+      // Listen modunda da tool gönderme — kullanıcı duygusal, çözüm değil dinleme istiyor
+      const isListenMode =
+        toneAnalysis.supportNeeded === 'listen' ||
+        (toneAnalysis.tone !== 'neutral' &&
+          toneAnalysis.tone !== 'happy' &&
+          toneAnalysis.intensity > 0.6)
+      const toolCategoriesParam = isListenMode
+        ? []
+        : route.difficulty === 'easy' && route.toolCategories.length === 0
           ? []
           : route.toolCategories.length > 0
             ? route.toolCategories
             : 'all'
 
       console.log(
-        `[router] ${route.difficulty} → ${selectedModel} (${route.reasoning}) | tools: ${Array.isArray(toolCategoriesParam) ? toolCategoriesParam.join(',') || 'NONE' : 'all'} | prompt: ${route.difficulty === 'hard' ? 'full' : 'light'}`
+        `[router] ${route.difficulty} → ${selectedModel} | tone: ${toneAnalysis.tone}(${toneAnalysis.intensity.toFixed(1)},${toneAnalysis.supportNeeded}) | tools: ${Array.isArray(toolCategoriesParam) ? toolCategoriesParam.join(',') || 'NONE' : 'all'}`
       )
 
       try {
