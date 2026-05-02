@@ -25,6 +25,8 @@ import { productivityToolDefs, productivityExecutors } from './productivity'
 import { careerToolDefs, careerExecutors } from './career'
 import { hobbyToolDefs, hobbyExecutors } from './hobby'
 import { sportsToolDefs, sportsExecutors } from './sports'
+import { travelToolDefs, travelExecutors } from './travel'
+import { homeToolDefs, homeExecutors } from './home'
 
 export const ALL_TOOL_DEFS: ToolDefinition[] = [
   ...healthReadToolDefs,
@@ -49,6 +51,8 @@ export const ALL_TOOL_DEFS: ToolDefinition[] = [
   ...careerToolDefs,
   ...hobbyToolDefs,
   ...sportsToolDefs,
+  ...travelToolDefs,
+  ...homeToolDefs,
 ]
 
 export const ALL_EXECUTORS: Record<string, ToolExecutor> = {
@@ -74,6 +78,8 @@ export const ALL_EXECUTORS: Record<string, ToolExecutor> = {
   ...careerExecutors,
   ...hobbyExecutors,
   ...sportsExecutors,
+  ...travelExecutors,
+  ...homeExecutors,
 }
 
 /**
@@ -154,6 +160,8 @@ export function getToolDefsForCategories(categories: string[] | 'all'): ToolDefi
     career: ['career'],
     hobby: ['hobby'],
     sports: ['sports'],
+    travel: ['travel'],
+    home: ['home'],
     tools_actions: ['tools'],
   }
 

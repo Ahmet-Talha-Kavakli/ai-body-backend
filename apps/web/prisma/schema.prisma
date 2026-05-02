@@ -111,6 +111,19 @@ model User {
   personalRecords         PersonalRecord[]         @relation("UserPersonalRecords")
   races                   Race[]                   @relation("UserRaces")
   gearItems               GearItem[]               @relation("UserGearItems")
+  trips                   Trip[]                   @relation("UserTrips")
+  flights                 Flight[]                 @relation("UserFlights")
+  lodgings                Lodging[]                @relation("UserLodgings")
+  visitedPlaces           PlaceVisited[]           @relation("UserVisitedPlaces")
+  packingItems            PackingItem[]            @relation("UserPackingItems")
+  travelDocuments         TravelDocument[]         @relation("UserTravelDocuments")
+  householdItems          HouseholdItem[]          @relation("UserHouseholdItems")
+  chores                  Chore[]                  @relation("UserChores")
+  maintenanceItems        MaintenanceItem[]        @relation("UserMaintenanceItems")
+  vehicles                UserVehicle[]            @relation("UserVehicles")
+  userPets                UserPet[]                @relation("UserPets")
+  userPetEvents           UserPetEvent[]           @relation("UserPetEvents")
+  homeAppointments        HomeAppointment[]        @relation("UserHomeAppointments")
   people                  Person[]                @relation("UserPeople")
   lifeEvents              LifeEvent[]             @relation("UserLifeEvents")
   environment             EnvironmentContext?     @relation("UserEnvironment")
@@ -3372,4 +3385,269 @@ model GearItem {
   updatedAt     DateTime  @updatedAt
 
   @@index([userId, retired])
+}
+
+// ──────────────────────────────────────────
+// SEYAHAT & MEKAN
+// ──────────────────────────────────────────
+
+model Trip {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("UserTrips", fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  destination String
+  country     String?
+  startDate   DateTime?
+  endDate     DateTime?
+  status      String    @default("planned") // planned | ongoing | completed | cancelled
+  budget      Float?
+  currency    String?   @default("TRY")
+  notes       String?
+  tags        String[]  @default([])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+model Flight {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation("UserFlights", fields: [userId], references: [id], onDelete: Cascade)
+  tripId        String?
+  flightNumber  String?
+  airline       String?
+  origin        String
+  destination   String
+  departureAt   DateTime?
+  arrivalAt     DateTime?
+  status        String    @default("scheduled") // scheduled | departed | landed | cancelled | delayed
+  seatNumber    String?
+  confirmCode   String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, tripId])
+}
+
+model Lodging {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation("UserLodgings", fields: [userId], references: [id], onDelete: Cascade)
+  tripId       String?
+  name         String
+  type         String    @default("hotel") // hotel | hostel | airbnb | villa | camping | other
+  city         String?
+  address      String?
+  checkIn      DateTime?
+  checkOut     DateTime?
+  confirmCode  String?
+  pricePerNight Float?
+  currency     String?   @default("TRY")
+  rating       Int?      // 1-5
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, tripId])
+}
+
+model PlaceVisited {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation("UserVisitedPlaces", fields: [userId], references: [id], onDelete: Cascade)
+  tripId     String?
+  name       String
+  category   String?   // restaurant | museum | park | beach | landmark | cafe | other
+  city       String?
+  country    String?
+  rating     Int?      // 1-5
+  visitedAt  DateTime  @default(now())
+  notes      String?
+  tags       String[]  @default([])
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([userId, country])
+}
+
+model PackingItem {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation("UserPackingItems", fields: [userId], references: [id], onDelete: Cascade)
+  tripId    String?
+  name      String
+  category  String?   // clothing | electronics | toiletries | documents | medicine | other
+  quantity  Int       @default(1)
+  packed    Boolean   @default(false)
+  essential Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, tripId])
+}
+
+model TravelDocument {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation("UserTravelDocuments", fields: [userId], references: [id], onDelete: Cascade)
+  type         String    // passport | visa | id_card | drivers_license | insurance | vaccine_card | other
+  country      String?
+  documentNo   String?
+  issuedAt     DateTime?
+  expiresAt    DateTime?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, expiresAt])
+}
+
+// ──────────────────────────────────────────
+// YAŞAM & EV
+// ──────────────────────────────────────────
+
+model HouseholdItem {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation("UserHouseholdItems", fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  category        String?   // appliance | furniture | electronics | cleaning | kitchen | bedroom | other
+  room            String?
+  purchaseDate    DateTime?
+  warrantyExpires DateTime?
+  brand           String?
+  model           String?
+  lastUsedAt      DateTime?
+  needsReplacement Boolean  @default(false)
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, needsReplacement])
+}
+
+model Chore {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation("UserChores", fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  room         String?
+  frequency    String?   // daily | weekly | biweekly | monthly | quarterly | yearly | once
+  lastDoneAt   DateTime?
+  nextDueAt    DateTime?
+  assignedTo   String?
+  estimateMins Int?
+  notes        String?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, nextDueAt])
+}
+
+model MaintenanceItem {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation("UserMaintenanceItems", fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  category        String?   // hvac | plumbing | electrical | appliance | roof | garden | other
+  lastServiceAt   DateTime?
+  nextServiceAt   DateTime?
+  intervalMonths  Int?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, nextServiceAt])
+}
+
+model UserVehicle {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation("UserVehicles", fields: [userId], references: [id], onDelete: Cascade)
+  name            String    // "Benim Arabam"
+  make            String?   // Toyota
+  vehicleModel    String?   // Corolla
+  year            Int?
+  plate           String?
+  fuelType        String?   // gasoline | diesel | electric | hybrid | lpg
+  currentKm       Float     @default(0)
+  lastServiceKm   Float?
+  lastServiceAt   DateTime?
+  nextServiceKm   Float?
+  nextServiceAt   DateTime?
+  insuranceExpires DateTime?
+  inspectionExpires DateTime?
+  notes           String?
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model UserPet {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation("UserPets", fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  species       String    // dog | cat | bird | fish | rabbit | other
+  breed         String?
+  birthDate     DateTime?
+  weightKg      Float?
+  color         String?
+  microchipNo   String?
+  neutered      Boolean   @default(false)
+  vetName       String?
+  vetPhone      String?
+  notes         String?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model UserPetEvent {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("UserPetEvents", fields: [userId], references: [id], onDelete: Cascade)
+  petId       String
+  type        String    // vaccine | vet_visit | grooming | medication | weight | note
+  title       String
+  date        DateTime  @default(now())
+  nextDueAt   DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([userId, petId])
+}
+
+model HomeAppointment {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("UserHomeAppointments", fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  category    String?   // doctor | dentist | vet | service | government | other
+  location    String?
+  scheduledAt DateTime
+  durationMins Int?
+  notes       String?
+  completed   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, scheduledAt])
 }

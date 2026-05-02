@@ -24,6 +24,8 @@ export type ToolCategory =
   | 'career'
   | 'hobby'
   | 'sports'
+  | 'travel'
+  | 'home'
 
 export interface ToolDefinition {
   name: string
