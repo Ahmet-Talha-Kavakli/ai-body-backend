@@ -20,7 +20,7 @@
     },
     {
       "path": "/api/cron/notifications-water",
-      "schedule": "0 * * * *"
+      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/notifications-daily",
@@ -29,6 +29,14 @@
     {
       "path": "/api/cron/notifications-streak",
       "schedule": "0 20 * * *"
+    },
+    {
+      "path": "/api/cron/assistant-memory-decay",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/assistant-proactive",
+      "schedule": "0 12 * * *"
     }
   ]
 }
