@@ -1814,6 +1814,11 @@ model AssistantProfile {
   onboardingCompletedAt DateTime?
   onboardingStep       Int      @default(0) // 0=başlamadı, 1-5=adım, 6=tamam (skip de buraya ulaşır)
 
+  // V3 Faz B — Avatar (DALL-E ile üretilen)
+  avatarUrl            String?
+  avatarGeneratedAt    DateTime?
+  bio                  String?  @db.Text  // Profil sayfasında "hakkında" kısmı
+
   // V3 Faz A — Karakter & Mood
   archetype            String   @default("warm_friend") // 'comedian' | 'philosopher' | 'street' | 'princess' | 'artist' | 'soldier' | 'sage' | 'rebel' | 'warm_friend'
   swearProfile         String   @default("never")       // 'never' | 'mirror_user' | 'casual'

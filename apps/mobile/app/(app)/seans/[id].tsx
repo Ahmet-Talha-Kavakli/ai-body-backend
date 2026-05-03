@@ -19,6 +19,7 @@ import { useAuth } from '@clerk/expo';
 import { SymbolView } from 'expo-symbols';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
+import { useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio';
 import {
   createEvent,
   createReminder,
@@ -31,7 +32,7 @@ import {
   deleteReminder,
 } from '../../../src/services/assistant/calendar';
 import { searchContacts, requestContactsAuth } from '../../../src/services/assistant/contacts';
-import { font, SLEEP, API_URL } from '../tracking/uyku/_components/theme';
+import { font, C, API_URL } from '../../../lib/theme';
 import { streamAssistantMessage } from './_streamClient';
 
 interface ToolCallRecord {
@@ -69,18 +70,28 @@ export default function SeansChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { getToken } = useAuth();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, starter } = useLocalSearchParams<{ id: string; starter?: string }>();
 
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [thinking, setThinking] = useState(false);
+  const [activeToolName, setActiveToolName] = useState<string | null>(null);
   const [profileName, setProfileName] = useState('Asistan');
   const [onboardingActive, setOnboardingActive] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(starter ? decodeURIComponent(starter) : '');
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [memoryToast, setMemoryToast] = useState<{
+    facts: Array<{ category: string; content: string }>;
+    visible: boolean;
+  } | null>(null);
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recordingDuration = useRef(0);
+  const durationTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [recordSecs, setRecordSecs] = useState(0);
 
   const listRef = useRef<FlatList<Message>>(null);
-  // Otomatik scroll: kullanıcı yukarı kaydırırsa duraklat, en altta ise aktif
   const stickToBottomRef = useRef(true);
   const scrollAt = (animated = true) => {
     if (!stickToBottomRef.current) return;
@@ -118,8 +129,6 @@ export default function SeansChatScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Sadece mesaj SAYISI değişince (yeni eklendi) animated scroll
-  // Streaming sırasında token akışı zaten onContentSizeChange tarafından handle ediliyor
   useEffect(() => {
     if (messages.length) {
       setTimeout(() => scrollAt(true), 80);
@@ -127,14 +136,91 @@ export default function SeansChatScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
+  const startRecording = async () => {
+    try {
+      const perm = await AudioModule.requestRecordingPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Mikrofon İzni', 'Ses kaydı için mikrofon iznine ihtiyaç var.', [
+          { text: 'Tamam' },
+        ]);
+        return;
+      }
+      await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+      setIsRecording(true);
+      setRecordSecs(0);
+      recordingDuration.current = 0;
+      durationTimer.current = setInterval(() => {
+        recordingDuration.current += 1;
+        setRecordSecs((s) => s + 1);
+      }, 1000);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (e) {
+      console.error('[record/start]', e);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!isRecording) return;
+    try {
+      if (durationTimer.current) {
+        clearInterval(durationTimer.current);
+        durationTimer.current = null;
+      }
+      setIsRecording(false);
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
+      if (!uri || recordingDuration.current < 1) return;
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTranscribing(true);
+
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append('audio', {
+        uri,
+        type: 'audio/m4a',
+        name: 'recording.m4a',
+      } as unknown as Blob);
+
+      const res = await fetch(`${API_URL}/api/voice/transcribe`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.transcript) {
+        setInput(data.transcript);
+      }
+    } catch (e) {
+      console.error('[record/stop]', e);
+    } finally {
+      setTranscribing(false);
+      setRecordSecs(0);
+    }
+  };
+
+  const cancelRecording = async () => {
+    if (!isRecording) return;
+    if (durationTimer.current) {
+      clearInterval(durationTimer.current);
+      durationTimer.current = null;
+    }
+    setIsRecording(false);
+    setRecordSecs(0);
+    try {
+      await audioRecorder.stop();
+    } catch {}
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   const send = async () => {
     const content = input.trim();
     if (!content || sending) return;
 
     setInput('');
     Haptics.selectionAsync();
-
-    // Yeni mesaj atılırken stick'i tekrar aktive et (kullanıcı net şekilde aşağı dönmek istiyor)
     stickToBottomRef.current = true;
 
     const userTmpId = `tmp-user-${Date.now()}`;
@@ -145,7 +231,6 @@ export default function SeansChatScreen() {
       content,
       createdAt: new Date().toISOString(),
     };
-    // Boş AI mesajı — streaming buraya yazacak
     const optimisticAi: Message = {
       id: aiTmpId,
       role: 'assistant',
@@ -156,6 +241,7 @@ export default function SeansChatScreen() {
     setMessages((prev) => [...prev, optimisticUser, optimisticAi]);
     setSending(true);
     setThinking(true);
+    setActiveToolName(null);
 
     let aiAccumulated = '';
     const collectedTools: ToolCallRecord[] = [];
@@ -178,6 +264,7 @@ export default function SeansChatScreen() {
 
           if (event.type === 'tool_start') {
             setThinking(false);
+            setActiveToolName(event.name);
             const tcRecord: ToolCallRecord = {
               id: event.toolCallId,
               name: event.name,
@@ -187,7 +274,7 @@ export default function SeansChatScreen() {
                 display: {
                   title: `${labelTool(event.name)}…`,
                   icon: 'circle.dotted',
-                  color: '#8E8E93',
+                  color: C.textDim,
                 },
               },
             };
@@ -199,6 +286,7 @@ export default function SeansChatScreen() {
           }
 
           if (event.type === 'tool_end') {
+            setActiveToolName(null);
             const idx = collectedTools.findIndex((t) => t.id === event.toolCallId);
             if (idx >= 0) {
               collectedTools[idx] = {
@@ -214,6 +302,7 @@ export default function SeansChatScreen() {
 
           if (event.type === 'text_delta') {
             setThinking(false);
+            setActiveToolName(null);
             aiAccumulated += event.text;
             setMessages((prev) =>
               prev.map((m) => (m.id === aiTmpId ? { ...m, content: aiAccumulated } : m)),
@@ -231,6 +320,15 @@ export default function SeansChatScreen() {
               prev.map((m) => (m.id === aiTmpId ? { ...m, id: event.aiMessageId } : m)),
             );
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            return;
+          }
+
+          if (event.type === 'memory_saved') {
+            if (event.facts && event.facts.length > 0) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setMemoryToast({ facts: event.facts, visible: true });
+              setTimeout(() => setMemoryToast((t) => (t ? { ...t, visible: false } : null)), 4500);
+            }
             return;
           }
 
@@ -252,6 +350,7 @@ export default function SeansChatScreen() {
     } finally {
       setSending(false);
       setThinking(false);
+      setActiveToolName(null);
     }
   };
 
@@ -280,6 +379,12 @@ export default function SeansChatScreen() {
           start_meditation: 'Meditasyon',
           play_sleep_sound: 'Ses çalınıyor',
           measure_pulse: 'Nabız ölçümü',
+          log_expense: 'Harcama kaydediliyor',
+          log_income: 'Gelir kaydediliyor',
+          add_task: 'Görev ekleniyor',
+          start_focus_session: 'Odak başlatılıyor',
+          log_weight: 'Kilo kaydediliyor',
+          revise_belief: 'Güncelleniyor',
         } as Record<string, string>
       )[name] ?? name
     );
@@ -295,8 +400,8 @@ export default function SeansChatScreen() {
               <SymbolView
                 name="chevron.left"
                 size={20}
-                tintColor={SLEEP.accent}
-                fallback={<Text style={{ color: SLEEP.accent }}>‹</Text>}
+                tintColor={C.accent}
+                fallback={<Text style={{ color: C.accent }}>‹</Text>}
               />
             </Pressable>
             <View style={st.headerCenter}>
@@ -322,21 +427,28 @@ export default function SeansChatScreen() {
         style={[st.root, { paddingTop: insets.top }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        {/* Header */}
         <View style={st.header}>
           <Pressable onPress={() => router.back()} hitSlop={14} style={st.backBtn}>
             <SymbolView
               name="chevron.left"
               size={20}
-              tintColor={SLEEP.accent}
-              fallback={<Text style={{ color: SLEEP.accent }}>‹</Text>}
+              tintColor={C.accent}
+              fallback={<Text style={{ color: C.accent }}>‹</Text>}
             />
           </Pressable>
-          <View style={st.headerCenter}>
+          <Pressable
+            onPress={() => {
+              Haptics.selectionAsync();
+              router.push('/seans/profile');
+            }}
+            style={st.headerCenter}
+          >
             <View style={st.avatarSmall}>
               <Text style={st.avatarTxt}>{profileName[0]?.toUpperCase()}</Text>
             </View>
             <Text style={st.headerName}>{profileName}</Text>
-          </View>
+          </Pressable>
           {onboardingActive ? (
             <Pressable
               onPress={async () => {
@@ -369,27 +481,38 @@ export default function SeansChatScreen() {
               hitSlop={10}
               style={{ paddingHorizontal: 8 }}
             >
-              <Text style={{ fontFamily: font.medium, fontSize: 13, color: SLEEP.textDim }}>
-                Atla
-              </Text>
+              <Text style={{ fontFamily: font.medium, fontSize: 13, color: C.textDim }}>Atla</Text>
             </Pressable>
           ) : (
             <View style={{ width: 40 }} />
           )}
         </View>
 
+        {/* Memory toast — yeni hafıza kaydedildi bildirimi */}
+        {memoryToast && <MemoryToast facts={memoryToast.facts} visible={memoryToast.visible} />}
+
+        {/* Mesaj listesi */}
         <FlatList
           ref={listRef}
           data={messages}
-          keyExtractor={(m, i) => `${m.id}-${i}`}
+          keyExtractor={(m) => m.id}
           contentContainerStyle={[st.list, { paddingBottom: 16 }]}
           renderItem={({ item, index }) => (
-            <MessageBubble message={item} previous={messages[index - 1]} />
+            <MessageBubble message={item} previous={messages[index - 1]} getToken={getToken} />
           )}
+          ListHeaderComponent={
+            !loading && messages.length === 0 && !thinking ? (
+              <ConversationStarters
+                profileName={profileName}
+                onSelect={(text) => {
+                  setInput(text);
+                }}
+              />
+            ) : null
+          }
           ListFooterComponent={
-            // Sadece thinking aşamasında alt typing — AI streaming başlayınca caret zaten bubble'da görünür
             thinking && !messages.some((m) => m.id.startsWith('tmp-ai-') && m.content) ? (
-              <TypingIndicator showThinking={true} />
+              <TypingIndicator toolName={activeToolName} />
             ) : null
           }
           showsVerticalScrollIndicator={false}
@@ -400,11 +523,9 @@ export default function SeansChatScreen() {
             stickToBottomRef.current = distanceFromBottom < 60;
           }}
           onScrollBeginDrag={() => {
-            // Kullanıcı manuel scroll başlattı — şu anki pozisyonu korusun
             stickToBottomRef.current = false;
           }}
           onContentSizeChange={() => {
-            // Sadece sticky modda kayır
             if (stickToBottomRef.current) {
               listRef.current?.scrollToEnd({ animated: false });
             }
@@ -412,51 +533,102 @@ export default function SeansChatScreen() {
           scrollEventThrottle={32}
         />
 
+        {/* Input */}
         <View style={[st.inputWrap, { paddingBottom: insets.bottom + 8 }]}>
-          <View style={st.inputBubble}>
-            <TextInput
-              style={st.input}
-              value={input}
-              onChangeText={setInput}
-              onSubmitEditing={send}
-              placeholder="Mesaj yaz..."
-              placeholderTextColor={SLEEP.textDim}
-              multiline
-              blurOnSubmit={false}
-              submitBehavior="submit"
-              returnKeyType="send"
-              maxLength={2000}
-              editable={!sending}
-            />
-            <Pressable
-              onPress={send}
-              disabled={!input.trim() || sending}
-              style={[
-                st.sendBtn,
-                { backgroundColor: input.trim() && !sending ? SLEEP.accent : '#D1D1D6' },
-              ]}
-            >
-              <SymbolView
-                name="arrow.up"
-                size={16}
-                tintColor="#fff"
-                fallback={<Text style={{ color: '#fff', fontSize: 14 }}>↑</Text>}
+          {isRecording ? (
+            <RecordingBar seconds={recordSecs} onStop={stopRecording} onCancel={cancelRecording} />
+          ) : (
+            <View style={st.inputBubble}>
+              <TextInput
+                style={st.input}
+                value={transcribing ? '' : input}
+                onChangeText={setInput}
+                onSubmitEditing={send}
+                placeholder={transcribing ? 'Transkript ediliyor...' : 'Mesaj yaz...'}
+                placeholderTextColor={transcribing ? C.accent : C.textDim}
+                multiline
+                blurOnSubmit={false}
+                submitBehavior="submit"
+                returnKeyType="send"
+                maxLength={2000}
+                editable={!sending && !transcribing}
               />
-            </Pressable>
-          </View>
+              {!input.trim() && !transcribing ? (
+                <Pressable
+                  onPress={startRecording}
+                  disabled={sending}
+                  style={[st.sendBtn, { backgroundColor: C.surface }]}
+                >
+                  <SymbolView
+                    name="mic.fill"
+                    size={16}
+                    tintColor={C.accent}
+                    fallback={<Text style={{ color: C.accent, fontSize: 14 }}>🎤</Text>}
+                  />
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={send}
+                  disabled={!input.trim() || sending || transcribing}
+                  style={[
+                    st.sendBtn,
+                    { backgroundColor: input.trim() && !sending ? C.accent : '#D1D1D6' },
+                  ]}
+                >
+                  <SymbolView
+                    name="arrow.up"
+                    size={16}
+                    tintColor="#fff"
+                    fallback={<Text style={{ color: '#fff', fontSize: 14 }}>↑</Text>}
+                  />
+                </Pressable>
+              )}
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
     </>
   );
 }
 
-function MessageBubble({ message, previous }: { message: Message; previous?: Message }) {
+// ─── MessageBubble ────────────────────────────────────────────────────────────
+
+function MessageBubble({
+  message,
+  previous,
+  getToken,
+}: {
+  message: Message;
+  previous?: Message;
+  getToken: () => Promise<string | null>;
+}) {
   const router = useRouter();
-  const { getToken } = useAuth();
   const isUser = message.role === 'user';
   const showSpacing = previous && previous.role !== message.role;
   const visibleTools = (message.toolCalls ?? []).filter((tc) => tc.result?.display);
   const isStreaming = !isUser && message.id.startsWith('tmp-ai-');
+
+  // Entrance animasyonu
+  const translateY = useRef(new Animated.Value(8)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+    ]).start();
+    // sadece mount'ta çalışsın
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCreateCalendarEvent = async (data: {
     title?: string;
@@ -480,7 +652,7 @@ function MessageBubble({ message, previous }: { message: Message; previous?: Mes
               Alert.alert('İzin gerekli', 'Takvim izni verilmedi.');
               return;
             }
-            const id = await createEvent({
+            const eid = await createEvent({
               title: data.title!,
               startDate: new Date(data.startISO!),
               endDate: new Date(data.endISO!),
@@ -488,7 +660,7 @@ function MessageBubble({ message, previous }: { message: Message; previous?: Mes
               location: data.location,
               alarmMinutes: data.alarmMinutes,
             });
-            if (id) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            if (eid) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           },
         },
       ],
@@ -511,12 +683,12 @@ function MessageBubble({ message, previous }: { message: Message; previous?: Mes
             Alert.alert('İzin gerekli', 'Reminders izni verilmedi.');
             return;
           }
-          const id = await createReminder({
+          const rid = await createReminder({
             title: data.title!,
             notes: data.notes,
             dueDate: data.dueISO ? new Date(data.dueISO) : undefined,
           });
-          if (id) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          if (rid) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         },
       },
     ]);
@@ -598,6 +770,35 @@ function MessageBubble({ message, previous }: { message: Message; previous?: Mes
     ]);
   };
 
+  const navigateTool = (call: ToolCallRecord) => {
+    const nav = call.result?.data?.navigate;
+    if (!nav) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const data = call.result.data ?? {};
+    if (nav === 'breath') router.push('/(app)/tracking/uyku/araclar/nefes');
+    else if (nav === 'meditation') router.push('/(app)/tracking/uyku/araclar/meditasyon');
+    else if (nav === 'sounds') router.push('/(app)/tracking/uyku/araclar/sesler');
+    else if (nav === 'pulse') router.push('/(app)/tracking/uyku/araclar/nabiz');
+    else if (nav === 'dream') router.push('/(app)/tracking/uyku/araclar/ruya');
+    else if (nav === 'sleep_start') router.push('/(app)/tracking/uyku/baslat');
+    else if (nav === 'emergency_call') {
+      const url = (data as { dialerUrl?: string })?.dialerUrl;
+      if (url) Linking.openURL(url).catch(() => {});
+    } else if (nav === 'create_calendar_event')
+      handleCreateCalendarEvent(data as Parameters<typeof handleCreateCalendarEvent>[0]);
+    else if (nav === 'create_reminder')
+      handleCreateReminder(data as Parameters<typeof handleCreateReminder>[0]);
+    else if (nav === 'find_and_call_contact') handleFindAndCallContact(data as { name?: string });
+    else if (nav === 'update_calendar_event')
+      handleUpdateCalendarEvent(data as Record<string, unknown>);
+    else if (nav === 'delete_calendar_event')
+      handleDeleteCalendarEvent(data as { eventId?: string });
+    else if (nav === 'complete_reminder') handleCompleteReminder(data as { reminderId?: string });
+    else if (nav === 'update_reminder') handleUpdateReminder(data as Record<string, unknown>);
+    else if (nav === 'delete_reminder') handleDeleteReminder(data as { reminderId?: string });
+    void data;
+  };
+
   const handleFindAndCallContact = async (data: { name?: string }) => {
     if (!data.name) return;
     const granted = await requestContactsAuth();
@@ -622,135 +823,122 @@ function MessageBubble({ message, previous }: { message: Message; previous?: Mes
     ]);
   };
 
-  const navigateTool = (call: ToolCallRecord) => {
-    const nav = call.result?.data?.navigate;
-    if (!nav) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const data = call.result.data ?? {};
-    if (nav === 'breath') {
-      router.push('/(app)/tracking/uyku/araclar/nefes');
-    } else if (nav === 'meditation') {
-      router.push('/(app)/tracking/uyku/araclar/meditasyon');
-    } else if (nav === 'sounds') {
-      router.push('/(app)/tracking/uyku/araclar/sesler');
-    } else if (nav === 'pulse') {
-      router.push('/(app)/tracking/uyku/araclar/nabiz');
-    } else if (nav === 'dream') {
-      router.push('/(app)/tracking/uyku/araclar/ruya');
-    } else if (nav === 'sleep_start') {
-      router.push('/(app)/tracking/uyku/baslat');
-    } else if (nav === 'emergency_call') {
-      const url = (data as { dialerUrl?: string })?.dialerUrl;
-      if (url) {
-        Linking.openURL(url).catch((e) => {
-          console.error('[emergency-call]', e);
-        });
-      }
-    } else if (nav === 'create_calendar_event') {
-      handleCreateCalendarEvent(
-        data as {
-          title?: string;
-          startISO?: string;
-          endISO?: string;
-          notes?: string;
-          location?: string;
-          alarmMinutes?: number;
-        },
-      );
-    } else if (nav === 'create_reminder') {
-      handleCreateReminder(
-        data as {
-          title?: string;
-          dueISO?: string;
-          notes?: string;
-        },
-      );
-    } else if (nav === 'find_and_call_contact') {
-      handleFindAndCallContact(data as { name?: string });
-    } else if (nav === 'update_calendar_event') {
-      handleUpdateCalendarEvent(data as Record<string, unknown>);
-    } else if (nav === 'delete_calendar_event') {
-      handleDeleteCalendarEvent(data as { eventId?: string });
-    } else if (nav === 'complete_reminder') {
-      handleCompleteReminder(data as { reminderId?: string });
-    } else if (nav === 'update_reminder') {
-      handleUpdateReminder(data as Record<string, unknown>);
-    } else if (nav === 'delete_reminder') {
-      handleDeleteReminder(data as { reminderId?: string });
-    }
-    void data;
-  };
-
   return (
-    <View style={[bubbleSt.row, { marginTop: showSpacing ? 12 : 3 }]}>
-      <View style={isUser ? bubbleSt.userOuter : bubbleSt.aiOuter}>
-        {/* Tool kartları (varsa) */}
-        {visibleTools.length > 0 && (
-          <View style={{ gap: 6, marginBottom: message.content ? 8 : 0, alignSelf: 'stretch' }}>
-            {visibleTools.map((tc, i) => (
-              <ToolCard key={i} call={tc} onPress={() => navigateTool(tc)} />
-            ))}
+    <Animated.View
+      style={[
+        bubbleSt.row,
+        { marginTop: showSpacing ? 12 : 3 },
+        { transform: [{ translateY }], opacity },
+      ]}
+    >
+      {/* AI mesajı — Flow modeli */}
+      {!isUser && (
+        <View style={bubbleSt.aiOuter}>
+          {/* Sol çizgi + içerik */}
+          <View style={bubbleSt.aiFlow}>
+            <View style={bubbleSt.aiLine} />
+            <View style={{ flex: 1, gap: 6 }}>
+              {/* Tool kartları */}
+              {visibleTools.length > 0 && (
+                <View style={{ gap: 5 }}>
+                  {visibleTools.map((tc, i) => (
+                    <ToolCard key={i} call={tc} onPress={() => navigateTool(tc)} />
+                  ))}
+                </View>
+              )}
+              {/* Mesaj metni */}
+              {!!message.content && (
+                <Pressable
+                  onLongPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    const buttons: Array<{
+                      text: string;
+                      onPress?: () => void;
+                      style?: 'cancel' | 'destructive';
+                    }> = [];
+                    buttons.push({
+                      text: 'Kopyala',
+                      onPress: async () => {
+                        await Clipboard.setStringAsync(message.content);
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      },
+                    });
+                    if (!message.id.startsWith('tmp-')) {
+                      buttons.push({
+                        text: message.isPinned ? 'Sabitlemeyi Kaldır' : 'Bunu Hatırla (Pinle)',
+                        onPress: async () => {
+                          try {
+                            const tk = await getToken();
+                            await fetch(`${API_URL}/api/assistant/messages/${message.id}/pin`, {
+                              method: 'POST',
+                              headers: { Authorization: `Bearer ${tk}` },
+                            });
+                          } catch {}
+                        },
+                      });
+                    }
+                    buttons.push({ text: 'Vazgeç', style: 'cancel' });
+                    Alert.alert('Mesaj', undefined, buttons);
+                  }}
+                  style={bubbleSt.aiTextWrap}
+                >
+                  <Text style={bubbleSt.aiText}>
+                    {message.content}
+                    {isStreaming && <StreamingCaret />}
+                  </Text>
+                  {message.isPinned && (
+                    <SymbolView
+                      name="pin.fill"
+                      size={10}
+                      tintColor={C.textDim}
+                      fallback={<Text>📌</Text>}
+                      style={{ position: 'absolute', top: 2, right: 0 }}
+                    />
+                  )}
+                </Pressable>
+              )}
+            </View>
           </View>
-        )}
-        {/* Mesaj balonu (içerik varsa) */}
-        {!!message.content && (
+        </View>
+      )}
+
+      {/* User mesajı — Bubble */}
+      {isUser && (
+        <View style={bubbleSt.userOuter}>
           <Pressable
             onLongPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              const buttons: Array<{
-                text: string;
-                onPress?: () => void;
-                style?: 'cancel' | 'destructive';
-              }> = [];
-              buttons.push({
-                text: 'Kopyala',
-                onPress: async () => {
-                  await Clipboard.setStringAsync(message.content);
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                },
-              });
-              if (!isUser && !message.id.startsWith('tmp-')) {
-                buttons.push({
-                  text: message.isPinned ? 'Sabitlemeyi Kaldır' : 'Bunu Hatırla (Pinle)',
+              Alert.alert('Mesaj', undefined, [
+                {
+                  text: 'Kopyala',
                   onPress: async () => {
-                    try {
-                      const tk = await getToken();
-                      await fetch(`${API_URL}/api/assistant/messages/${message.id}/pin`, {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${tk}` },
-                      });
-                    } catch {}
+                    await Clipboard.setStringAsync(message.content);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                   },
-                });
-              }
-              buttons.push({ text: 'Vazgeç', style: 'cancel' });
-              Alert.alert('Mesaj', undefined, buttons);
+                },
+                { text: 'Vazgeç', style: 'cancel' },
+              ]);
             }}
-            style={[
-              bubbleSt.bubble,
-              isUser ? bubbleSt.user : bubbleSt.ai,
-              message.isPinned && bubbleSt.pinned,
-            ]}
+            style={[bubbleSt.userBubble, message.isPinned && bubbleSt.pinnedUser]}
           >
-            <Text style={[bubbleSt.text, isUser ? bubbleSt.userText : bubbleSt.aiText]}>
-              {message.content}
-              {isStreaming && <StreamingCaret />}
-            </Text>
+            <Text style={bubbleSt.userText}>{message.content}</Text>
             {message.isPinned && (
               <SymbolView
                 name="pin.fill"
                 size={10}
-                tintColor={isUser ? 'rgba(255,255,255,0.7)' : SLEEP.textDim}
+                tintColor="rgba(255,255,255,0.7)"
                 fallback={<Text>📌</Text>}
                 style={{ position: 'absolute', top: 4, right: 6 }}
               />
             )}
           </Pressable>
-        )}
-      </View>
-    </View>
+        </View>
+      )}
+    </Animated.View>
   );
 }
+
+// ─── StreamingCaret ───────────────────────────────────────────────────────────
 
 function StreamingCaret() {
   const opacity = useRef(new Animated.Value(1)).current;
@@ -775,35 +963,48 @@ function StreamingCaret() {
     return () => loop.stop();
   }, []);
   return (
-    <Animated.Text style={{ opacity, color: SLEEP.accent, fontWeight: '600' }}>
-      {' ▍'}
-    </Animated.Text>
+    <Animated.Text style={{ opacity, color: C.accent, fontWeight: '600' }}>{' ▍'}</Animated.Text>
   );
 }
+
+// ─── ToolCard ─────────────────────────────────────────────────────────────────
 
 function ToolCard({ call, onPress }: { call: ToolCallRecord; onPress?: () => void }) {
   const display = call.result?.display;
   if (!display) return null;
-  const tint = display.color ?? SLEEP.accent;
+
+  const isPending = display.icon === 'circle.dotted';
+  const isError = !call.result.ok;
   const isNav = !!call.result?.data?.navigate;
 
+  // Renk: hata → kırmızı, bekliyor → gri, başarı → yeşil
+  const tint = isError ? C.danger : isPending ? C.textDim : (display.color ?? C.success);
+  const bgTint = isError ? C.dangerBg : isPending ? C.surface : C.successBg;
+  const checkIcon = isError
+    ? 'xmark.circle.fill'
+    : isPending
+      ? 'circle.dotted'
+      : 'checkmark.circle.fill';
+
+  const now = new Date();
+  const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
   const Inner = (
-    <View style={[toolSt.card, { borderLeftColor: tint }]}>
-      <View style={[toolSt.iconWrap, { backgroundColor: tint + '20' }]}>
-        {display.icon ? (
-          <SymbolView
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            name={display.icon as any}
-            size={16}
-            tintColor={tint}
-            fallback={<Text style={{ color: tint }}>•</Text>}
-          />
-        ) : (
-          <Text style={{ color: tint }}>✓</Text>
-        )}
-      </View>
+    <View style={[toolSt.card, { backgroundColor: bgTint }]}>
+      <SymbolView
+        name={
+          display.icon
+            ? (display.icon as 'checkmark.circle.fill')
+            : (checkIcon as 'checkmark.circle.fill')
+        }
+        size={15}
+        tintColor={tint}
+        fallback={
+          <Text style={{ color: tint, fontSize: 13 }}>{isError ? '✗' : isPending ? '…' : '✓'}</Text>
+        }
+      />
       <View style={{ flex: 1 }}>
-        <Text style={toolSt.title} numberOfLines={1}>
+        <Text style={[toolSt.title, { color: isError ? C.danger : C.text }]} numberOfLines={1}>
           {display.title}
         </Text>
         {display.subtitle && (
@@ -811,25 +1012,271 @@ function ToolCard({ call, onPress }: { call: ToolCallRecord; onPress?: () => voi
             {display.subtitle}
           </Text>
         )}
+        {!isPending && !isError && (
+          <Text style={toolSt.meta}>
+            {timeStr}
+            {display.undoable && <Text style={toolSt.undo}> · Geri al</Text>}
+          </Text>
+        )}
       </View>
       {isNav && (
         <SymbolView
           name="chevron.right"
-          size={12}
-          tintColor={tint}
-          fallback={<Text style={{ color: tint }}>›</Text>}
+          size={11}
+          tintColor={C.textDim}
+          fallback={<Text style={{ color: C.textDim }}>›</Text>}
         />
       )}
     </View>
   );
 
-  if (isNav && onPress) {
-    return <Pressable onPress={onPress}>{Inner}</Pressable>;
-  }
+  if (isNav && onPress) return <Pressable onPress={onPress}>{Inner}</Pressable>;
   return Inner;
 }
 
-function TypingIndicator({ showThinking }: { showThinking?: boolean }) {
+// ─── MemoryToast ──────────────────────────────────────────────────────────────
+
+function MemoryToast({
+  facts,
+  visible,
+}: {
+  facts: Array<{ category: string; content: string }>;
+  visible: boolean;
+}) {
+  const translateY = useRef(new Animated.Value(-60)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: visible ? 0 : -60,
+        duration: visible ? 380 : 320,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+      Animated.timing(opacity, {
+        toValue: visible ? 1 : 0,
+        duration: visible ? 380 : 320,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+    ]).start();
+  }, [visible]);
+
+  const first = facts[0];
+  if (!first) return null;
+
+  return (
+    <Animated.View
+      style={[memToastSt.wrap, { opacity, transform: [{ translateY }] }]}
+      pointerEvents="none"
+    >
+      <View style={memToastSt.card}>
+        <View style={memToastSt.iconWrap}>
+          <SymbolView
+            name="brain.head.profile"
+            size={14}
+            tintColor={C.accent}
+            fallback={<Text style={{ color: C.accent, fontSize: 12 }}>🧠</Text>}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={memToastSt.title}>Hatırladım</Text>
+          <Text style={memToastSt.body} numberOfLines={2}>
+            {first.content}
+            {facts.length > 1 ? ` · +${facts.length - 1} daha` : ''}
+          </Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+const memToastSt = StyleSheet.create({
+  wrap: {
+    position: 'absolute',
+    top: 8,
+    left: 16,
+    right: 16,
+    zIndex: 100,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: C.card,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: C.accentSoft,
+    shadowColor: C.accent,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+  },
+  iconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: C.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontFamily: font.semibold,
+    fontSize: 12,
+    color: C.accent,
+    letterSpacing: 0.2,
+  },
+  body: {
+    fontFamily: font.regular,
+    fontSize: 13,
+    color: C.text,
+    marginTop: 1,
+    letterSpacing: -0.1,
+  },
+});
+
+// ─── RecordingBar ─────────────────────────────────────────────────────────────
+
+const BAR_COUNT = 24;
+const BAR_ANIMS = Array.from({ length: BAR_COUNT }, () => new Animated.Value(0.3));
+
+function RecordingBar({
+  seconds,
+  onStop,
+  onCancel,
+}: {
+  seconds: number;
+  onStop: () => void;
+  onCancel: () => void;
+}) {
+  useEffect(() => {
+    const animations = BAR_ANIMS.map((bar, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 40),
+          Animated.timing(bar, {
+            toValue: 0.3 + (i % 5) * 0.15,
+            duration: 300 + (i % 3) * 100,
+            useNativeDriver: true,
+            easing: Easing.bezier(0.22, 1, 0.36, 1),
+          }),
+          Animated.timing(bar, {
+            toValue: 0.15,
+            duration: 280 + (i % 3) * 80,
+            useNativeDriver: true,
+            easing: Easing.bezier(0.4, 0, 1, 1),
+          }),
+        ]),
+      ),
+    );
+    animations.forEach((a) => a.start());
+    return () => animations.forEach((a) => a.stop());
+  }, []);
+
+  const mins = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, '0');
+  const secs = (seconds % 60).toString().padStart(2, '0');
+
+  return (
+    <View style={recSt.wrap}>
+      <Pressable onPress={onCancel} hitSlop={12} style={recSt.cancelBtn}>
+        <SymbolView
+          name="xmark"
+          size={14}
+          tintColor={C.textMuted}
+          fallback={<Text style={{ color: C.textMuted }}>✕</Text>}
+        />
+      </Pressable>
+
+      <View style={recSt.waveWrap}>
+        {BAR_ANIMS.map((bar, i) => (
+          <Animated.View
+            key={i}
+            style={[
+              recSt.bar,
+              {
+                transform: [{ scaleY: bar }],
+                backgroundColor: C.accent,
+              },
+            ]}
+          />
+        ))}
+      </View>
+
+      <Text style={recSt.timer}>
+        {mins}:{secs}
+      </Text>
+
+      <Pressable onPress={onStop} style={recSt.stopBtn}>
+        <SymbolView
+          name="arrow.up"
+          size={16}
+          tintColor="#fff"
+          fallback={<Text style={{ color: '#fff' }}>↑</Text>}
+        />
+      </Pressable>
+    </View>
+  );
+}
+
+const recSt = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minHeight: 48,
+    gap: 8,
+  },
+  cancelBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: C.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  waveWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    height: 32,
+    overflow: 'hidden',
+  },
+  bar: {
+    width: 3,
+    height: 20,
+    borderRadius: 2,
+  },
+  timer: {
+    fontFamily: font.semibold,
+    fontSize: 13,
+    color: C.accent,
+    minWidth: 36,
+    textAlign: 'right',
+  },
+  stopBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: C.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
+
+// ─── TypingIndicator ──────────────────────────────────────────────────────────
+
+function TypingIndicator({ toolName }: { toolName?: string | null }) {
   const dots = [
     useRef(new Animated.Value(0)).current,
     useRef(new Animated.Value(0)).current,
@@ -863,27 +1310,204 @@ function TypingIndicator({ showThinking }: { showThinking?: boolean }) {
   return (
     <View style={[bubbleSt.row, { marginTop: 12 }]}>
       <View style={bubbleSt.aiOuter}>
-        {showThinking && <Text style={typingSt.thinking}>Bir bakayım...</Text>}
-        <View style={[bubbleSt.bubble, bubbleSt.ai, typingSt.bubble]}>
-          {dots.map((dot, i) => (
-            <Animated.View
-              key={i}
-              style={[
-                typingSt.dot,
-                {
-                  opacity: dot.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
-                  transform: [
-                    { translateY: dot.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) },
-                  ],
-                },
-              ]}
-            />
-          ))}
+        <View style={bubbleSt.aiFlow}>
+          <View style={bubbleSt.aiLine} />
+          <View style={{ gap: 4 }}>
+            {toolName && (
+              <Text style={typingSt.toolLabel}>{toolName.replace(/_/g, ' ')} yapılıyor...</Text>
+            )}
+            <View style={typingSt.dotsRow}>
+              {dots.map((dot, i) => (
+                <Animated.View
+                  key={i}
+                  style={[
+                    typingSt.dot,
+                    {
+                      opacity: dot.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+                      transform: [
+                        {
+                          translateY: dot.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }),
+                        },
+                      ],
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
         </View>
       </View>
     </View>
   );
 }
+
+// ─── ConversationStarters ─────────────────────────────────────────────────────
+
+function getStarters(profileName: string): string[] {
+  const hour = new Date().getHours();
+  const day = new Date().getDay(); // 0=Pazar, 6=Cumartesi
+
+  if (hour >= 6 && hour < 11) {
+    return [
+      'Bugün nasıl hissediyorsun?',
+      'Nasıl uyudun?',
+      'Bugün için planın ne?',
+      'Kahvaltında ne yedin?',
+    ];
+  }
+  if (hour >= 11 && hour < 14) {
+    return [
+      'Sabahın nasıl geçti?',
+      'Öğle yemeğinde ne yiyeceksin?',
+      'Bugün kaç adım attın?',
+      'Bugün bir şey içtin mi?',
+    ];
+  }
+  if (hour >= 14 && hour < 18) {
+    return [
+      'Öğleden sonra nasıl gidiyor?',
+      'Bugün en çok ne düşündün?',
+      'Akşam ne yapmayı planlıyorsun?',
+      `${profileName}, bugün kendine iyi baktın mı?`,
+    ];
+  }
+  if (hour >= 18 && hour < 22) {
+    return [
+      'Bugün nasıl geçti?',
+      'Akşam yemeğinde ne yedin?',
+      day === 5 || day === 6 ? 'Haftasonu planın var mı?' : 'Bu hafta nasıl gidiyor?',
+      'Bugünün en güzel anı neydi?',
+    ];
+  }
+  // Gece
+  return [
+    'Bugünü nasıl değerlendirirsin?',
+    'Uyumadan önce aklında ne var?',
+    'Yarın için bir hedefin var mı?',
+    'Bu gece iyi uyuman için bir şey yapayım mı?',
+  ];
+}
+
+function ConversationStarters({
+  profileName,
+  onSelect,
+}: {
+  profileName: string;
+  onSelect: (text: string) => void;
+}) {
+  const starters = getStarters(profileName);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 380,
+      useNativeDriver: true,
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, paddingTop: 32, paddingBottom: 24, gap: 10 }}>
+      <Text
+        style={{
+          fontFamily: font.semibold,
+          fontSize: 13,
+          color: C.textDim,
+          textAlign: 'center',
+          letterSpacing: 0.3,
+          marginBottom: 6,
+        }}
+      >
+        Nasıl başlamak istersin?
+      </Text>
+      {starters.map((text, i) => (
+        <StarterChip key={i} text={text} delay={i * 60} onSelect={onSelect} />
+      ))}
+    </Animated.View>
+  );
+}
+
+function StarterChip({
+  text,
+  delay,
+  onSelect,
+}: {
+  text: string;
+  delay: number;
+  onSelect: (text: string) => void;
+}) {
+  const translateY = useRef(new Animated.Value(12)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 340,
+        delay,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 340,
+        delay,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+      <Pressable
+        onPress={() => {
+          Haptics.selectionAsync();
+          onSelect(text);
+        }}
+        onPressIn={() => {
+          Animated.timing(scale, { toValue: 0.97, duration: 100, useNativeDriver: true }).start();
+        }}
+        onPressOut={() => {
+          Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true }).start();
+        }}
+        style={{
+          backgroundColor: C.card,
+          borderRadius: 14,
+          paddingHorizontal: 16,
+          paddingVertical: 13,
+          borderWidth: 1,
+          borderColor: C.border,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: font.regular,
+            fontSize: 15,
+            color: C.text,
+            flex: 1,
+            letterSpacing: -0.2,
+          }}
+        >
+          {text}
+        </Text>
+        <SymbolView
+          name="arrow.up.circle.fill"
+          size={20}
+          tintColor={C.accent}
+          fallback={<Text style={{ color: C.accent }}>↑</Text>}
+        />
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+// ─── ChatSkeleton ─────────────────────────────────────────────────────────────
 
 function ChatSkeleton() {
   const opacity = useRef(new Animated.Value(0.4)).current;
@@ -908,7 +1532,6 @@ function ChatSkeleton() {
     return () => loop.stop();
   }, [opacity]);
 
-  // 3 bubble — solda AI, sağda user, solda AI — gerçek paterne yakın
   const bubbles: Array<{ side: 'ai' | 'user'; w: number }> = [
     { side: 'ai', w: 220 },
     { side: 'user', w: 160 },
@@ -924,7 +1547,7 @@ function ChatSkeleton() {
               width: b.w,
               height: 38,
               borderRadius: 18,
-              backgroundColor: b.side === 'user' ? SLEEP.accentSoft : '#E9E9EB',
+              backgroundColor: b.side === 'user' ? C.accentSoft : '#E9E9EB',
               opacity,
             }}
           />
@@ -934,15 +1557,17 @@ function ChatSkeleton() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const st = StyleSheet.create({
-  root: { flex: 1, backgroundColor: SLEEP.page },
+  root: { flex: 1, backgroundColor: C.page },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: SLEEP.border,
+    borderBottomColor: C.border,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, alignItems: 'center' },
@@ -950,25 +1575,20 @@ const st = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: SLEEP.accent,
+    backgroundColor: C.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
   },
   avatarTxt: { fontFamily: font.bold, fontSize: 13, color: '#fff' },
-  headerName: {
-    fontFamily: font.semibold,
-    fontSize: 11,
-    color: SLEEP.textMuted,
-    letterSpacing: -0.1,
-  },
-  list: { paddingHorizontal: 14, paddingTop: 14 },
+  headerName: { fontFamily: font.semibold, fontSize: 11, color: C.textMuted, letterSpacing: -0.1 },
+  list: { paddingHorizontal: 16, paddingTop: 14 },
   inputWrap: {
     paddingHorizontal: 12,
     paddingTop: 8,
-    backgroundColor: SLEEP.page,
+    backgroundColor: C.page,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: SLEEP.border,
+    borderTopColor: C.border,
   },
   inputBubble: {
     flexDirection: 'row',
@@ -976,7 +1596,7 @@ const st = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: SLEEP.border,
+    borderColor: C.border,
     paddingLeft: 14,
     paddingRight: 4,
     paddingVertical: 4,
@@ -986,7 +1606,7 @@ const st = StyleSheet.create({
     flex: 1,
     fontFamily: font.regular,
     fontSize: 16,
-    color: SLEEP.text,
+    color: C.text,
     lineHeight: 22,
     paddingTop: 6,
     paddingBottom: 6,
@@ -1005,59 +1625,74 @@ const st = StyleSheet.create({
 
 const bubbleSt = StyleSheet.create({
   row: { flexDirection: 'row' },
+
+  // User
   userOuter: { flex: 1, alignItems: 'flex-end' },
+  userBubble: {
+    maxWidth: '78%',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
+    borderBottomRightRadius: 6,
+    backgroundColor: C.accent,
+  },
+  pinnedUser: { borderWidth: 1.5, borderColor: C.accentDark },
+  userText: {
+    fontFamily: font.regular,
+    fontSize: 16,
+    lineHeight: 22,
+    letterSpacing: -0.2,
+    color: '#fff',
+  },
+
+  // AI — flow modeli (arka plan yok)
   aiOuter: { flex: 1, alignItems: 'flex-start' },
-  bubble: { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20 },
-  user: { backgroundColor: SLEEP.accent, borderBottomRightRadius: 6 },
-  ai: { backgroundColor: '#E9E9EB', borderBottomLeftRadius: 6 },
-  pinned: { borderWidth: 1.5, borderColor: SLEEP.accent },
-  text: { fontFamily: font.regular, fontSize: 16, lineHeight: 22, letterSpacing: -0.2 },
-  userText: { color: '#fff' },
-  aiText: { color: SLEEP.text },
+  aiFlow: {
+    flexDirection: 'row',
+    gap: 10,
+    maxWidth: '88%',
+  },
+  aiLine: {
+    width: 2,
+    borderRadius: 1,
+    backgroundColor: C.accent,
+    opacity: 0.25,
+    alignSelf: 'stretch',
+    marginTop: 3,
+  },
+  aiTextWrap: { flex: 1 },
+  aiText: {
+    fontFamily: font.regular,
+    fontSize: 16,
+    lineHeight: 24,
+    letterSpacing: -0.2,
+    color: C.text,
+  },
+  pinnedAi: {},
 });
 
 const toolSt = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderLeftWidth: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    minWidth: 200,
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
-  iconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: { fontFamily: font.semibold, fontSize: 13, color: SLEEP.text, letterSpacing: -0.1 },
-  subtitle: { fontFamily: font.regular, fontSize: 11, color: SLEEP.textMuted, marginTop: 2 },
+  title: { fontFamily: font.semibold, fontSize: 13, letterSpacing: -0.1 },
+  subtitle: { fontFamily: font.regular, fontSize: 11, color: C.textMuted, marginTop: 1 },
+  meta: { fontFamily: font.regular, fontSize: 11, color: C.textDim, marginTop: 2 },
+  undo: { fontFamily: font.medium, fontSize: 11, color: C.accent },
 });
 
 const typingSt = StyleSheet.create({
-  bubble: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: SLEEP.textMuted },
-  thinking: {
+  toolLabel: {
     fontFamily: font.regular,
     fontSize: 12,
-    color: SLEEP.textDim,
+    color: C.textDim,
     fontStyle: 'italic',
-    marginBottom: 6,
-    marginLeft: 4,
   },
+  dotsRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.textMuted },
 });
