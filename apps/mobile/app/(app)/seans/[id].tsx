@@ -138,6 +138,16 @@ export default function SeansChatScreen() {
         if (p.profile?.name) setProfileName(p.profile.name);
         if (p.profile && p.profile.onboardingCompleted === false) setOnboardingActive(true);
         setMessages(c.messages ?? []);
+
+        // V3 Faz B: AI'nın mesajlarını okundu olarak işaretle (background)
+        fetch(`${API_URL}/api/assistant/messages/mark-read`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ conversationId: id }),
+        }).catch(() => {});
       } catch (e) {
         console.error('[seans/chat]', e);
       } finally {

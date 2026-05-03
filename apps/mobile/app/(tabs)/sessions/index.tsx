@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  Easing,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -242,6 +243,21 @@ export default function SessionsScreen() {
         <Pressable
           onPress={() => {
             Haptics.selectionAsync();
+            router.push('/seans/search');
+          }}
+          hitSlop={12}
+          style={st.headerIconBtn}
+        >
+          <SymbolView
+            name="magnifyingglass"
+            size={20}
+            tintColor={SLEEP.accent}
+            fallback={<Text style={{ fontSize: 18 }}>🔍</Text>}
+          />
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync();
             router.push('/seans/memory');
           }}
           hitSlop={12}
@@ -392,7 +408,28 @@ export default function SessionsScreen() {
       )}
 
       {conversations.length === 0 && (
-        <EmptyHero profileName={profile.name} onStart={startNewChat} loading={creating} />
+        <EmptyHero
+          profileName={profile.name}
+          onStart={startNewChat}
+          loading={creating}
+          onSelectStarter={async (text) => {
+            if (creating) return;
+            setCreating(true);
+            try {
+              const token = await getToken();
+              const res = await fetch(`${API_URL}/api/assistant/conversations`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const conv = await res.json();
+              router.push(`/seans/${conv.id}?starter=${encodeURIComponent(text)}`);
+            } catch (e) {
+              console.error('[sessions/starter]', e);
+            } finally {
+              setCreating(false);
+            }
+          }}
+        />
       )}
     </ScrollView>
   );
@@ -480,11 +517,15 @@ function EmptyHero({
   profileName,
   onStart,
   loading,
+  onSelectStarter,
 }: {
   profileName: string;
   onStart: () => void;
   loading: boolean;
+  onSelectStarter: (text: string) => void;
 }) {
+  const starters = getEmptyStarters(profileName);
+
   return (
     <View style={emptySt.wrap}>
       <View style={emptySt.avatar}>
@@ -492,34 +533,131 @@ function EmptyHero({
       </View>
       <Text style={emptySt.title}>{profileName}</Text>
       <Text style={emptySt.sub}>
-        Sağlığın, alışkanlıkların, hayatın hakkında bilebileceğin her şey için buradayım. İlk
-        sohbetimizi başlatalım.
+        Sağlığın, alışkanlıkların, hayatın hakkında bilebileceğin her şey için buradayım.
       </Text>
+
+      {/* Starter chip'ler */}
+      <View style={{ alignSelf: 'stretch', gap: 8, marginTop: 24 }}>
+        {starters.map((text, i) => (
+          <EmptyStarterChip
+            key={i}
+            text={text}
+            delay={i * 60}
+            onSelect={onSelectStarter}
+            loading={loading}
+          />
+        ))}
+      </View>
+
       <Pressable
         onPress={onStart}
         disabled={loading}
         style={{
-          marginTop: 28,
+          marginTop: 20,
           backgroundColor: SLEEP.accent,
           borderRadius: 16,
-          paddingVertical: 16,
+          paddingVertical: 14,
           paddingHorizontal: 32,
-          minHeight: 52,
+          minHeight: 48,
           alignItems: 'center',
           opacity: loading ? 0.6 : 1,
-          shadowColor: SLEEP.accent,
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.3,
-          shadowRadius: 14,
         }}
       >
         {loading ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
-          <Text style={{ fontFamily: font.bold, fontSize: 16, color: '#fff' }}>Sohbete Başla</Text>
+          <Text style={{ fontFamily: font.semibold, fontSize: 15, color: '#fff' }}>
+            Boş sohbet başlat
+          </Text>
         )}
       </Pressable>
     </View>
+  );
+}
+
+function getEmptyStarters(profileName: string): string[] {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 11) {
+    return ['Bugün nasıl hissediyorsun?', 'Nasıl uyudun?', 'Bugün için planın ne?'];
+  }
+  if (hour >= 11 && hour < 18) {
+    return [
+      'Sabahın nasıl geçti?',
+      'Bugün kaç adım attın?',
+      `${profileName}, bugün öğle ne yedin?`,
+    ];
+  }
+  if (hour >= 18 && hour < 22) {
+    return ['Bugün nasıl geçti?', 'Bugünün en güzel anı neydi?', 'Akşam yemeğinde ne yedin?'];
+  }
+  return ['Bugünü nasıl değerlendirirsin?', 'Yarın için bir hedefin var mı?', 'Aklında ne var?'];
+}
+
+function EmptyStarterChip({
+  text,
+  delay,
+  onSelect,
+  loading,
+}: {
+  text: string;
+  delay: number;
+  onSelect: (text: string) => void;
+  loading: boolean;
+}) {
+  const translateY = useRef(new Animated.Value(10)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 320,
+        delay,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 320,
+        delay,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+      <Pressable
+        onPress={() => {
+          if (!loading) onSelect(text);
+        }}
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: 12,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+          borderWidth: 1,
+          borderColor: 'rgba(94,92,230,0.12)',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: font.regular,
+            fontSize: 14,
+            color: '#1C1C1E',
+            flex: 1,
+            letterSpacing: -0.1,
+          }}
+        >
+          {text}
+        </Text>
+        <Text style={{ fontSize: 14, color: SLEEP.accent, marginLeft: 8 }}>→</Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 
