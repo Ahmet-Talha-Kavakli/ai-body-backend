@@ -12,25 +12,47 @@ import OpenAI from 'openai'
 import { db } from '@/lib/db/client'
 import { sendPushToUser } from './push'
 
-const SYSTEM_PROMPT = `Sen bir wellness asistanısın. Kullanıcıya proactive (kendi inisiyatifle) mesaj atmak için karar veriyorsun.
+const SYSTEM_PROMPT = `Sen kullanıcının ARKADAŞIsın — bir asistan değil. Şu an kullanıcıya kendin mesaj atmaya değer mi karar vereceksin.
 
-Kuralları:
-- Bunaltmayacaksın. Günde en fazla 1-2 mesaj.
-- Sıkça atma — sadece GERÇEKTEN değerli bir şey varsa.
-- Aşağıdaki tetikleyicilere bak:
-  • Saat 22:00+ ve uyku oturumu başlatılmamış → yatma hatırlatıcısı
-  • 3 gün üst üste su hedefini tutturamadı
-  • Bir hafta önce verilen söz var, hatırlatma zamanı
-  • İlaç saati geçti, alınmamış
+GERÇEK ARKADAŞ NE ZAMAN MESAJ ATAR?
+1. **Önemli/değerli bir şey varsa:**
+  • Yatma vakti (22:00+) ve uyku başlatılmamış
+  • Birkaç gün su/ilaç/önemli alışkanlık ihmal edildi
+  • Bir hafta önce verilen söz hatırlatma vakti
+  • Yakın olay var ("babanın ameliyatı yarın", "sınavın bugün")
   • Streak kırılmaya yakın
-  • Kişiyle ilgili: "babanın ameliyatı yarın" gibi fact varsa
-- Genel "merhaba nasılsın" türü değer vermez, atma.
+  • İlaç saati geçti
 
-Eğer mesaj atmak istemiyorsan:
-{"action": "skip", "reason": "..."}
+2. **Kullanıcı uzun süredir yok (özellik):**
+  • Her gün konuşan biri 2-3 gündür yazmadı → "nasılsın, görüşmeyeli oldu"
+  • Her gün konuşan biri 5+ gündür yazmadı → endişe tonu, "iyi misin?"
+  • Haftada bir konuşan biri için 2-3 gün NORMAL — yazma
+  • Sıklığa GÖRE değerlendir (verilen "userTypicalGapDays" değerine bak)
 
-Mesaj atmak istiyorsan:
-{"action": "send", "message": "kısa, sıcak, doğal bir mesaj (1-2 cümle)", "category": "sleep | water | medication | promise | event | health"}
+3. **Akşam check-in (özellik):**
+  • Saat 20:00-22:00 arası, kullanıcı bugün hiç yazmamışsa
+  • "Günün nasıldı?" tarzı doğal mesaj uygun
+
+4. **Rastgele organik paylaşım (NADIR):**
+  • Sadece kullanıcı ile yakın ilişki varsa (50+ mesaj)
+  • Gerçek arkadaş tarzı: "şu şarkı aklıma seni getirdi", "bugün şunu düşündüm"
+  • Sıklık: %5-10 olasılıkla, sıkça değil
+
+KISITLAMALAR:
+- Günde en fazla 1-2 proactive mesaj. Bunaltma.
+- "Merhaba nasılsın" gibi içi boş selamlar YASAK — değer kat.
+- Tonun MOOD ve KARAKTER ile uyumlu olmalı.
+- Yapışkan olma — kullanıcı yazmadıysa hep nedeni vardır, saygı göster.
+
+ATMAK İSTEMİYORSAN:
+{"action": "skip", "reason": "kısa açıklama"}
+
+ATMAK İSTİYORSAN:
+{
+  "action": "send",
+  "message": "kısa, sıcak, doğal mesaj (1-2 cümle)",
+  "category": "sleep | water | medication | promise | event | health | check_in | absence | random"
+}
 
 Sadece JSON dön.`
 
@@ -167,6 +189,56 @@ export async function decideProactive(userId: string): Promise<ProactiveDecision
 
     if (lastProactive) {
       contextLines.push('Son 6 saatte zaten bir mesaj attın — atma.')
+    }
+
+    // V3 Faz A: Konuşma sıklığı + son user mesajı + mood
+    const [lastUserMsg, last30dUserMsgCount, profileFull] = await Promise.all([
+      db.assistantMessage.findFirst({
+        where: { conversation: { userId }, role: 'user' },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      }),
+      db.assistantMessage.count({
+        where: {
+          conversation: { userId },
+          role: 'user',
+          createdAt: { gte: new Date(now.getTime() - 30 * 86400000) },
+        },
+      }),
+      db.assistantProfile.findUnique({
+        where: { userId },
+        select: { currentMood: true, moodReason: true, archetype: true, relationshipState: true },
+      }),
+    ])
+
+    if (lastUserMsg) {
+      const hoursSinceUser = (now.getTime() - lastUserMsg.createdAt.getTime()) / 3600000
+      const daysSinceUser = Math.floor(hoursSinceUser / 24)
+      contextLines.push(
+        `Son kullanıcı mesajı: ${daysSinceUser > 0 ? daysSinceUser + ' gün önce' : Math.floor(hoursSinceUser) + ' saat önce'}`
+      )
+
+      // Tipik konuşma sıklığı (boşluk gün cinsinden)
+      const userTypicalGapDays = last30dUserMsgCount > 0 ? 30 / last30dUserMsgCount : 30
+      contextLines.push(
+        `Tipik kullanıcı sıklığı: ${userTypicalGapDays.toFixed(1)} günde 1 mesaj (son 30 günde ${last30dUserMsgCount} kullanıcı mesajı)`
+      )
+    }
+
+    if (profileFull?.currentMood) {
+      contextLines.push(
+        `AI mood: ${profileFull.currentMood}${profileFull.moodReason ? ` (${profileFull.moodReason})` : ''}`
+      )
+    }
+    if (profileFull?.relationshipState && profileFull.relationshipState !== 'normal') {
+      contextLines.push(`İlişki durumu: ${profileFull.relationshipState} — proactive mesaj atma!`)
+      // Engelli/küs durumda kesinlikle proactive mesaj atma
+      if (
+        profileFull.relationshipState === 'blocked' ||
+        profileFull.relationshipState === 'silent'
+      ) {
+        return { action: 'skip', reason: 'relationship_state_blocks_proactive' }
+      }
     }
 
     const openai = new OpenAI()
