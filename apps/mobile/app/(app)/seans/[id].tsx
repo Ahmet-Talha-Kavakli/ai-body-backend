@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Easing,
@@ -32,6 +33,11 @@ import {
   deleteReminder,
 } from '../../../src/services/assistant/calendar';
 import { searchContacts, requestContactsAuth } from '../../../src/services/assistant/contacts';
+import {
+  pickAndUploadMedia,
+  captureAndUploadPhoto,
+  pickAndUploadDocument,
+} from '../../../src/services/assistant/attachment';
 import { font, C, API_URL } from '../../../lib/theme';
 import { streamAssistantMessage } from './_streamClient';
 
@@ -57,6 +63,14 @@ interface ToolCallRecord {
   };
 }
 
+interface Attachment {
+  kind: 'image' | 'video' | 'document';
+  url: string;
+  filename?: string;
+  size?: number;
+  mime?: string;
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant' | 'tool';
@@ -64,6 +78,7 @@ interface Message {
   createdAt: string;
   toolCalls?: ToolCallRecord[] | null;
   isPinned?: boolean;
+  attachments?: Attachment[] | null;
 }
 
 export default function SeansChatScreen() {
@@ -91,6 +106,7 @@ export default function SeansChatScreen() {
     role: 'user' | 'assistant' | 'tool';
     content: string;
   } | null>(null);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recordingDuration = useRef(0);
   const durationTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -218,6 +234,78 @@ export default function SeansChatScreen() {
       await audioRecorder.stop();
     } catch {}
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const showAttachmentMenu = () => {
+    Alert.alert('Eklenti', 'Ne paylaşmak istersin?', [
+      {
+        text: 'Fotoğraf çek',
+        onPress: () => uploadAttachment('camera'),
+      },
+      {
+        text: 'Galeriden seç',
+        onPress: () => uploadAttachment('gallery'),
+      },
+      {
+        text: 'Dosya seç',
+        onPress: () => uploadAttachment('document'),
+      },
+      { text: 'Vazgeç', style: 'cancel' },
+    ]);
+  };
+
+  const uploadAttachment = async (source: 'camera' | 'gallery' | 'document') => {
+    if (uploadingAttachment) return;
+    setUploadingAttachment(true);
+    try {
+      const token = (await getToken()) ?? '';
+      const caption = input.trim();
+      let result = null;
+      if (source === 'camera') {
+        result = await captureAndUploadPhoto({
+          apiUrl: API_URL,
+          conversationId: id,
+          token,
+          caption,
+        });
+      } else if (source === 'gallery') {
+        result = await pickAndUploadMedia({
+          apiUrl: API_URL,
+          conversationId: id,
+          token,
+          kind: 'mixed',
+          caption,
+        });
+      } else {
+        result = await pickAndUploadDocument({
+          apiUrl: API_URL,
+          conversationId: id,
+          token,
+          caption,
+        });
+      }
+
+      if (result) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Optimistic mesaj ekle
+        const newMsg: Message = {
+          id: result.messageId,
+          role: 'user',
+          content:
+            caption ||
+            `[${result.attachment.kind === 'image' ? 'Fotoğraf' : result.attachment.kind === 'video' ? 'Video' : 'Dosya'}]`,
+          createdAt: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, newMsg]);
+        setInput('');
+        stickToBottomRef.current = true;
+      }
+    } catch (e) {
+      console.error('[upload]', e);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setUploadingAttachment(false);
+    }
   };
 
   const send = async () => {
@@ -592,6 +680,26 @@ export default function SeansChatScreen() {
             <RecordingBar seconds={recordSecs} onStop={stopRecording} onCancel={cancelRecording} />
           ) : (
             <View style={st.inputBubble}>
+              {/* Eklenti seç (+ butonu) */}
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  showAttachmentMenu();
+                }}
+                disabled={sending || transcribing || uploadingAttachment}
+                style={st.plusBtn}
+              >
+                {uploadingAttachment ? (
+                  <ActivityIndicator size="small" color={C.accent} />
+                ) : (
+                  <SymbolView
+                    name="plus"
+                    size={18}
+                    tintColor={C.accent}
+                    fallback={<Text style={{ color: C.accent, fontSize: 16 }}>+</Text>}
+                  />
+                )}
+              </Pressable>
               <TextInput
                 style={st.input}
                 value={transcribing ? '' : input}
@@ -973,6 +1081,14 @@ function MessageBubble({
       {/* User mesajı — Bubble */}
       {isUser && (
         <View style={bubbleSt.userOuter}>
+          {/* Attachment thumbnails (image/video/document) */}
+          {message.attachments && message.attachments.length > 0 && (
+            <View style={bubbleSt.attachmentRow}>
+              {message.attachments.map((att, i) => (
+                <AttachmentPreview key={i} attachment={att} />
+              ))}
+            </View>
+          )}
           <Pressable
             onLongPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -1038,6 +1154,129 @@ function MessageBubble({
 }
 
 // ─── StreamingCaret ───────────────────────────────────────────────────────────
+
+// ─── AttachmentPreview ────────────────────────────────────────────────────────
+
+function AttachmentPreview({ attachment }: { attachment: Attachment }) {
+  const handlePress = async () => {
+    if (attachment.url) {
+      Haptics.selectionAsync();
+      try {
+        await Linking.openURL(attachment.url);
+      } catch {}
+    }
+  };
+
+  if (attachment.kind === 'image') {
+    return (
+      <Pressable onPress={handlePress} style={attSt.imageWrap}>
+        <Animated.Image source={{ uri: attachment.url }} style={attSt.image} resizeMode="cover" />
+      </Pressable>
+    );
+  }
+  if (attachment.kind === 'video') {
+    return (
+      <Pressable onPress={handlePress} style={attSt.videoWrap}>
+        <View style={attSt.videoOverlay}>
+          <SymbolView
+            name="play.circle.fill"
+            size={36}
+            tintColor="#FFF"
+            fallback={<Text style={{ color: '#FFF', fontSize: 30 }}>▶</Text>}
+          />
+        </View>
+        <Text style={attSt.videoLabel} numberOfLines={1}>
+          {attachment.filename ?? 'Video'}
+        </Text>
+      </Pressable>
+    );
+  }
+  // Document
+  return (
+    <Pressable onPress={handlePress} style={attSt.docWrap}>
+      <View style={attSt.docIcon}>
+        <SymbolView
+          name="doc.fill"
+          size={20}
+          tintColor={C.accent}
+          fallback={<Text style={{ color: C.accent }}>📄</Text>}
+        />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={attSt.docName} numberOfLines={1}>
+          {attachment.filename ?? 'Belge'}
+        </Text>
+        {attachment.size && <Text style={attSt.docSize}>{formatBytes(attachment.size)}</Text>}
+      </View>
+    </Pressable>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const attSt = StyleSheet.create({
+  imageWrap: {
+    width: 200,
+    height: 200,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: C.surface,
+    marginBottom: 6,
+  },
+  image: { width: '100%', height: '100%' },
+  videoWrap: {
+    width: 220,
+    height: 140,
+    borderRadius: 14,
+    backgroundColor: '#000',
+    marginBottom: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoOverlay: {
+    position: 'absolute',
+    inset: 0 as unknown as number,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoLabel: {
+    position: 'absolute',
+    bottom: 8,
+    left: 12,
+    right: 12,
+    color: '#FFF',
+    fontFamily: 'System',
+    fontSize: 11,
+  },
+  docWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+    minWidth: 200,
+    maxWidth: 280,
+    marginBottom: 6,
+  },
+  docIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: C.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  docName: { fontFamily: 'System', fontSize: 14, color: C.text },
+  docSize: { fontFamily: 'System', fontSize: 11, color: C.textMuted, marginTop: 2 },
+});
 
 function StreamingCaret() {
   const opacity = useRef(new Animated.Value(1)).current;
@@ -1759,6 +1998,16 @@ const st = StyleSheet.create({
     marginLeft: 6,
     marginBottom: 2,
   },
+  plusBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: C.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+    marginBottom: 2,
+  },
 });
 
 const bubbleSt = StyleSheet.create({
@@ -1766,6 +2015,13 @@ const bubbleSt = StyleSheet.create({
 
   // User
   userOuter: { flex: 1, alignItems: 'flex-end' },
+  attachmentRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'flex-end',
+    marginBottom: 4,
+  },
   userBubble: {
     maxWidth: '78%',
     paddingHorizontal: 14,
