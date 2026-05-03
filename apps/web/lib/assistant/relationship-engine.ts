@@ -115,16 +115,30 @@ export async function processHostility(
   let newState: RelationshipState = oldState
   let blockedUntil: Date | null = null
 
-  // 1) Severe → karaktere göre direkt block veya warning
+  // 1) Severe — hiçbir karakter ilk küfürde direkt block'a gitmez, herkes bir şans verir
   if (severeCount >= 1) {
-    if (patience <= 2) {
-      // Sabırsız → direkt block
+    // Eğer zaten warning'deysek → bu severe blocked'a geçer
+    if (oldState === 'warning') {
       newState = 'blocked'
       blockedUntil = new Date(Date.now() + (ARCHETYPE_BLOCK_HOURS[archetype] ?? 24) * 3600000)
-    } else if (oldState === 'warning' || severeCount >= 2) {
+    }
+    // Sabırsız karakterler 2. severe'de blocked
+    else if (patience <= 2 && severeCount >= 2) {
       newState = 'blocked'
       blockedUntil = new Date(Date.now() + (ARCHETYPE_BLOCK_HOURS[archetype] ?? 24) * 3600000)
-    } else {
+    }
+    // Sabırlı karakterler 3. severe'de blocked
+    else if (patience >= 4 && severeCount >= 3) {
+      newState = 'blocked'
+      blockedUntil = new Date(Date.now() + (ARCHETYPE_BLOCK_HOURS[archetype] ?? 24) * 3600000)
+    }
+    // Orta sabır 2. severe'de blocked
+    else if (patience === 3 && severeCount >= 2) {
+      newState = 'blocked'
+      blockedUntil = new Date(Date.now() + (ARCHETYPE_BLOCK_HOURS[archetype] ?? 24) * 3600000)
+    }
+    // İlk severe — sadece uyarı
+    else {
       newState = 'warning'
     }
   }
