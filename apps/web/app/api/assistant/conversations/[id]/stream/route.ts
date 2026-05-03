@@ -93,8 +93,85 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
   const currentState = (currentProfile?.relationshipState ?? 'normal') as RelationshipState
 
   if (isBlocked(currentState)) {
-    // Mesaj kaydedildi ama AI cevap vermeyecek — stream kapatılır
-    // Kullanıcı UI'dan "engellenmiş" durumu görür (Faz B'de)
+    // Engelli olsak bile acil durum kontrolü — hayat AI'nın küsmüşlüğünden önemli
+    const blockedEmergency = detectEmergency(content)
+    if (blockedEmergency) {
+      // Soğuk-ama-orada bir yanıt: ön cümle olarak küs olduğunu hatırlat,
+      // sonra hayat hattı + acil yönlendirme. Tonu donmuş gibi.
+      const coldPrefix =
+        currentState === 'blocked' ? 'Şu an seninle konuşmak istemiyorum ama bu önemli. ' : ''
+      const emergencyText = coldPrefix + blockedEmergency.response
+
+      // AI mesajı olarak kaydet (kayıt önemli — "AI burada müdahele etti" delili)
+      const aiMessage = await db.assistantMessage.create({
+        data: {
+          conversationId: id,
+          role: 'assistant',
+          content: emergencyText,
+          toolCalls: [
+            {
+              id: 'emergency-while-blocked',
+              name: '_emergency_through_block',
+              args: { type: blockedEmergency.type, hotline: blockedEmergency.hotline },
+              result: { ok: true },
+            },
+          ] as Parameters<typeof db.assistantMessage.create>[0]['data']['toolCalls'],
+        },
+      })
+      embedAndStoreMessage(aiMessage.id, emergencyText).catch(() => {})
+
+      // Engelleme süresini erken bitir — kullanıcı kritik anda yalnız kalmasın
+      // ve barışma evresine geç (cold)
+      await db.assistantProfile.update({
+        where: { userId: user.id },
+        data: {
+          relationshipState: 'cold',
+          blockedUntil: null,
+          relationshipStateChangedAt: new Date(),
+        },
+      })
+      const lastBlock = await db.blockEvent.findFirst({
+        where: { userId: user.id, endedAt: null },
+        orderBy: { startedAt: 'desc' },
+        select: { id: true },
+      })
+      if (lastBlock) {
+        await db.blockEvent.update({
+          where: { id: lastBlock.id },
+          data: { endedAt: new Date() },
+        })
+      }
+
+      // SSE response — emergency yanıtı stream et
+      const encoder = new TextEncoder()
+      const stream = new ReadableStream({
+        start(controller) {
+          const enq = (event: object) => {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
+          }
+          enq({ type: 'thinking' })
+          enq({ type: 'user_message_id', userMessageId: userMessage.id })
+          // Yavaş chunk chunk yaz
+          ;(async () => {
+            for (let i = 0; i < emergencyText.length; i += 8) {
+              enq({ type: 'text_delta', text: emergencyText.slice(i, i + 8) })
+              await new Promise((r) => setTimeout(r, 25))
+            }
+            enq({ type: 'done', finalText: emergencyText, toolCalls: [] })
+            enq({ type: 'saved', aiMessageId: aiMessage.id })
+            controller.close()
+          })()
+        },
+      })
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+        },
+      })
+    }
+
+    // Acil durum yoksa engelleme uygulanır
     return new Response(
       `data: ${JSON.stringify({
         type: 'blocked',
