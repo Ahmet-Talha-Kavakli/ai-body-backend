@@ -328,7 +328,8 @@ export default function ProfileScreen() {
             {data.starredMessageCount > 0 && (
               <Pressable
                 onPress={() => {
-                  Alert.alert('Yakında', 'Favori anlarımız sayfası yakında.');
+                  Haptics.selectionAsync();
+                  router.push('/seans/favorites');
                 }}
                 style={st.actionRow}
               >

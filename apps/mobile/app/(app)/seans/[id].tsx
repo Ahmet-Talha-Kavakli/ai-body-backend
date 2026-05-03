@@ -86,6 +86,11 @@ export default function SeansChatScreen() {
     facts: Array<{ category: string; content: string }>;
     visible: boolean;
   } | null>(null);
+  const [replyTo, setReplyTo] = useState<{
+    id: string;
+    role: 'user' | 'assistant' | 'tool';
+    content: string;
+  } | null>(null);
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recordingDuration = useRef(0);
   const durationTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -219,7 +224,13 @@ export default function SeansChatScreen() {
     const content = input.trim();
     if (!content || sending) return;
 
+    // Yanıt verilen mesaj varsa içeriğin başına ekle ki AI bağlamı anlasın
+    const finalContent = replyTo
+      ? `[Şu mesaja yanıt: "${replyTo.content.slice(0, 100)}"]\n${content}`
+      : content;
+
     setInput('');
+    setReplyTo(null);
     Haptics.selectionAsync();
     stickToBottomRef.current = true;
 
@@ -251,7 +262,7 @@ export default function SeansChatScreen() {
       await streamAssistantMessage({
         url: `${API_URL}/api/assistant/conversations/${id}/stream`,
         token: token ?? '',
-        content,
+        content: finalContent,
         onEvent: (event) => {
           if (event.type === 'thinking') return;
 
@@ -498,7 +509,19 @@ export default function SeansChatScreen() {
           keyExtractor={(m) => m.id}
           contentContainerStyle={[st.list, { paddingBottom: 16 }]}
           renderItem={({ item, index }) => (
-            <MessageBubble message={item} previous={messages[index - 1]} getToken={getToken} />
+            <MessageBubble
+              message={item}
+              previous={messages[index - 1]}
+              getToken={getToken}
+              onReply={(m) => {
+                Haptics.selectionAsync();
+                setReplyTo({
+                  id: m.id,
+                  role: m.role,
+                  content: m.content.slice(0, 200),
+                });
+              }}
+            />
           )}
           ListHeaderComponent={
             !loading && messages.length === 0 && !thinking ? (
@@ -532,6 +555,36 @@ export default function SeansChatScreen() {
           }}
           scrollEventThrottle={32}
         />
+
+        {/* Reply preview — yanıt verilen mesaj */}
+        {replyTo && (
+          <View style={replyPreviewSt.wrap}>
+            <View style={replyPreviewSt.bar} />
+            <View style={{ flex: 1 }}>
+              <Text style={replyPreviewSt.label}>
+                {replyTo.role === 'user' ? 'Sen' : profileName}
+              </Text>
+              <Text style={replyPreviewSt.content} numberOfLines={1}>
+                {replyTo.content}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                Haptics.selectionAsync();
+                setReplyTo(null);
+              }}
+              hitSlop={10}
+              style={replyPreviewSt.closeBtn}
+            >
+              <SymbolView
+                name="xmark"
+                size={12}
+                tintColor={C.textMuted}
+                fallback={<Text style={{ color: C.textMuted }}>×</Text>}
+              />
+            </Pressable>
+          </View>
+        )}
 
         {/* Input */}
         <View style={[st.inputWrap, { paddingBottom: insets.bottom + 8 }]}>
@@ -597,10 +650,12 @@ function MessageBubble({
   message,
   previous,
   getToken,
+  onReply,
 }: {
   message: Message;
   previous?: Message;
   getToken: () => Promise<string | null>;
+  onReply?: (m: Message) => void;
 }) {
   const router = useRouter();
   const isUser = message.role === 'user';
@@ -856,6 +911,14 @@ function MessageBubble({
                       onPress?: () => void;
                       style?: 'cancel' | 'destructive';
                     }> = [];
+                    if (!message.id.startsWith('tmp-')) {
+                      buttons.push({
+                        text: 'Yanıtla',
+                        onPress: () => {
+                          onReply?.(message);
+                        },
+                      });
+                    }
                     buttons.push({
                       text: 'Kopyala',
                       onPress: async () => {
@@ -865,14 +928,19 @@ function MessageBubble({
                     });
                     if (!message.id.startsWith('tmp-')) {
                       buttons.push({
-                        text: message.isPinned ? 'Sabitlemeyi Kaldır' : 'Bunu Hatırla (Pinle)',
+                        text: message.isPinned ? 'Yıldızı Kaldır' : 'Yıldızla',
                         onPress: async () => {
                           try {
                             const tk = await getToken();
-                            await fetch(`${API_URL}/api/assistant/messages/${message.id}/pin`, {
+                            await fetch(`${API_URL}/api/assistant/messages/${message.id}/star`, {
                               method: 'POST',
-                              headers: { Authorization: `Bearer ${tk}` },
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${tk}`,
+                              },
+                              body: JSON.stringify({ starred: !message.isPinned }),
                             });
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                           } catch {}
                         },
                       });
@@ -908,16 +976,47 @@ function MessageBubble({
           <Pressable
             onLongPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              Alert.alert('Mesaj', undefined, [
-                {
-                  text: 'Kopyala',
-                  onPress: async () => {
-                    await Clipboard.setStringAsync(message.content);
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              const buttons: Array<{
+                text: string;
+                onPress?: () => void;
+                style?: 'cancel' | 'destructive';
+              }> = [];
+              if (!message.id.startsWith('tmp-')) {
+                buttons.push({
+                  text: 'Yanıtla',
+                  onPress: () => {
+                    onReply?.(message);
                   },
+                });
+              }
+              buttons.push({
+                text: 'Kopyala',
+                onPress: async () => {
+                  await Clipboard.setStringAsync(message.content);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 },
-                { text: 'Vazgeç', style: 'cancel' },
-              ]);
+              });
+              if (!message.id.startsWith('tmp-')) {
+                buttons.push({
+                  text: message.isPinned ? 'Yıldızı Kaldır' : 'Yıldızla',
+                  onPress: async () => {
+                    try {
+                      const tk = await getToken();
+                      await fetch(`${API_URL}/api/assistant/messages/${message.id}/star`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${tk}`,
+                        },
+                        body: JSON.stringify({ starred: !message.isPinned }),
+                      });
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    } catch {}
+                  },
+                });
+              }
+              buttons.push({ text: 'Vazgeç', style: 'cancel' });
+              Alert.alert('Mesaj', undefined, buttons);
             }}
             style={[bubbleSt.userBubble, message.isPinned && bubbleSt.pinnedUser]}
           >
@@ -1222,6 +1321,45 @@ function RecordingBar({
     </View>
   );
 }
+
+const replyPreviewSt = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: C.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: C.border,
+  },
+  bar: {
+    width: 3,
+    alignSelf: 'stretch',
+    borderRadius: 2,
+    backgroundColor: C.accent,
+  },
+  label: {
+    fontFamily: font.semibold,
+    fontSize: 11,
+    color: C.accent,
+    letterSpacing: 0.2,
+  },
+  content: {
+    fontFamily: font.regular,
+    fontSize: 13,
+    color: C.textMuted,
+    marginTop: 2,
+  },
+  closeBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.card,
+  },
+});
 
 const recSt = StyleSheet.create({
   wrap: {

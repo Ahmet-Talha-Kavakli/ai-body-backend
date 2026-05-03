@@ -1954,10 +1954,21 @@ model AssistantMessage {
   toolResults    Json?
   attachments    Json? // multipart hazırlık
   isPinned       Boolean               @default(false)
+
+  // V3 Faz B — Mesaj aksiyonları
+  starredAt           DateTime?
+  starredBy           String? // 'user' | 'ai'
+  repliedToMessageId  String?
+  repliedToMessage    AssistantMessage?  @relation("MessageReply", fields: [repliedToMessageId], references: [id], onDelete: SetNull)
+  replies             AssistantMessage[] @relation("MessageReply")
+  readAt              DateTime? // mavi tik için
+
   embedding      Unsupported("vector(1536)")?
   createdAt      DateTime              @default(now())
 
   @@index([conversationId, createdAt])
+  @@index([conversationId, starredAt])
+  @@index([repliedToMessageId])
 }
 
 model AssistantMemoryFact {
