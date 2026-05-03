@@ -18,6 +18,7 @@ import {
 } from '@/lib/assistant/summary-builder'
 import { moodToPromptHint, maybeShiftMood, Mood } from '@/lib/assistant/mood-engine'
 import { detectHostility } from '@/lib/assistant/hostility-detector'
+import { evaluateHonesty, honestyToPromptHint } from '@/lib/assistant/honesty-evaluator'
 import {
   processHostility,
   checkAndResetExpiredBlock,
@@ -310,6 +311,15 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
       const lifeEventHint = lifeEvent ? lifeEventToPromptHint(lifeEvent) : ''
       const summaryHint = formatSummaryContextForPrompt(summaryCtx)
 
+      // V3 Faz A: Honesty evaluator — tone'a bağlı, sonra çağrılır (skip kuralları için)
+      // Sadece risk ihtimali olan mesajlarda devreye girer, üzgün/yorgun durumda skip eder.
+      const honestyEval = await evaluateHonesty({
+        userMessage: content,
+        recentContext,
+        tone: toneAnalysis,
+      }).catch(() => null)
+      const honestyHint = honestyEval ? honestyToPromptHint(honestyEval) : ''
+
       // Easy/medium → light system prompt (~1500 token), hard → full prompt (~6000 token)
       const profileSafe = ctx.profile!
       const baseSystemPrompt =
@@ -351,7 +361,8 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         relationshipHint +
         summaryHint +
         tonePromptHint +
-        lifeEventHint
+        lifeEventHint +
+        honestyHint
 
       // Easy + tool-less mesajlarda hiç tool gönderme (büyük tasarruf)
       // Listen modunda veya yaşam olayı varsa tool gönderme — kullanıcı duygusal an yaşıyor
