@@ -116,7 +116,7 @@ function Avatar({
             name="pin.fill"
             size={10}
             tintColor="#8E8E93"
-            fallback={<Text style={{ fontSize: 8 }}>📌</Text>}
+            fallback={<Text style={{ fontSize: 8, fontFamily: font.regular }}>📌</Text>}
           />
         </View>
       )}
@@ -210,7 +210,7 @@ function Row({
           name="archivebox.fill"
           size={20}
           tintColor="#FFFFFF"
-          fallback={<Text style={{ color: '#fff' }}>📦</Text>}
+          fallback={<Text style={{ color: '#fff', fontFamily: font.regular }}>📦</Text>}
         />
         <Text style={s.archiveText}>Arşivle</Text>
       </Pressable>
@@ -388,19 +388,23 @@ export default function SessionsScreen() {
                 name="square.and.pencil"
                 size={22}
                 tintColor={C.accent}
-                fallback={<Text style={{ color: C.accent, fontSize: 22 }}>✎</Text>}
+                fallback={
+                  <Text style={{ color: C.accent, fontSize: 22, fontFamily: font.regular }}>✎</Text>
+                }
               />
             </Pressable>
           )}
         </View>
 
-        {/* Search */}
+        {/* Search — Apple Messages stili */}
         <View style={s.searchWrap}>
           <SymbolView
             name="magnifyingglass"
             size={15}
             tintColor="#8E8E93"
-            fallback={<Text style={{ color: '#8E8E93', fontSize: 14 }}>🔍</Text>}
+            fallback={
+              <Text style={{ color: '#8E8E93', fontSize: 14, fontFamily: font.regular }}>🔍</Text>
+            }
           />
           <TextInput
             value={search}
@@ -410,6 +414,15 @@ export default function SessionsScreen() {
             style={s.searchInput}
             returnKeyType="search"
             clearButtonMode="while-editing"
+            autoCorrect={false}
+          />
+          <SymbolView
+            name="mic.fill"
+            size={15}
+            tintColor="#8E8E93"
+            fallback={
+              <Text style={{ color: '#8E8E93', fontSize: 14, fontFamily: font.regular }}>🎤</Text>
+            }
           />
         </View>
       </View>
@@ -511,8 +524,8 @@ const s = StyleSheet.create({
   },
   title: {
     fontFamily: font.bold,
-    fontSize: 32,
-    letterSpacing: -0.6,
+    fontSize: 34,
+    letterSpacing: -0.4,
     color: '#0A0A0A',
   },
   composeBtn: {
@@ -522,21 +535,23 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   searchWrap: {
-    marginTop: 10,
+    marginTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#E3E3E8',
     borderRadius: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     height: 36,
     gap: 6,
   },
   searchInput: {
     flex: 1,
     fontFamily: font.regular,
-    fontSize: 16,
+    fontSize: 17,
+    letterSpacing: -0.4,
     color: '#0A0A0A',
     paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   row: {
     flexDirection: 'row',
