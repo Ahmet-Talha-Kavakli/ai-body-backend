@@ -374,7 +374,9 @@ export default function SessionsScreen() {
       {/* Header */}
       <View style={s.header}>
         <View style={s.headerRow}>
-          <Text style={s.title}>Sohbetler</Text>
+          <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit>
+            Sohbetler
+          </Text>
           {canCreateGroup && (
             <Pressable
               onPress={() => {
@@ -523,10 +525,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 4,
   },
   title: {
+    flex: 1,
     fontFamily: font.bold,
     fontSize: 34,
     letterSpacing: -0.4,
     color: '#0A0A0A',
+    marginRight: 12,
   },
   composeBtn: {
     width: 36,
