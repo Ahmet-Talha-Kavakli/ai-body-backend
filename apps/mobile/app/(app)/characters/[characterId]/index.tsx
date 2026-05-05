@@ -30,7 +30,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { font, C } from '../../../../lib/theme';
+import * as Clipboard from 'expo-clipboard';
+import ContextMenu from 'react-native-context-menu-view';
+import { font, C, API_URL } from '../../../../lib/theme';
 import {
   fetchCharacterMessages,
   markCharacterAsRead,
@@ -111,21 +113,76 @@ interface ChatBubbleProps {
     | CharacterMessage
     | { id: string; role: 'assistant'; content: string; createdAt: string; pending?: boolean };
   characterName: string;
+  onStarToggle?: (messageId: string, starred: boolean) => void;
+  isStarred?: boolean;
 }
 
-function ChatBubble({ message, characterName }: ChatBubbleProps) {
+function ChatBubble({ message, characterName, onStarToggle, isStarred }: ChatBubbleProps) {
   const isUser = message.role === 'user';
   const isPending = 'pending' in message && message.pending;
+  const isTemp = message.id.startsWith('tmp-') || message.id.startsWith('streaming-');
+
+  const bubble = (
+    <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
+      <Text
+        style={[styles.bubbleText, isUser ? styles.bubbleTextUser : styles.bubbleTextAssistant]}
+      >
+        {message.content || (isPending ? '…' : '')}
+      </Text>
+      {isStarred && (
+        <Text style={{ position: 'absolute', top: 4, right: 6, fontSize: 10, color: '#FFC107' }}>
+          ⭐
+        </Text>
+      )}
+    </View>
+  );
+
+  // Geçici mesaj (gönderilirken / streaming) — sadece kopyala
+  if (isTemp || !message.content) {
+    return (
+      <View style={[styles.bubbleRow, isUser ? styles.bubbleRowUser : styles.bubbleRowAssistant]}>
+        {message.content ? (
+          <ContextMenu
+            actions={[{ title: 'Kopyala', systemIcon: 'doc.on.doc' }]}
+            onPress={async (e) => {
+              if (e.nativeEvent.index === 0) {
+                await Clipboard.setStringAsync(message.content);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }
+            }}
+          >
+            {bubble}
+          </ContextMenu>
+        ) : (
+          bubble
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.bubbleRow, isUser ? styles.bubbleRowUser : styles.bubbleRowAssistant]}>
-      <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
-        <Text
-          style={[styles.bubbleText, isUser ? styles.bubbleTextUser : styles.bubbleTextAssistant]}
-        >
-          {message.content || (isPending ? '…' : '')}
-        </Text>
-      </View>
+      <ContextMenu
+        actions={[
+          { title: 'Kopyala', systemIcon: 'doc.on.doc' },
+          {
+            title: isStarred ? 'Yıldızı Kaldır' : 'Yıldızla',
+            systemIcon: isStarred ? 'star.slash' : 'star',
+          },
+        ]}
+        onPress={async (e) => {
+          const idx = e.nativeEvent.index;
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          if (idx === 0) {
+            await Clipboard.setStringAsync(message.content);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } else if (idx === 1) {
+            onStarToggle?.(message.id, !isStarred);
+          }
+        }}
+      >
+        {bubble}
+      </ContextMenu>
     </View>
   );
 }
@@ -179,6 +236,33 @@ export default function CharacterChatScreen() {
       });
     }
   }, [messages.length, streamingText]);
+
+  const onStarToggle = useCallback(
+    async (messageId: string, starred: boolean) => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        await fetch(`${API_URL}/api/assistant/messages/${messageId}/star`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ starred }),
+        });
+        // Optimistic update — local state'te starredAt'i toggle et
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id !== messageId) return m;
+            // Streaming/temp mesajlar için starredAt yok, atla
+            if (!('starredAt' in m)) return m;
+            return { ...m, starredAt: starred ? new Date().toISOString() : null };
+          }),
+        );
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch (e) {
+        console.error('[character-chat] star toggle fail:', e);
+      }
+    },
+    [getToken],
+  );
 
   const onSend = async () => {
     if (!input.trim() || sending || !characterId) return;
@@ -298,7 +382,14 @@ export default function CharacterChatScreen() {
         ref={listRef}
         data={messages}
         keyExtractor={(m) => m.id}
-        renderItem={({ item }) => <ChatBubble message={item} characterName={header?.name ?? ''} />}
+        renderItem={({ item }) => (
+          <ChatBubble
+            message={item}
+            characterName={header?.name ?? ''}
+            isStarred={'starredAt' in item ? !!item.starredAt : false}
+            onStarToggle={onStarToggle}
+          />
+        )}
         contentContainerStyle={styles.messagesContent}
         ListFooterComponent={
           streamingMessageId ? (

@@ -11,7 +11,8 @@ import {
 export const GET = withAuth(async (req: NextRequest, { user }) => {
   const archived = req.nextUrl.searchParams.get('archived') === 'true'
   const conversations = await db.assistantConversation.findMany({
-    where: { userId: user.id, archived },
+    // V4: characterId null = Jarvis sohbeti. Karakter sohbetleri V3 listesinde görünmez.
+    where: { userId: user.id, archived, characterId: null },
     orderBy: { updatedAt: 'desc' },
     include: {
       _count: { select: { messages: true } },
