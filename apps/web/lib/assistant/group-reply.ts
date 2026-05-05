@@ -57,8 +57,10 @@ export async function generateGroupReply(args: {
       trustScore: true,
       loveScore: true,
       intimacyDepth: true,
-      momentum: true,
+      recentMomentum: true,
       accumulationDays: true,
+      totalInteractions: true,
+      lastInteractionAt: true,
     },
   })
 
@@ -110,12 +112,19 @@ Bazen kullanıcıya, bazen başka bir üyeye laf atabilirsin.`
       },
       relationship: relationship
         ? {
-            status: relationship.status,
+            status: relationship.status as any,
             trustScore: relationship.trustScore,
             loveScore: relationship.loveScore,
             intimacyDepth: relationship.intimacyDepth,
-            momentum: relationship.momentum,
+            recentMomentum: relationship.recentMomentum,
             accumulationDays: relationship.accumulationDays,
+            totalInteractions: relationship.totalInteractions,
+            daysSinceLastInteraction: relationship.lastInteractionAt
+              ? Math.floor(
+                  (Date.now() - new Date(relationship.lastInteractionAt).getTime()) /
+                    (1000 * 60 * 60 * 24)
+                )
+              : null,
           }
         : null,
       user: { name: group.user.name, timezone: group.user.timezone },

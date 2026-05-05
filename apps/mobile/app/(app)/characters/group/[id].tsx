@@ -132,7 +132,13 @@ export default function GroupChatScreen() {
       const token = await getToken();
       if (!token || !id) return;
       const msgs = await listGroupMessages(token, id, { take: 50 });
-      setMessages(msgs);
+      setMessages((prev) => {
+        // Optimistic mesajları (local-XXX) koru — server'a gidiş yolundalar
+        const localPending = prev.filter((m) => m.id.startsWith('local-'));
+        const serverIds = new Set(msgs.map((m) => m.id));
+        const stillPending = localPending.filter((m) => !serverIds.has(m.id));
+        return [...msgs, ...stillPending];
+      });
     } catch (e) {
       console.error('[group] loadMessages', e);
     }
