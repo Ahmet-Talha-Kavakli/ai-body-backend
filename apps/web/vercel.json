@@ -53,6 +53,22 @@
     {
       "path": "/api/cron/ai-aging",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/graph-pattern",
+      "schedule": "0 2 * * 0"
+    },
+    {
+      "path": "/api/cron/graph-essence",
+      "schedule": "0 1 1 * *"
+    },
+    {
+      "path": "/api/cron/character-lifecycle",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/life-engine",
+      "schedule": "0 4 * * *"
     }
   ]
 }

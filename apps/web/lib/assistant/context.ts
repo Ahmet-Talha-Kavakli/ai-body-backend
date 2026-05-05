@@ -46,11 +46,15 @@ export async function loadAssistantContext(userId: string) {
         bornAt: true,
         worldview: true,
         verbalTics: true,
+        // V4 Faz A — öz farkındalık state
+        currentActivity: true,
+        currentLocation: true,
       },
     }),
     db.user.findUnique({
       where: { id: userId },
-      select: { name: true },
+      // V4 Faz A — timezone system prompt'ta dinamik saat için kullanılır
+      select: { name: true, timezone: true },
     }),
     db.assistantMemoryFact.findMany({
       // V2 (Faz J): Sadece aktif (supersede edilmemiş, arşivlenmemiş) facts

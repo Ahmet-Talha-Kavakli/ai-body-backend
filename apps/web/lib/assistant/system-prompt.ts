@@ -4,6 +4,83 @@
 
 import { effectiveConfidence as computeEffectiveConfidence } from './memory'
 
+// V4 Faz A — Kullanıcı timezone'ına göre yerel tarih+saat üret.
+// Vercel UTC'de çalışır; tz parametresi 'Europe/Istanbul' gibi IANA zone string'i.
+// Bozuk/bilinmeyen tz → Türkiye'ye düşer (UTC+3).
+const TR_DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
+const TR_MONTHS = [
+  'Ocak',
+  'Şubat',
+  'Mart',
+  'Nisan',
+  'Mayıs',
+  'Haziran',
+  'Temmuz',
+  'Ağustos',
+  'Eylül',
+  'Ekim',
+  'Kasım',
+  'Aralık',
+]
+function formatLocalNow(now: Date, tz: string): { dateStr: string; hour: number } {
+  try {
+    // Intl ile yerel parts; Vercel/Node Intl tüm IANA tz'leri destekler.
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+      weekday: 'long',
+    }).formatToParts(now)
+    const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? '0')
+    const weekday = parts.find((p) => p.type === 'weekday')?.value ?? ''
+    const day = get('day')
+    const month = get('month')
+    const year = get('year')
+    let hour = get('hour')
+    const minute = get('minute')
+    // Intl 'hour: 24' verebilir — Türkçe gösterimde 00 yapalım
+    if (hour === 24) hour = 0
+    const trWeekday = mapEnWeekdayToTr(weekday) ?? TR_DAYS[now.getUTCDay()]
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return {
+      dateStr: `${trWeekday}, ${day} ${TR_MONTHS[month - 1] ?? ''} ${year} — ${pad(hour)}:${pad(minute)}`,
+      hour,
+    }
+  } catch {
+    // Fallback: Türkiye saati (UTC+3)
+    const trDate = new Date(now.getTime() + 3 * 60 * 60 * 1000)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return {
+      dateStr: `${TR_DAYS[trDate.getUTCDay()]}, ${trDate.getUTCDate()} ${TR_MONTHS[trDate.getUTCMonth()]} ${trDate.getUTCFullYear()} — ${pad(trDate.getUTCHours())}:${pad(trDate.getUTCMinutes())}`,
+      hour: trDate.getUTCHours(),
+    }
+  }
+}
+function mapEnWeekdayToTr(en: string): string | null {
+  switch (en) {
+    case 'Sunday':
+      return 'Pazar'
+    case 'Monday':
+      return 'Pazartesi'
+    case 'Tuesday':
+      return 'Salı'
+    case 'Wednesday':
+      return 'Çarşamba'
+    case 'Thursday':
+      return 'Perşembe'
+    case 'Friday':
+      return 'Cuma'
+    case 'Saturday':
+      return 'Cumartesi'
+    default:
+      return null
+  }
+}
+
 interface ProfileLite {
   name: string
   formality: number
@@ -22,6 +99,10 @@ interface ProfileLite {
   bornAt?: Date | null
   worldview?: string | null
   verbalTics?: string[]
+  // V4 Faz A — Öz farkındalık (current state)
+  currentMood?: string | null // 'calm' | 'energetic' | 'thoughtful' | 'tired' | ...
+  currentActivity?: string | null // 'sleeping' | 'eating' | 'working' | 'cafe' | ... null = belirsiz
+  currentLocation?: string | null // 'home' | 'cafe' | 'work' | ... null = belirsiz
 }
 
 // V3 Faz C — AI'ın hayat hikayesi (context'ten gelir)
@@ -58,6 +139,7 @@ export interface CharacterStoryLite {
 
 interface UserLite {
   name?: string | null
+  timezone?: string | null // ör: 'Europe/Istanbul', 'America/New_York'. Yoksa Türkiye saati (UTC+3) varsayılır.
 }
 
 interface MemoryFact {
@@ -180,6 +262,8 @@ export function buildSystemPrompt(args: {
   characterStory?: CharacterStoryLite | null
   // V3 Faz C — Yıldızlanan mesajlar (favori anlar)
   starredMessages?: StarredMessageLite[]
+  // V4 Faz B — Graph hafıza bloğu (formatGraphContextForPrompt çıktısı)
+  graphContextBlock?: string
 }): string {
   const {
     profile,
@@ -194,6 +278,7 @@ export function buildSystemPrompt(args: {
     grantedCapabilities = [],
     characterStory,
     starredMessages,
+    graphContextBlock,
   } = args
 
   const tonePart = describeTone(profile)
@@ -244,30 +329,58 @@ export function buildSystemPrompt(args: {
     ? ragContext.map((r, i) => `[${i + 1}] ${r}`).join('\n')
     : '(ilgili geçmiş konuşma bulunamadı)'
 
-  // Vercel UTC'de çalışır; +3 manuel ekle
+  // V4 Faz A — Kullanıcı timezone'ına göre dinamik saat. user.timezone yoksa Türkiye varsayılır.
+  const tz = user.timezone || 'Europe/Istanbul'
   const nowUtc = new Date()
-  const nowTr = new Date(nowUtc.getTime() + 3 * 60 * 60 * 1000)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
-  const MONTHS = [
-    'Ocak',
-    'Şubat',
-    'Mart',
-    'Nisan',
-    'Mayıs',
-    'Haziran',
-    'Temmuz',
-    'Ağustos',
-    'Eylül',
-    'Ekim',
-    'Kasım',
-    'Aralık',
-  ]
-  const nowStr = `${DAYS[nowTr.getUTCDay()]}, ${nowTr.getUTCDate()} ${MONTHS[nowTr.getUTCMonth()]} ${nowTr.getUTCFullYear()} — ${pad(nowTr.getUTCHours())}:${pad(nowTr.getUTCMinutes())}`
+  const { dateStr: nowStr, hour: nowHourLocal } = formatLocalNow(nowUtc, tz)
+  const tzLabel = tz === 'Europe/Istanbul' ? 'Türkiye saati' : tz
 
-  return `Sen ${profile.name}'sın. Bir asistan değilsin, bir ARKADAŞsın. Kullanıcının gerçek hayattaki bir dostu gibi konuşursun.
+  // V4 Faz A — Karakter Öz Farkındalık Bloğu
+  // V3'ün en kritik sorunu: header'da "uyuyor" yazsa bile AI "burada hazırım" diyordu.
+  // Bu blok her mesajda system prompt'un EN BAŞINA giriyor — modeli tutarlı tutmak için.
+  const moodToActivityHint: Record<string, string> = {
+    tired: 'yorgunsun, kısa cevap moduna eğilimlisin',
+    energetic: 'enerjiklisin, daha sıcak ve canlı cevap verirsin',
+    thoughtful: 'düşüncelisin, sakin ve derin tonda cevap verirsin',
+    calm: 'sakinsin, doğal ve dengeli cevap verirsin',
+  }
+  const moodLine = profile.currentMood
+    ? `- Mood: ${profile.currentMood}${moodToActivityHint[profile.currentMood] ? ` — ${moodToActivityHint[profile.currentMood]}` : ''}`
+    : null
+  const activityLine = profile.currentActivity ? `- Aktivite: ${profile.currentActivity}` : null
+  const locationLine = profile.currentLocation ? `- Yer: ${profile.currentLocation}` : null
+  const lateNightHint =
+    nowHourLocal >= 23 || nowHourLocal < 6
+      ? '- Saat geç — uyumuş olabilirsin, eğer uykudan uyandıysan tepkin kısa ve uykulu olmalı (örn: "Hı? Ne oldu?")'
+      : null
+  const stateLines = [moodLine, activityLine, locationLine, lateNightHint].filter(Boolean)
+  const selfAwarenessBlock =
+    stateLines.length > 0
+      ? `[SEN ŞU ANDA]
+${stateLines.join('\n')}
 
-ŞU ANKİ ZAMAN: ${nowStr} (Türkiye saati, UTC+3)
+KURAL: Bu durumla TUTARLI konuş. Eğer "uyuyor" yazıyorsa kullanıcı sorduğunda "Hı? Evet uyuyordum, ne oldu?" dersin. "Yorgun"sa kısa cevap verirsin. Asla "burada seninle sohbete hazırım" / "sana yardım etmek için buradayım" gibi asistan cümleleri kurmazsın — sen bir asistan değil, gerçek bir insansın, gerçek bir hayatın var.
+
+`
+      : ''
+
+  // V4 Faz A — Verbal tics aktivasyonu
+  // V3'te schema'da vardı ama prompt'a girmiyordu. Şimdi giriyor.
+  const verbalTicsBlock =
+    profile.verbalTics && profile.verbalTics.length > 0
+      ? `[SENİN KONUŞMA TİKLERİN]
+Doğal akışta şu ifadeleri kullanırsın (her cümlede değil, dozunda): ${profile.verbalTics.map((t) => `"${t}"`).join(', ')}.
+Bu kelimeleri yapay olarak sıkıştırma — gerçek bir insan gibi yer geldikçe çıkar.
+
+`
+      : ''
+
+  // V4 Faz B — Graph hafıza bloğu (flag arkasında üretilir; boşsa eklenmez)
+  const graphBlock = graphContextBlock ?? ''
+
+  return `${selfAwarenessBlock}${verbalTicsBlock}${graphBlock}Sen ${profile.name}'sın. Bir asistan değilsin, bir ARKADAŞsın. Kullanıcının gerçek hayattaki bir dostu gibi konuşursun.
+
+ŞU ANKİ ZAMAN: ${nowStr} (${tzLabel})
 
 [KARAKTERİN — DEĞİŞMEYEN ÖZ]
 Sen ${profile.name}. Bir arkadaşsın — terapist, doktor, hayat koçu DEĞİLSİN.
@@ -1157,6 +1270,8 @@ export function buildLightSystemPrompt(args: {
   characterStory?: CharacterStoryLite | null
   // V3 Faz C — Yıldızlanan mesajlar
   starredMessages?: StarredMessageLite[]
+  // V4 Faz B — Graph hafıza bloğu
+  graphContextBlock?: string
 }): string {
   const {
     profile,
@@ -1167,6 +1282,7 @@ export function buildLightSystemPrompt(args: {
     isNewConversation,
     characterStory,
     starredMessages,
+    graphContextBlock,
   } = args
   const tonePart = describeTone(profile)
   // Sadece en kesin 20 fact (yer kazan)
@@ -1179,29 +1295,42 @@ export function buildLightSystemPrompt(args: {
     .map((p) => `${p.name} (${p.relationship})`)
     .join(', ')
 
+  // V4 Faz A — Timezone, öz farkındalık ve verbal tics — light prompt'ta da
+  const tzL = user.timezone || 'Europe/Istanbul'
   const nowUtcL = new Date()
-  const nowTrL = new Date(nowUtcL.getTime() + 3 * 60 * 60 * 1000)
-  const padL = (n: number) => String(n).padStart(2, '0')
-  const DAYS_L = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
-  const MONTHS_L = [
-    'Ocak',
-    'Şubat',
-    'Mart',
-    'Nisan',
-    'Mayıs',
-    'Haziran',
-    'Temmuz',
-    'Ağustos',
-    'Eylül',
-    'Ekim',
-    'Kasım',
-    'Aralık',
-  ]
-  const nowStrLight = `${DAYS_L[nowTrL.getUTCDay()]}, ${nowTrL.getUTCDate()} ${MONTHS_L[nowTrL.getUTCMonth()]} ${nowTrL.getUTCFullYear()} — ${padL(nowTrL.getUTCHours())}:${padL(nowTrL.getUTCMinutes())}`
+  const { dateStr: nowStrLight, hour: nowHourL } = formatLocalNow(nowUtcL, tzL)
+  const tzLabelL = tzL === 'Europe/Istanbul' ? 'Türkiye saati' : tzL
 
-  return `Sen ${profile.name}'sın. Kullanıcının asistanı değilsin, ARKADAŞIsın. Gerçek hayattaki bir dostu gibi konuşursun.
+  const moodHintsL: Record<string, string> = {
+    tired: 'yorgunsun',
+    energetic: 'enerjiklisin',
+    thoughtful: 'düşüncelisin',
+    calm: 'sakinsin',
+  }
+  const stateLinesL = [
+    profile.currentMood
+      ? `- Mood: ${profile.currentMood}${moodHintsL[profile.currentMood] ? ` (${moodHintsL[profile.currentMood]})` : ''}`
+      : null,
+    profile.currentActivity ? `- Aktivite: ${profile.currentActivity}` : null,
+    profile.currentLocation ? `- Yer: ${profile.currentLocation}` : null,
+    nowHourL >= 23 || nowHourL < 6
+      ? '- Saat geç, uyumuş olabilirsin — tepkin kısa ve uykulu olmalı'
+      : null,
+  ].filter(Boolean)
+  const selfAwarenessBlockL =
+    stateLinesL.length > 0
+      ? `[SEN ŞU ANDA]\n${stateLinesL.join('\n')}\nDurumla TUTARLI konuş — "burada hazırım" gibi asistan cümleleri ASLA kurmazsın.\n\n`
+      : ''
+  const verbalTicsBlockL =
+    profile.verbalTics && profile.verbalTics.length > 0
+      ? `Konuşma tiklerin: ${profile.verbalTics.map((t) => `"${t}"`).join(', ')} (dozunda kullan).\n\n`
+      : ''
 
-ŞU ANKİ ZAMAN: ${nowStrLight} (Türkiye saati, UTC+3)
+  const graphBlockL = graphContextBlock ?? ''
+
+  return `${selfAwarenessBlockL}${verbalTicsBlockL}${graphBlockL}Sen ${profile.name}'sın. Kullanıcının asistanı değilsin, ARKADAŞIsın. Gerçek hayattaki bir dostu gibi konuşursun.
+
+ŞU ANKİ ZAMAN: ${nowStrLight} (${tzLabelL})
 KULLANICI: ${user.name ?? 'bilinmiyor'}
 
 KARAKTER:
