@@ -49,6 +49,7 @@ interface JarvisConv {
   updatedAt: string;
   aiTypingUntil?: string | null;
   messages: Array<{ content: string; role: string; createdAt: string }>;
+  unreadCount?: number;
 }
 
 type Item =
@@ -245,14 +246,18 @@ function Row({
           {avatar}
           <View style={s.body}>
             <View style={s.titleLine}>
-              <Text style={s.name} numberOfLines={1}>
+              <Text style={[s.name, !!unread && unread > 0 && s.nameUnread]} numberOfLines={1}>
                 {name}
               </Text>
-              <Text style={s.time}>{time}</Text>
+              <Text style={[s.time, !!unread && unread > 0 && s.timeUnread]}>{time}</Text>
             </View>
             <View style={s.previewLine}>
               <Text
-                style={[s.preview, typing && { color: C.accent, fontFamily: font.medium }]}
+                style={[
+                  s.preview,
+                  !!unread && unread > 0 && s.previewUnread,
+                  typing && { color: C.accent, fontFamily: font.medium },
+                ]}
                 numberOfLines={1}
               >
                 {typing ? 'yazıyor…' : preview}
@@ -491,6 +496,7 @@ export default function SessionsScreen() {
                 preview={preview}
                 time={relTime(last?.createdAt ?? item.data.updatedAt)}
                 typing={isTyping}
+                unread={item.data.unreadCount}
                 onPress={() => router.push(`/(app)/seans/${item.data.id}`)}
               />
             );
@@ -622,10 +628,18 @@ const s = StyleSheet.create({
     color: '#0A0A0A',
     marginRight: 8,
   },
+  nameUnread: {
+    fontFamily: font.bold,
+    color: '#000000',
+  },
   time: {
     fontFamily: font.regular,
     fontSize: 13,
     color: '#8E8E93',
+  },
+  timeUnread: {
+    fontFamily: font.semibold,
+    color: C.accent,
   },
   previewLine: {
     flexDirection: 'row',
@@ -639,6 +653,10 @@ const s = StyleSheet.create({
     lineHeight: 19,
     color: '#8E8E93',
     marginRight: 8,
+  },
+  previewUnread: {
+    fontFamily: font.medium,
+    color: '#0A0A0A',
   },
   unread: {
     minWidth: 20,

@@ -23,7 +23,18 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
       },
     },
   })
-  return NextResponse.json({ conversations })
+
+  // Her sohbet için okunmamış asistan mesaj sayısı
+  const convWithUnread = await Promise.all(
+    conversations.map(async (c) => {
+      const unreadCount = await db.assistantMessage.count({
+        where: { conversationId: c.id, role: 'assistant', readAt: null },
+      })
+      return { ...c, unreadCount }
+    })
+  )
+
+  return NextResponse.json({ conversations: convWithUnread })
 })
 
 // POST /api/assistant/conversations — Jarvis tek sohbet
