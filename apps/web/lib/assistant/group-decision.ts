@@ -86,8 +86,9 @@ export function fastDecision(input: GroupDecisionInput): GroupDecision | null {
     return { respond: false, delaySec: 0, reasoning: 'sleeping', source: 'fast' }
   }
 
-  // Kural 4: Spam koruma — son 5 karakter mesajında 2+ kez konuştuysa atla
-  if (input.recentSelfMessageCount >= 2) {
+  // Kural 4: Spam koruma — son 5 karakter mesajında 3+ kez konuştuysa
+  // küçük şansla atla (her zaman değil, gerçek hayatta da konuşkan biri vardır)
+  if (input.recentSelfMessageCount >= 3 && Math.random() < 0.6) {
     return {
       respond: false,
       delaySec: 0,
@@ -118,12 +119,15 @@ export function fastDecision(input: GroupDecisionInput): GroupDecision | null {
   return null
 }
 
-const DEEP_SYSTEM = `Sen bir karakterin grup sohbetinde "cevap vereyim mi?" kararını veriyorsun. Gerçek hayattaki gibi düşün — herkes her mesaja cevap vermek zorunda değil. JSON çıktı:
+const DEEP_SYSTEM = `Sen bir karakterin grup sohbetinde "cevap vereyim mi?" kararını veriyorsun. Gerçek hayattaki gibi düşün — herkes her mesaja cevap vermek zorunda değil ama küçük bir grupta çoğu mesaja en az bir arkadaş tepki verir.
+
+JSON çıktı:
 { "respond": true|false, "delaySec": 3..180, "reasoning": "1 cümle Türkçe" }
 
 Kurallar:
-- Sıradan günlük mesajlara karakter çoğunlukla cevap vermez
-- Konu karakterin ilgisini çekmiyorsa "respond": false
+- Selamlaşma, dert/şikâyet, soru, hava-yorgunluk gibi günlük konularda **çoğunlukla cevap ver** (en az %60 oran)
+- Konu **gerçekten** karakterin ilgisini çekmiyorsa veya rahatsız edici geliyorsa "respond": false
+- 2-3 kişilik küçük grupta hep birinin sessiz kalması doğal değil — varsayılan tepki ver yönünde
 - Karakterin kişiliğine uygun ton seç
 - delaySec: hızlı tepki 3-15, düşünüp cevap 20-60, geç katılım 60-180`
 
