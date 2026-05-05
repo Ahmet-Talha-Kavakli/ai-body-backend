@@ -133,11 +133,18 @@ export default function GroupChatScreen() {
       if (!token || !id) return;
       const msgs = await listGroupMessages(token, id, { take: 50 });
       setMessages((prev) => {
-        // Optimistic mesajları (local-XXX) koru — server'a gidiş yolundalar
+        // Sadece local- prefix'li gerçekten optimistic olanları koru
+        // (server response geldiğinde id zaten değişmiş olur — duplicate olmaz)
         const localPending = prev.filter((m) => m.id.startsWith('local-'));
-        const serverIds = new Set(msgs.map((m) => m.id));
-        const stillPending = localPending.filter((m) => !serverIds.has(m.id));
-        return [...msgs, ...stillPending];
+        // Tekilleştirmeyi id'ye göre yap (her ihtimale karşı)
+        const seen = new Set<string>();
+        const merged: typeof msgs = [];
+        for (const m of [...msgs, ...localPending]) {
+          if (seen.has(m.id)) continue;
+          seen.add(m.id);
+          merged.push(m);
+        }
+        return merged;
       });
     } catch (e) {
       console.error('[group] loadMessages', e);
@@ -213,6 +220,13 @@ export default function GroupChatScreen() {
       // "Yazıyor..." göstergesi — cevap verecek karakterler
       const typerNames = result.decisions.filter((d) => d.respond).map((d) => d.characterName);
       setPendingTypers(typerNames);
+      // Güvenlik timeout — cron gecikirse 60sn sonra typer'ı kaldır (UI sonsuza kalmasın)
+      if (typerNames.length > 0) {
+        setTimeout(
+          () => setPendingTypers((cur) => cur.filter((n) => !typerNames.includes(n))),
+          60000,
+        );
+      }
 
       // Optimistic mesajı server kayıdı ile değiştir
       setMessages((prev) =>
