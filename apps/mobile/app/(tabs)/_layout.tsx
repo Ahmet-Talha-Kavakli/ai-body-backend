@@ -13,8 +13,8 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon sf={{ default: 'map', selected: 'map.fill' }} />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="sessions">
-        <NativeTabs.Trigger.Label>Seans</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'play.circle', selected: 'play.circle.fill' }} />
+        <NativeTabs.Trigger.Label>Sohbetler</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'message', selected: 'message.fill' }} />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="tracking">
         <NativeTabs.Trigger.Label>Takip</NativeTabs.Trigger.Label>

@@ -346,9 +346,25 @@ export default function CharacterChatScreen() {
     }
   };
 
-  const headerStatus = header?.currentMood
-    ? `${MOOD_EMOJI[header.currentMood] ?? ''} ${header.currentMood}${header.currentActivity ? ` • ${header.currentActivity}` : ''}`
-    : '';
+  // WhatsApp tarzı son görülme / durum
+  // - Yazıyorsa zaten streamingMessageId'den biliyoruz, ama header'da basit tutalım
+  // - currentActivity sleeping → "uyuyor"
+  // - kafede / işte / dışarda → "kafede" / "işte" / "dışarda"
+  // - default → "çevrimiçi"
+  const activityLabels: Record<string, string> = {
+    sleeping: 'uyuyor',
+    sleep: 'uyuyor',
+    eating: 'yemekte',
+    working: 'işte',
+    cafe: 'kafede',
+    outside: 'dışarda',
+    resting: 'dinleniyor',
+  };
+  const headerStatus = streamingMessageId
+    ? 'yazıyor…'
+    : header?.currentActivity && activityLabels[header.currentActivity]
+      ? activityLabels[header.currentActivity]
+      : 'çevrimiçi';
 
   if (loading) {
     return (
