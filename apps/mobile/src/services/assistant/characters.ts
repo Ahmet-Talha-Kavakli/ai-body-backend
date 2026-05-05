@@ -137,24 +137,14 @@ export async function streamCharacterMessage(
     callbacks.onError?.(`HTTP ${res.status}: ${txt}`);
     return;
   }
-  if (!res.body) {
-    callbacks.onError?.('No response body');
-    return;
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
+  // RN fetch body okuma yolları farklı. Önce body.getReader() dene, olmazsa text() ile bütününü oku.
   let buffer = '';
+  let receivedAnyEvent = false;
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    // SSE format: data: {...}\n\n
+  const processBuffer = (raw: string) => {
+    buffer += raw;
     const lines = buffer.split('\n\n');
     buffer = lines.pop() ?? '';
-
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed.startsWith('data:')) continue;
@@ -162,6 +152,7 @@ export async function streamCharacterMessage(
       if (!json) continue;
       try {
         const event = JSON.parse(json);
+        receivedAnyEvent = true;
         switch (event.type) {
           case 'message_chunk':
             if (typeof event.delta === 'string') callbacks.onChunk?.(event.delta);
@@ -177,6 +168,44 @@ export async function streamCharacterMessage(
             break;
         }
       } catch {}
+    }
+  };
+
+  // Path A: ReadableStream desteği varsa chunk-by-chunk
+  // RN >= 0.70 + Hermes'te genellikle var ama bazen body null oluyor.
+  // @ts-ignore - getReader RN typings'de yok
+  const reader = res.body?.getReader?.();
+  if (reader) {
+    const decoder = new TextDecoder();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        processBuffer(decoder.decode(value, { stream: true }));
+      }
+      // Final flush
+      if (buffer) processBuffer('\n\n');
+      return;
+    } catch (e) {
+      // Reader hatası — fall back to text()
+      if (receivedAnyEvent) {
+        // Zaten mesaj geldi, sessizce bitir (yarım kalmış olabilir ama kullanıcı görüyor)
+        return;
+      }
+      // Hiç event gelmediyse text() fallback'ine düş
+    }
+  }
+
+  // Path B: text() ile bütünü oku, sonra chunk-by-chunk göster (gerçek stream değil ama çalışır)
+  try {
+    const fullText = await res.text();
+    processBuffer(fullText);
+    if (!receivedAnyEvent) {
+      callbacks.onError?.('Empty stream response');
+    }
+  } catch (e) {
+    if (!receivedAnyEvent) {
+      callbacks.onError?.(e instanceof Error ? e.message : 'stream read failed');
     }
   }
 }

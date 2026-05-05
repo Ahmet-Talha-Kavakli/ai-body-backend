@@ -6,7 +6,15 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
@@ -109,9 +117,13 @@ export default function CharacterProfileScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
         {/* Avatar */}
         <View style={styles.avatarBlock}>
-          <View style={styles.bigAvatar}>
-            <Text style={styles.bigAvatarFallback}>{character.name[0]}</Text>
-          </View>
+          {character.avatarUrl ? (
+            <Image source={{ uri: character.avatarUrl }} style={styles.bigAvatar} />
+          ) : (
+            <View style={styles.bigAvatar}>
+              <Text style={styles.bigAvatarFallback}>{character.name[0]}</Text>
+            </View>
+          )}
           <Text style={styles.bigName}>{character.name}</Text>
           <Text style={styles.bigSubtitle}>
             {character.age} • {character.archetype.replace('_', ' ')}

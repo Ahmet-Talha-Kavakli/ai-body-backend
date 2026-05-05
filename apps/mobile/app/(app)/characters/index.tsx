@@ -17,6 +17,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -77,10 +78,7 @@ function CharacterRow({ item, onPress }: { item: CharacterListItem; onPress: () 
     >
       <View style={styles.avatarBox}>
         {item.avatarUrl ? (
-          // Avatar varsa görsel — Faz E sonunda Flux ile üretilir
-          <View style={[styles.avatar, { backgroundColor: C.accentSofter }]}>
-            <Text style={styles.avatarFallback}>{item.name[0]}</Text>
-          </View>
+          <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
         ) : (
           <View style={[styles.avatar, { backgroundColor: C.accentSofter }]}>
             <Text style={styles.avatarFallback}>{item.name[0]}</Text>

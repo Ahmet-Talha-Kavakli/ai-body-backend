@@ -16,6 +16,7 @@ import {
   Animated,
   Easing,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -51,6 +52,7 @@ const MOOD_EMOJI: Record<string, string> = {
 interface HeaderState {
   name: string;
   bio: string | null;
+  avatarUrl?: string | null;
   currentMood: string | null;
   currentActivity?: string | null;
   currentLocation?: string | null;
@@ -265,7 +267,7 @@ export default function CharacterChatScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
       {/* Header */}
@@ -277,9 +279,13 @@ export default function CharacterChatScreen() {
           style={styles.headerCenter}
           onPress={() => router.push(`/(app)/characters/${characterId}/profile`)}
         >
-          <View style={styles.headerAvatar}>
-            <Text style={styles.headerAvatarFallback}>{header?.name?.[0]}</Text>
-          </View>
+          {header?.avatarUrl ? (
+            <Image source={{ uri: header.avatarUrl }} style={styles.headerAvatar} />
+          ) : (
+            <View style={styles.headerAvatar}>
+              <Text style={styles.headerAvatarFallback}>{header?.name?.[0]}</Text>
+            </View>
+          )}
           <View style={{ marginLeft: 12 }}>
             <Text style={styles.headerName}>{header?.name}</Text>
             {!!headerStatus && <Text style={styles.headerStatus}>{headerStatus}</Text>}
@@ -320,7 +326,7 @@ export default function CharacterChatScreen() {
       />
 
       {/* Input */}
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 8 }]}>
+      <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         <TextInput
           value={input}
           onChangeText={setInput}
@@ -329,6 +335,11 @@ export default function CharacterChatScreen() {
           style={styles.input}
           multiline
           editable={!sending}
+          returnKeyType="send"
+          blurOnSubmit={false}
+          onSubmitEditing={() => {
+            if (input.trim() && !sending) onSend();
+          }}
         />
         <Pressable
           onPress={onSend}
@@ -407,10 +418,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingTop: 10,
     borderTopWidth: 0.5,
     borderTopColor: '#E5E7EB',
     gap: 8,
+    backgroundColor: '#FFFFFF',
   },
   input: {
     flex: 1,

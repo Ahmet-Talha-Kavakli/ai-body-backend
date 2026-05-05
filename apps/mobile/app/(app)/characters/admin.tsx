@@ -153,6 +153,82 @@ export default function AdminFlagsScreen() {
           </View>
         ))}
 
+        <Text style={[styles.subtitle, { marginTop: 24, marginBottom: 8 }]}>
+          Test: Karakter spawn (trigger bypass)
+        </Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {['mia', 'kerem', 'selin', 'ayse', 'mehmet'].map((key) => (
+            <Pressable
+              key={key}
+              onPress={async () => {
+                try {
+                  const token = await getToken();
+                  if (!token) return;
+                  const res = await fetch(`${API_URL}/api/assistant/admin/spawn-character`, {
+                    method: 'POST',
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ templateKey: key }),
+                  });
+                  const data = await res.json();
+                  if (data.alreadyExists) {
+                    Alert.alert(key, 'Bu karakter zaten var');
+                  } else if (data.ok) {
+                    Alert.alert(key, `Spawn edildi: ${data.introLine}`);
+                  } else {
+                    Alert.alert('Hata', JSON.stringify(data));
+                  }
+                } catch (e) {
+                  Alert.alert('Hata', String(e));
+                }
+              }}
+              style={styles.spawnBtn}
+            >
+              <Text style={styles.spawnBtnText}>+ {key}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Text style={[styles.subtitle, { marginTop: 24, marginBottom: 8 }]}>
+          Test: Avatar üret (Flux 1.1 Pro Ultra — $0.06/karakter)
+        </Text>
+        <Pressable
+          onPress={async () => {
+            try {
+              const token = await getToken();
+              if (!token) return;
+              const listRes = await fetch(`${API_URL}/api/assistant/characters`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const listData = await listRes.json();
+              const noAvatar = (listData.characters ?? []).filter((c: any) => !c.avatarUrl);
+              if (noAvatar.length === 0) {
+                Alert.alert('Avatar', 'Tüm karakterlerin avatarı zaten var');
+                return;
+              }
+              Alert.alert('Avatar', `${noAvatar.length} karakter için üretiliyor — 10-30sn`);
+              for (const c of noAvatar) {
+                await fetch(`${API_URL}/api/assistant/admin/generate-avatar`, {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ characterId: c.id }),
+                });
+              }
+              Alert.alert('Avatar', 'Tamamlandı! Listeyi yenile.');
+            } catch (e) {
+              Alert.alert('Hata', String(e));
+            }
+          }}
+          style={[styles.spawnBtn, { alignSelf: 'flex-start' }]}
+        >
+          <Text style={styles.spawnBtnText}>🎨 Eksik avatarları üret</Text>
+        </Pressable>
+
         <Pressable onPress={() => router.push('/(app)/characters')} style={styles.gotoBtn}>
           <Text style={styles.gotoBtnText}>Karakterlere git →</Text>
         </Pressable>
@@ -185,4 +261,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   gotoBtnText: { fontFamily: font.semibold, fontSize: 16, color: '#FFFFFF' },
+  spawnBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: C.accentSofter,
+    borderRadius: 10,
+  },
+  spawnBtnText: {
+    fontFamily: font.medium,
+    fontSize: 14,
+    color: C.accent,
+  },
 });

@@ -27,6 +27,8 @@ async function resolveClerkId(req: NextRequest): Promise<string | null> {
     try {
       const payload = await verifyToken(token, {
         secretKey: process.env.CLERK_SECRET_KEY!,
+        // Mobile JWT'leri kısa ömürlü (60sn). Refresh gecikmesi için 5 dk tolerans.
+        clockSkewInMs: 5 * 60 * 1000,
       })
       return payload.sub ?? null
     } catch (e) {
