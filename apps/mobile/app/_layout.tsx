@@ -8,6 +8,15 @@ import { RootProviders } from '../src/providers';
 import { initSentry } from '../src/lib/sentry';
 import Mapbox from '@rnmapbox/maps';
 import { MAPBOX_PUBLIC_TOKEN } from '../lib/mapsConfig';
+import {
+  useFonts,
+  Sora_400Regular,
+  Sora_500Medium,
+  Sora_600SemiBold,
+  Sora_700Bold,
+  Sora_800ExtraBold,
+} from '@expo-google-fonts/sora';
+import { View } from 'react-native';
 
 initSentry();
 
@@ -20,7 +29,21 @@ try {
 }
 
 export default function RootLayout() {
-  // RootProviders zaten GestureHandlerRootView içeriyor — burada ikinci kat sarmalama yok.
+  // CLAUDE.md zorunlu: Sora font tüm ekranlarda. Root'ta global yüklendi —
+  // sayfa-spesifik useFonts artık gerekli değil.
+  const [fontsLoaded] = useFonts({
+    Sora_400Regular,
+    Sora_500Medium,
+    Sora_600SemiBold,
+    Sora_700Bold,
+    Sora_800ExtraBold,
+  });
+
+  if (!fontsLoaded) {
+    // Splash gibi boş beyaz ekran — sora yüklenir yüklenmez kaldırılır
+    return <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
+  }
+
   return (
     <RootProviders>
       <Stack screenOptions={{ headerShown: false }}>
