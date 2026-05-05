@@ -53,6 +53,14 @@
     {
       "path": "/api/cron/ai-aging",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/graph-pattern",
+      "schedule": "0 2 * * 0"
+    },
+    {
+      "path": "/api/cron/graph-essence",
+      "schedule": "0 1 1 * *"
     }
   ]
 }

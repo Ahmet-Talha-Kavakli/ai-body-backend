@@ -5,6 +5,9 @@ import { loadAssistantContext } from '@/lib/assistant/context'
 import { buildSystemPrompt, buildLightSystemPrompt } from '@/lib/assistant/system-prompt'
 import { runAssistantStream, StreamEvent } from '@/lib/assistant/run-stream'
 import { extractAndStoreFacts } from '@/lib/assistant/memory-extractor'
+// V4 Faz B — Graph hafıza (flag arkasında)
+import { extractGraphFromMessages } from '@/lib/assistant/graph-extractor'
+import { loadGraphContext, formatGraphContextForPrompt } from '@/lib/assistant/graph-context'
 import { embedAndStoreMessage, searchSimilarMessages } from '@/lib/assistant/rag'
 import { maybeEvolvePersonality } from '@/lib/assistant/personality-evolver'
 import { detectAndUnlockSharedMilestones } from '@/lib/assistant/milestone-detector'
@@ -337,13 +340,16 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         .map((m) => `${m.role}: ${m.content.slice(0, 80)}`)
         .join(' | ')
 
-      // V2 Chunk 4 + V3 Faz A: Router + tone + life event + summary context paralel
-      const [route, toneAnalysis, lifeEvent, summaryCtx] = await Promise.all([
+      // V2 Chunk 4 + V3 Faz A + V4 Faz B: Router + tone + life event + summary + graph paralel
+      const [route, toneAnalysis, lifeEvent, summaryCtx, graphNodes] = await Promise.all([
         routeMessage({ message: content, recentContext }),
         analyzeTone(content),
         detectLifeEvent(content),
         loadSummaryContext(user.id),
+        // V4 Faz B — flag kapalıysa boş array döner (sıfır maliyet)
+        loadGraphContext({ userId: user.id, userMessage: content }),
       ])
+      const graphContextBlock = formatGraphContextForPrompt(graphNodes)
       // V3 Faz B — Vision varsa gpt-4o (mini de vision yapar ama 4o daha iyi yorumlar)
       const selectedModel = imageUrls.length > 0 ? 'gpt-4o' : modelForDifficulty(route.difficulty)
       const selectedMaxTokens = maxTokensForDifficulty(route.difficulty)
@@ -377,6 +383,7 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
               grantedCapabilities: ctx.grantedCapabilities,
               characterStory: ctx.characterStory,
               starredMessages: ctx.starredMessages,
+              graphContextBlock,
             })
           : buildLightSystemPrompt({
               profile: profileSafe,
@@ -388,6 +395,7 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
               grantedCapabilities: ctx.grantedCapabilities,
               characterStory: ctx.characterStory,
               starredMessages: ctx.starredMessages,
+              graphContextBlock,
             })
       // V3 Faz A: mood hint
       const moodHint = profileSafe.currentMood
@@ -553,6 +561,25 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any)
           }
+
+          // V4 Faz B — Graph extractor (flag arkasında, fire-and-forget — kullanıcıyı bekletme)
+          // Son 20 mesajı al, her 15 user mesajında bir tetiklenir (kendi içinde kontrol ediyor).
+          const recentForGraph = await db.assistantMessage.findMany({
+            where: { conversationId: id },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+            select: { role: true, content: true },
+          })
+          // Sırayı kronolojik yap
+          const recentChrono = recentForGraph.reverse().map((m) => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          }))
+          extractGraphFromMessages({
+            userId: user.id,
+            recentMessages: recentChrono,
+            userMessageCount: userMsgCount,
+          }).catch((e) => console.error('[v4 graph extract]', e))
         } catch {}
       } catch (e) {
         send({ type: 'error', message: e instanceof Error ? e.message : 'unknown' })

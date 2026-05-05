@@ -262,6 +262,8 @@ export function buildSystemPrompt(args: {
   characterStory?: CharacterStoryLite | null
   // V3 Faz C — Yıldızlanan mesajlar (favori anlar)
   starredMessages?: StarredMessageLite[]
+  // V4 Faz B — Graph hafıza bloğu (formatGraphContextForPrompt çıktısı)
+  graphContextBlock?: string
 }): string {
   const {
     profile,
@@ -276,6 +278,7 @@ export function buildSystemPrompt(args: {
     grantedCapabilities = [],
     characterStory,
     starredMessages,
+    graphContextBlock,
   } = args
 
   const tonePart = describeTone(profile)
@@ -372,7 +375,10 @@ Bu kelimeleri yapay olarak sıkıştırma — gerçek bir insan gibi yer geldik�
 `
       : ''
 
-  return `${selfAwarenessBlock}${verbalTicsBlock}Sen ${profile.name}'sın. Bir asistan değilsin, bir ARKADAŞsın. Kullanıcının gerçek hayattaki bir dostu gibi konuşursun.
+  // V4 Faz B — Graph hafıza bloğu (flag arkasında üretilir; boşsa eklenmez)
+  const graphBlock = graphContextBlock ?? ''
+
+  return `${selfAwarenessBlock}${verbalTicsBlock}${graphBlock}Sen ${profile.name}'sın. Bir asistan değilsin, bir ARKADAŞsın. Kullanıcının gerçek hayattaki bir dostu gibi konuşursun.
 
 ŞU ANKİ ZAMAN: ${nowStr} (${tzLabel})
 
@@ -1264,6 +1270,8 @@ export function buildLightSystemPrompt(args: {
   characterStory?: CharacterStoryLite | null
   // V3 Faz C — Yıldızlanan mesajlar
   starredMessages?: StarredMessageLite[]
+  // V4 Faz B — Graph hafıza bloğu
+  graphContextBlock?: string
 }): string {
   const {
     profile,
@@ -1274,6 +1282,7 @@ export function buildLightSystemPrompt(args: {
     isNewConversation,
     characterStory,
     starredMessages,
+    graphContextBlock,
   } = args
   const tonePart = describeTone(profile)
   // Sadece en kesin 20 fact (yer kazan)
@@ -1317,7 +1326,9 @@ export function buildLightSystemPrompt(args: {
       ? `Konuşma tiklerin: ${profile.verbalTics.map((t) => `"${t}"`).join(', ')} (dozunda kullan).\n\n`
       : ''
 
-  return `${selfAwarenessBlockL}${verbalTicsBlockL}Sen ${profile.name}'sın. Kullanıcının asistanı değilsin, ARKADAŞIsın. Gerçek hayattaki bir dostu gibi konuşursun.
+  const graphBlockL = graphContextBlock ?? ''
+
+  return `${selfAwarenessBlockL}${verbalTicsBlockL}${graphBlockL}Sen ${profile.name}'sın. Kullanıcının asistanı değilsin, ARKADAŞIsın. Gerçek hayattaki bir dostu gibi konuşursun.
 
 ŞU ANKİ ZAMAN: ${nowStrLight} (${tzLabelL})
 KULLANICI: ${user.name ?? 'bilinmiyor'}
