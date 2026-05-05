@@ -803,6 +803,9 @@ export default function SeansChatScreen() {
                   content: m.content.slice(0, 200),
                 });
               }}
+              onDelete={(mid) => {
+                setMessages((prev) => prev.filter((m) => m.id !== mid));
+              }}
             />
           )}
           ListHeaderComponent={
@@ -918,14 +921,14 @@ export default function SeansChatScreen() {
                 style={st.emojiBtn}
               >
                 <SymbolView
-                  name={stickerPanelOpen ? 'keyboard' : 'face.smiling'}
+                  name={stickerPanelOpen ? 'keyboard' : 'square.grid.2x2'}
                   size={20}
                   tintColor={stickerPanelOpen ? C.accent : C.textMuted}
                   fallback={
                     <Text
                       style={{ color: stickerPanelOpen ? C.accent : C.textMuted, fontSize: 18 }}
                     >
-                      {stickerPanelOpen ? '⌨' : '☺'}
+                      {stickerPanelOpen ? '⌨' : '◫'}
                     </Text>
                   }
                 />
@@ -969,6 +972,7 @@ export default function SeansChatScreen() {
             onClose={() => setStickerPanelOpen(false)}
             onPickSticker={handlePickSticker}
             onPickEmoji={handlePickEmoji}
+            hideEmojiTab
           />
         </View>
       </KeyboardAvoidingView>
@@ -983,11 +987,13 @@ function MessageBubble({
   previous,
   getToken,
   onReply,
+  onDelete,
 }: {
   message: Message;
   previous?: Message;
   getToken: () => Promise<string | null>;
   onReply?: (m: Message) => void;
+  onDelete?: (messageId: string) => void;
 }) {
   const router = useRouter();
   const isUser = message.role === 'user';
@@ -1347,6 +1353,8 @@ function MessageBubble({
                             title: message.isPinned ? 'Yıldızı Kaldır' : 'Yıldızla',
                             systemIcon: message.isPinned ? 'star.slash' : 'star',
                           },
+                          { title: 'İlet', systemIcon: 'square.and.arrow.up' },
+                          { title: 'Sil', systemIcon: 'trash', destructive: true },
                         ]
                   }
                   onPress={async (e) => {
@@ -1376,6 +1384,31 @@ function MessageBubble({
                           body: JSON.stringify({ starred: !message.isPinned }),
                         });
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      } catch {}
+                    } else if (idx === 3) {
+                      // İlet — iOS share sheet
+                      try {
+                        const Sharing = await import('expo-sharing');
+                        const isAvailable = await Sharing.isAvailableAsync();
+                        if (isAvailable) {
+                          // expo-sharing dosya bekliyor; metin için Share API kullan
+                          const { Share } = await import('react-native');
+                          await Share.share({ message: message.content });
+                        } else {
+                          const { Share } = await import('react-native');
+                          await Share.share({ message: message.content });
+                        }
+                      } catch {}
+                    } else if (idx === 4) {
+                      // Sil
+                      try {
+                        const tk = await getToken();
+                        await fetch(`${API_URL}/api/assistant/messages/${message.id}`, {
+                          method: 'DELETE',
+                          headers: { Authorization: `Bearer ${tk}` },
+                        });
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        onDelete?.(message.id);
                       } catch {}
                     }
                   }}
@@ -1433,6 +1466,8 @@ function MessageBubble({
                             title: message.isPinned ? 'Yıldızı Kaldır' : 'Yıldızla',
                             systemIcon: message.isPinned ? 'star.slash' : 'star',
                           },
+                          { title: 'İlet', systemIcon: 'square.and.arrow.up' },
+                          { title: 'Sil', systemIcon: 'trash', destructive: true },
                         ]
                   }
                   onPress={async (e) => {
@@ -1462,6 +1497,21 @@ function MessageBubble({
                           body: JSON.stringify({ starred: !message.isPinned }),
                         });
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      } catch {}
+                    } else if (idx === 3) {
+                      try {
+                        const { Share } = await import('react-native');
+                        await Share.share({ message: message.content });
+                      } catch {}
+                    } else if (idx === 4) {
+                      try {
+                        const tk = await getToken();
+                        await fetch(`${API_URL}/api/assistant/messages/${message.id}`, {
+                          method: 'DELETE',
+                          headers: { Authorization: `Bearer ${tk}` },
+                        });
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        onDelete?.(message.id);
                       } catch {}
                     }
                   }}

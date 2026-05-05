@@ -661,6 +661,8 @@ interface Props {
   onClose: () => void;
   onPickSticker: (item: TenorItem) => void;
   onPickEmoji: (emoji: string) => void;
+  /** Emoji sekmesini gizle — kullanıcı sistem klavyesini kullansın (kalitesi yüksek) */
+  hideEmojiTab?: boolean;
 }
 
 // ─── Panel ────────────────────────────────────────────────────────────────────
@@ -672,8 +674,9 @@ export function StickerGifPanel({
   onClose,
   onPickSticker,
   onPickEmoji,
+  hideEmojiTab,
 }: Props) {
-  const [tab, setTab] = useState<Tab>('emoji');
+  const [tab, setTab] = useState<Tab>(hideEmojiTab ? 'sticker' : 'emoji');
   const [recentEmojis, setRecentEmojis] = useState<string[]>([]);
   const heightAnim = useRef(new Animated.Value(0)).current;
 
@@ -703,7 +706,9 @@ export function StickerGifPanel({
     <Animated.View style={[s.panel, { height: heightAnim }]}>
       {/* Sekme satırı */}
       <View style={s.tabs}>
-        <TabBtn label="😊" active={tab === 'emoji'} onPress={() => setTab('emoji')} />
+        {!hideEmojiTab && (
+          <TabBtn label="😊" active={tab === 'emoji'} onPress={() => setTab('emoji')} />
+        )}
         <TabBtn label="Sticker" active={tab === 'sticker'} onPress={() => setTab('sticker')} />
         <TabBtn label="GIF" active={tab === 'gif'} onPress={() => setTab('gif')} />
         <Pressable
