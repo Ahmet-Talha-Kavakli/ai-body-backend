@@ -132,6 +132,7 @@ export default function GroupChatScreen() {
       const token = await getToken();
       if (!token || !id) return;
       const msgs = await listGroupMessages(token, id, { take: 50 });
+      if (!Array.isArray(msgs)) return; // 401 ya da boş cevap koruması
       setMessages((prev) => {
         // Sadece local- prefix'li gerçekten optimistic olanları koru
         // (server response geldiğinde id zaten değişmiş olur — duplicate olmaz)
