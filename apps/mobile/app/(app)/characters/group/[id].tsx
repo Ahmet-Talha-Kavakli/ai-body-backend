@@ -229,12 +229,11 @@ export default function GroupChatScreen() {
         );
       }
 
-      // Optimistic mesajı server kayıdı ile değiştir
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === optimistic.id ? { ...result.message, senderCharacter: null } : m,
-        ),
-      );
+      // Optimistic mesajı SİL — polling zaten 5sn içinde server kaydını getirecek
+      // (id swap + polling birleşimi duplicate key bug'ı yapıyordu)
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      // Hemen polling tetikle — kullanıcı mesajını anında server-side ID ile görsün
+      loadMessages();
     } catch (e) {
       console.error('[group] send fail', e);
       // Optimistic mesajı sil
@@ -287,7 +286,7 @@ export default function GroupChatScreen() {
       <FlatList
         ref={listRef}
         data={messages}
-        keyExtractor={(m) => m.id}
+        keyExtractor={(m, idx) => `${m.id}:${idx}`}
         renderItem={({ item, index }) => {
           const prev = index > 0 ? messages[index - 1] : null;
           const showSender =
