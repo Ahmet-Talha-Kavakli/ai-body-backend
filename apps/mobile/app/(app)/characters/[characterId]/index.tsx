@@ -299,19 +299,22 @@ export default function CharacterChatScreen() {
           setStreamingText(accumulated);
         },
         onComplete: (messageId) => {
-          // Stream'i kalıcı mesaja çevir
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: messageId,
-              role: 'assistant',
-              content: accumulated,
-              createdAt: new Date().toISOString(),
-              starredAt: null,
-              readAt: new Date().toISOString(),
-              repliedToMessageId: null,
-            },
-          ]);
+          // Stream'i kalıcı mesaja çevir — duplicate id varsa eklemeyi atla
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === messageId)) return prev;
+            return [
+              ...prev,
+              {
+                id: messageId,
+                role: 'assistant',
+                content: accumulated,
+                createdAt: new Date().toISOString(),
+                starredAt: null,
+                readAt: new Date().toISOString(),
+                repliedToMessageId: null,
+              },
+            ];
+          });
           setStreamingMessageId(null);
           setStreamingText('');
         },
@@ -381,7 +384,7 @@ export default function CharacterChatScreen() {
       <FlatList
         ref={listRef}
         data={messages}
-        keyExtractor={(m) => m.id}
+        keyExtractor={(m, idx) => `${m.id}-${idx}`}
         renderItem={({ item }) => (
           <ChatBubble
             message={item}

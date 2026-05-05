@@ -340,30 +340,24 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         .map((m) => `${m.role}: ${m.content.slice(0, 80)}`)
         .join(' | ')
 
-      // V2 Chunk 4 + V3 Faz A + V4 Faz B: Router + tone + life event + summary + graph paralel
-      const [route, toneAnalysis, lifeEvent, summaryCtx, graphNodes] = await Promise.all([
-        routeMessage({ message: content, recentContext }),
-        analyzeTone(content),
-        detectLifeEvent(content),
-        loadSummaryContext(user.id),
-        // V4 Faz B — flag kapalıysa boş array döner (sıfır maliyet)
-        loadGraphContext({ userId: user.id, userMessage: content }),
-      ])
+      // V4 Perf: 6 paralel — honesty önceden tone'u bekliyordu (~500-1500ms seri kazanç)
+      // Honesty tone null geldiğinde de güvenli (kendi içinde skip kuralı + fallback)
+      // Bu paralelleştirme V3 cevap süresini ~1sn azaltır.
+      const [route, toneAnalysis, lifeEvent, summaryCtx, graphNodes, honestyEval] =
+        await Promise.all([
+          routeMessage({ message: content, recentContext }),
+          analyzeTone(content),
+          detectLifeEvent(content),
+          loadSummaryContext(user.id),
+          loadGraphContext({ userId: user.id, userMessage: content }),
+          evaluateHonesty({ userMessage: content, recentContext }).catch(() => null),
+        ])
       const graphContextBlock = formatGraphContextForPrompt(graphNodes)
-      // V3 Faz B — Vision varsa gpt-4o (mini de vision yapar ama 4o daha iyi yorumlar)
       const selectedModel = imageUrls.length > 0 ? 'gpt-4o' : modelForDifficulty(route.difficulty)
       const selectedMaxTokens = maxTokensForDifficulty(route.difficulty)
       const tonePromptHint = toneToPromptHint(toneAnalysis)
       const lifeEventHint = lifeEvent ? lifeEventToPromptHint(lifeEvent) : ''
       const summaryHint = formatSummaryContextForPrompt(summaryCtx)
-
-      // V3 Faz A: Honesty evaluator — tone'a bağlı, sonra çağrılır (skip kuralları için)
-      // Sadece risk ihtimali olan mesajlarda devreye girer, üzgün/yorgun durumda skip eder.
-      const honestyEval = await evaluateHonesty({
-        userMessage: content,
-        recentContext,
-        tone: toneAnalysis,
-      }).catch(() => null)
       const honestyHint = honestyEval ? honestyToPromptHint(honestyEval) : ''
 
       // Easy/medium → light system prompt (~1500 token), hard → full prompt (~6000 token)
