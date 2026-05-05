@@ -1,258 +1,263 @@
 /**
- * V4.5 Faz 2 — Sohbetler Listesi (WhatsApp tarzı)
+ * V4.5 Faz 2 — Sohbetler Listesi (WhatsApp parity)
  *
- * Üstte Jarvis sabit (pinned), altında karakterler + gruplar son etkileşime göre.
- *
- * Ana kaynaklar:
- *  - GET /api/assistant/conversations?archived=false → Jarvis sohbeti (tek)
- *  - GET /api/assistant/characters → karakter listesi + son mesaj
- *  - GET /api/assistant/groups → grup listesi + son mesaj
- *
- * Sıralama:
- *  - Jarvis her zaman 0. sırada
- *  - Diğerleri lastMessageAt DESC
- *
- * Polling: 8sn'de bir yenile.
+ * iOS Messages + WhatsApp karması:
+ *  - Üstte large title + arama input'u
+ *  - Jarvis pinned (üstte 📌 SF Symbol ile)
+ *  - Karakterler + gruplar son etkileşime göre
+ *  - Presence dot (yeşil = aktif, gri = uyuyor/değil)
+ *  - Swipe-left → arşivle/sil
+ *  - Press → scale 0.98 + haptic
+ *  - 8sn polling
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   Image,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { Swipeable } from 'react-native-gesture-handler';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
+import { SymbolView } from 'expo-symbols';
 import * as Haptics from 'expo-haptics';
-import { font, C } from '../../../lib/theme';
+import { font, C, API_URL } from '../../../lib/theme';
 import { listCharacters, type CharacterListItem } from '../../../src/services/assistant/characters';
 import { listGroups, type GroupListItem } from '../../../src/services/assistant/groups';
-import { API_URL } from '../../../lib/theme';
 
-interface JarvisConversation {
+interface JarvisConv {
   id: string;
   title: string;
   updatedAt: string;
   aiTypingUntil?: string | null;
   messages: Array<{ content: string; role: string; createdAt: string }>;
-  _count?: { messages: number };
 }
 
-const MOOD_EMOJI: Record<string, string> = {
-  calm: '🌿',
-  energetic: '⚡',
-  thoughtful: '💭',
-  tired: '🌙',
-  happy: '✨',
-  sad: '🥲',
-  anxious: '😶‍🌫️',
-  angry: '😤',
-};
-
-function relativeTime(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const date = new Date(iso);
-  const now = Date.now();
-  const diff = (now - date.getTime()) / 1000;
-  if (diff < 60) return 'şimdi';
-  if (diff < 3600) return `${Math.floor(diff / 60)}d`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}s`;
-  if (diff < 7 * 86400) return `${Math.floor(diff / 86400)}g`;
-  return `${date.getDate()}/${date.getMonth() + 1}`;
-}
-
-type ListItem =
-  | { kind: 'jarvis'; data: JarvisConversation; sortAt: string }
+type Item =
+  | { kind: 'jarvis'; data: JarvisConv; sortAt: string }
   | { kind: 'character'; data: CharacterListItem; sortAt: string }
   | { kind: 'group'; data: GroupListItem; sortAt: string };
 
-// ─── Row Components ──────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
-function JarvisRow({ item, onPress }: { item: JarvisConversation; onPress: () => void }) {
-  const last = item.messages?.[0];
-  const isTyping = item.aiTypingUntil && new Date(item.aiTypingUntil).getTime() > Date.now();
-  const lastText = isTyping
-    ? 'yazıyor…'
-    : last
-      ? last.role === 'user'
-        ? `Sen: ${last.content}`
-        : last.content
-      : 'AI asistanın';
+function relTime(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  const diff = (Date.now() - date.getTime()) / 1000;
+  if (diff < 60) return 'şimdi';
+  if (diff < 3600) return `${Math.floor(diff / 60)} dk`;
+  if (diff < 86400) {
+    const h = date.getHours().toString().padStart(2, '0');
+    const m = date.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+  }
+  if (diff < 7 * 86400) {
+    const days = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+    return days[date.getDay()];
+  }
+  return `${date.getDate()}.${date.getMonth() + 1}`;
+}
 
+function isCharacterOnline(char: CharacterListItem): boolean {
+  // Karakterler "AI" — uyumadıkça aktif
+  return char.currentActivity !== 'sleeping' && char.currentActivity !== 'sleep';
+}
+
+// ─── Avatar ──────────────────────────────────────────────────────────────────
+
+function Avatar({
+  uri,
+  fallback,
+  bg,
+  fg,
+  online,
+  pinned,
+}: {
+  uri?: string | null;
+  fallback: string;
+  bg?: string;
+  fg?: string;
+  online?: boolean;
+  pinned?: boolean;
+}) {
   return (
-    <Pressable
-      onPress={() => {
-        Haptics.selectionAsync();
-        onPress();
-      }}
-      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
-    >
-      <View style={styles.avatarBox}>
-        <View style={[styles.avatar, { backgroundColor: C.accent }]}>
-          <Text style={[styles.avatarFallback, { color: '#FFFFFF' }]}>J</Text>
+    <View style={a.box}>
+      {uri ? (
+        <Image source={{ uri }} style={a.img} />
+      ) : (
+        <View
+          style={[
+            a.img,
+            {
+              backgroundColor: bg ?? C.accentSofter,
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+          ]}
+        >
+          <Text style={[a.fallback, { color: fg ?? C.accent }]}>{fallback}</Text>
         </View>
-        <View style={[styles.pinBadge]}>
-          <Text style={styles.pinIcon}>📌</Text>
+      )}
+      {online !== undefined && (
+        <View style={[a.dot, { backgroundColor: online ? '#34C759' : '#C7C7CC' }]} />
+      )}
+      {pinned && (
+        <View style={a.pinWrap}>
+          <SymbolView
+            name="pin.fill"
+            size={10}
+            tintColor="#8E8E93"
+            fallback={<Text style={{ fontSize: 8 }}>📌</Text>}
+          />
         </View>
-      </View>
-      <View style={styles.body}>
-        <View style={styles.titleLine}>
-          <Text style={styles.name}>Jarvis</Text>
-          <Text style={styles.time}>{relativeTime(last?.createdAt ?? item.updatedAt)}</Text>
-        </View>
-        <View style={styles.previewLine}>
-          <Text
-            style={[styles.preview, isTyping && { color: C.accent, fontFamily: font.medium }]}
-            numberOfLines={1}
-          >
-            {lastText}
-          </Text>
-        </View>
-      </View>
-    </Pressable>
+      )}
+    </View>
   );
 }
 
-function CharacterRow({ item, onPress }: { item: CharacterListItem; onPress: () => void }) {
-  const lastText = item.isTyping
-    ? 'yazıyor…'
-    : item.lastMessage
-      ? item.lastMessage.role === 'assistant'
-        ? item.lastMessage.content
-        : `Sen: ${item.lastMessage.content}`
-      : (item.bio?.slice(0, 60) ?? '');
-
-  const moodEmoji = item.currentMood ? MOOD_EMOJI[item.currentMood] : null;
-  const isCold = item.relationship?.status === 'cold';
-  const isBroken = item.relationship?.status === 'broken';
-  const isSilent = item.relationship?.status === 'silent';
-
+function GroupAvatar({ members }: { members: GroupListItem['members'] }) {
+  const avs = members.slice(0, 2);
   return (
-    <Pressable
-      onPress={() => {
-        Haptics.selectionAsync();
-        onPress();
-      }}
-      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
-    >
-      <View style={styles.avatarBox}>
-        {item.avatarUrl ? (
-          <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, { backgroundColor: C.accentSofter }]}>
-            <Text style={styles.avatarFallback}>{item.name[0]}</Text>
-          </View>
-        )}
-        {moodEmoji && (
-          <View style={styles.moodBadge}>
-            <Text style={styles.moodEmoji}>{moodEmoji}</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.body}>
-        <View style={styles.titleLine}>
-          <Text style={styles.name}>
-            {item.name}
-            {isBroken && ' 💔'}
-            {isSilent && ' 🔇'}
-          </Text>
-          <Text style={styles.time}>{relativeTime(item.lastMessageAt ?? item.arrivedAt)}</Text>
-        </View>
-        <View style={styles.previewLine}>
-          <Text
+    <View style={a.box}>
+      <View style={a.groupComposite}>
+        {avs.map((m, idx) => (
+          <View
+            key={m.id}
             style={[
-              styles.preview,
-              item.isTyping && { color: C.accent, fontFamily: font.medium },
-              isCold && { color: '#9CA3AF', fontStyle: 'italic' },
+              a.groupPart,
+              {
+                left: idx === 0 ? 0 : 18,
+                top: idx === 0 ? 0 : 18,
+                zIndex: idx === 0 ? 2 : 1,
+              },
             ]}
-            numberOfLines={1}
           >
-            {lastText}
-          </Text>
-          {item.unreadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadText}>
-                {item.unreadCount > 99 ? '99+' : item.unreadCount}
-              </Text>
-            </View>
-          )}
-        </View>
+            {m.character.avatarUrl ? (
+              <Image source={{ uri: m.character.avatarUrl }} style={a.groupImg} />
+            ) : (
+              <View
+                style={[
+                  a.groupImg,
+                  {
+                    backgroundColor: C.accentSofter,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  },
+                ]}
+              >
+                <Text style={[a.fallback, { fontSize: 14, color: C.accent }]}>
+                  {m.character.name[0]}
+                </Text>
+              </View>
+            )}
+          </View>
+        ))}
       </View>
-    </Pressable>
+    </View>
   );
 }
 
-function GroupRow({ item, onPress }: { item: GroupListItem; onPress: () => void }) {
-  const last = item.messages?.[0];
-  const lastText = last
-    ? last.senderType === 'user'
-      ? `Sen: ${last.content}`
-      : `${last.senderCharacter?.name ?? 'biri'}: ${last.content}`
-    : `${item.members.length} üye`;
-  const avatars = item.members.slice(0, 2);
+// ─── Row ─────────────────────────────────────────────────────────────────────
+
+function Row({
+  avatar,
+  name,
+  preview,
+  time,
+  unread,
+  typing,
+  onPress,
+  onArchive,
+  pressDisabled,
+}: {
+  avatar: React.ReactNode;
+  name: string;
+  preview: string;
+  time: string;
+  unread?: number;
+  typing?: boolean;
+  onPress: () => void;
+  onArchive?: () => void;
+  pressDisabled?: boolean;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const onPressIn = () => {
+    Animated.timing(scale, { toValue: 0.98, duration: 80, useNativeDriver: true }).start();
+  };
+  const onPressOut = () => {
+    Animated.timing(scale, { toValue: 1, duration: 100, useNativeDriver: true }).start();
+  };
+
+  const renderRightActions = () => (
+    <View style={s.rightActions}>
+      <Pressable
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onArchive?.();
+        }}
+        style={s.archiveBtn}
+      >
+        <SymbolView
+          name="archivebox.fill"
+          size={20}
+          tintColor="#FFFFFF"
+          fallback={<Text style={{ color: '#fff' }}>📦</Text>}
+        />
+        <Text style={s.archiveText}>Arşivle</Text>
+      </Pressable>
+    </View>
+  );
 
   return (
-    <Pressable
-      onPress={() => {
-        Haptics.selectionAsync();
-        onPress();
-      }}
-      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+    <Swipeable
+      renderRightActions={onArchive ? renderRightActions : undefined}
+      overshootRight={false}
     >
-      <View style={styles.avatarBox}>
-        <View style={styles.groupAvatarComposite}>
-          {avatars.map((m, idx) => (
-            <View
-              key={m.id}
-              style={[
-                styles.groupAvatarPart,
-                {
-                  left: idx === 0 ? 0 : 18,
-                  top: idx === 0 ? 0 : 18,
-                  zIndex: idx === 0 ? 2 : 1,
-                },
-              ]}
-            >
-              {m.character.avatarUrl ? (
-                <Image source={{ uri: m.character.avatarUrl }} style={styles.groupAvatarImg} />
-              ) : (
-                <View
-                  style={[
-                    styles.groupAvatarImg,
-                    {
-                      backgroundColor: C.accentSofter,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    },
-                  ]}
-                >
-                  <Text style={styles.avatarFallback}>{m.character.name[0]}</Text>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Pressable
+          onPress={() => {
+            if (pressDisabled) return;
+            Haptics.selectionAsync();
+            onPress();
+          }}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          style={s.row}
+        >
+          {avatar}
+          <View style={s.body}>
+            <View style={s.titleLine}>
+              <Text style={s.name} numberOfLines={1}>
+                {name}
+              </Text>
+              <Text style={s.time}>{time}</Text>
+            </View>
+            <View style={s.previewLine}>
+              <Text
+                style={[s.preview, typing && { color: C.accent, fontFamily: font.medium }]}
+                numberOfLines={1}
+              >
+                {typing ? 'yazıyor…' : preview}
+              </Text>
+              {!!unread && unread > 0 && (
+                <View style={s.unread}>
+                  <Text style={s.unreadText}>{unread > 99 ? '99+' : unread}</Text>
                 </View>
               )}
             </View>
-          ))}
-        </View>
-      </View>
-      <View style={styles.body}>
-        <View style={styles.titleLine}>
-          <Text style={styles.name} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.time}>{relativeTime(last?.createdAt ?? item.updatedAt)}</Text>
-        </View>
-        <View style={styles.previewLine}>
-          <Text style={styles.preview} numberOfLines={1}>
-            {lastText}
-          </Text>
-        </View>
-      </View>
-    </Pressable>
+          </View>
+        </Pressable>
+      </Animated.View>
+    </Swipeable>
   );
 }
 
@@ -260,23 +265,22 @@ function GroupRow({ item, onPress }: { item: GroupListItem; onPress: () => void 
 
 export default function SessionsScreen() {
   const router = useRouter();
-  const { getToken } = useAuth();
   const insets = useSafeAreaInsets();
+  const { getToken } = useAuth();
 
-  const [jarvis, setJarvis] = useState<JarvisConversation | null>(null);
+  const [jarvis, setJarvis] = useState<JarvisConv | null>(null);
   const [characters, setCharacters] = useState<CharacterListItem[]>([]);
   const [groups, setGroups] = useState<GroupListItem[]>([]);
   const [groupFlagEnabled, setGroupFlagEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
     try {
       const token = await getToken();
       if (!token) return;
-
       const [convRes, charData, groupData] = await Promise.all([
-        // Jarvis sohbeti — tek olduğu için ilk satırı al
         fetch(`${API_URL}/api/assistant/conversations?archived=false`, {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -286,35 +290,31 @@ export default function SessionsScreen() {
           characters: [] as CharacterListItem[],
           flagEnabled: false,
         })),
-        listGroups(token).catch(() => ({
-          groups: [] as GroupListItem[],
-          flagEnabled: false,
-        })),
+        listGroups(token).catch(() => ({ groups: [] as GroupListItem[], flagEnabled: false })),
       ]);
 
-      const convs = (convRes?.conversations ?? []) as JarvisConversation[];
-      // Tek Jarvis sohbeti — yoksa otomatik oluştur
-      let jarvisConv: JarvisConversation | null = convs[0] ?? null;
-      if (!jarvisConv) {
+      const convs = (convRes?.conversations ?? []) as JarvisConv[];
+      let jv: JarvisConv | null = convs[0] ?? null;
+      if (!jv) {
         const created = await fetch(`${API_URL}/api/assistant/conversations`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         }).then((r) => (r.ok ? r.json() : null));
         if (created?.id) {
-          jarvisConv = {
+          jv = {
             id: created.id,
-            title: created.title ?? 'Jarvis',
+            title: 'Jarvis',
             updatedAt: created.updatedAt ?? new Date().toISOString(),
             messages: [],
           };
         }
       }
-      setJarvis(jarvisConv);
+      setJarvis(jv);
       setCharacters(charData.characters);
       setGroups(groupData.groups);
       setGroupFlagEnabled(groupData.flagEnabled);
-    } catch (e) {
-      // 401 vb. sessize al
+    } catch {
+      // sessize al
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -333,45 +333,48 @@ export default function SessionsScreen() {
     }, [load]),
   );
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    load();
-  };
+  const items: Item[] = useMemo(() => {
+    const others: Item[] = [
+      ...characters.map((c) => {
+        const lastTs = c.lastMessage?.createdAt ?? c.lastMessageAt ?? c.arrivedAt;
+        return { kind: 'character' as const, data: c, sortAt: lastTs };
+      }),
+      ...groups.map((g) => ({
+        kind: 'group' as const,
+        data: g,
+        sortAt: g.messages?.[0]?.createdAt ?? g.updatedAt,
+      })),
+    ].sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime());
 
-  // Birleşik liste — Jarvis 0. sırada sabit, kalanı son etkileşime göre
-  const otherItems: ListItem[] = [
-    ...characters.map((c) => ({
-      kind: 'character' as const,
-      data: c,
-      sortAt: c.lastMessageAt ?? c.arrivedAt,
-    })),
-    ...groups.map((g) => ({
-      kind: 'group' as const,
-      data: g,
-      sortAt: g.messages?.[0]?.createdAt ?? g.updatedAt,
-    })),
-  ].sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime());
+    const list = jarvis
+      ? [{ kind: 'jarvis' as const, data: jarvis, sortAt: jarvis.updatedAt }, ...others]
+      : others;
 
-  const combined: ListItem[] = jarvis
-    ? [{ kind: 'jarvis', data: jarvis, sortAt: jarvis.updatedAt }, ...otherItems]
-    : otherItems;
+    if (!search.trim()) return list;
+    const q = search.trim().toLowerCase();
+    return list.filter((it) => {
+      const name =
+        it.kind === 'jarvis' ? 'jarvis' : it.kind === 'character' ? it.data.name : it.data.title;
+      return name.toLowerCase().includes(q);
+    });
+  }, [jarvis, characters, groups, search]);
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + 60 }]}>
+      <View style={[s.container, { paddingTop: insets.top + 60 }]}>
         <ActivityIndicator size="large" color={C.accent} />
       </View>
     );
   }
 
-  const totalCount = (jarvis ? 1 : 0) + characters.length + groups.length;
   const canCreateGroup = groupFlagEnabled && characters.length >= 2;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>Sohbetler</Text>
+    <View style={[s.container, { paddingTop: insets.top }]}>
+      {/* Header */}
+      <View style={s.header}>
+        <View style={s.headerRow}>
+          <Text style={s.title}>Sohbetler</Text>
           {canCreateGroup && (
             <Pressable
               onPress={() => {
@@ -379,47 +382,111 @@ export default function SessionsScreen() {
                 router.push('/(app)/characters/new-group');
               }}
               hitSlop={12}
-              style={styles.newGroupBtn}
+              style={s.composeBtn}
             >
-              <Text style={styles.newGroupBtnText}>＋ Grup</Text>
+              <SymbolView
+                name="square.and.pencil"
+                size={22}
+                tintColor={C.accent}
+                fallback={<Text style={{ color: C.accent, fontSize: 22 }}>✎</Text>}
+              />
             </Pressable>
           )}
         </View>
-        <Text style={styles.subtitle}>
-          {totalCount === 0 ? 'Henüz sohbet yok' : `${totalCount} sohbet`}
-        </Text>
+
+        {/* Search */}
+        <View style={s.searchWrap}>
+          <SymbolView
+            name="magnifyingglass"
+            size={15}
+            tintColor="#8E8E93"
+            fallback={<Text style={{ color: '#8E8E93', fontSize: 14 }}>🔍</Text>}
+          />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Ara"
+            placeholderTextColor="#8E8E93"
+            style={s.searchInput}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+        </View>
       </View>
 
       <FlatList
-        data={combined}
-        keyExtractor={(item) => `${item.kind}:${item.data.id}`}
+        data={items}
+        keyExtractor={(it) => `${it.kind}:${it.data.id}`}
         renderItem={({ item }) => {
           if (item.kind === 'jarvis') {
+            const last = item.data.messages?.[0];
+            const isTyping =
+              !!item.data.aiTypingUntil && new Date(item.data.aiTypingUntil).getTime() > Date.now();
+            const preview = last
+              ? last.role === 'user'
+                ? `Sen: ${last.content}`
+                : last.content
+              : 'AI asistanın';
             return (
-              <JarvisRow
-                item={item.data}
+              <Row
+                avatar={<Avatar fallback="J" bg={C.accent} fg="#FFFFFF" online pinned />}
+                name="Jarvis"
+                preview={preview}
+                time={relTime(last?.createdAt ?? item.data.updatedAt)}
+                typing={isTyping}
                 onPress={() => router.push(`/(app)/seans/${item.data.id}`)}
               />
             );
           }
           if (item.kind === 'character') {
+            const c = item.data;
+            const preview = c.lastMessage
+              ? c.lastMessage.role === 'assistant'
+                ? c.lastMessage.content
+                : `Sen: ${c.lastMessage.content}`
+              : (c.bio?.slice(0, 60) ?? '');
             return (
-              <CharacterRow
-                item={item.data}
-                onPress={() => router.push(`/(app)/characters/${item.data.id}`)}
+              <Row
+                avatar={
+                  <Avatar uri={c.avatarUrl} fallback={c.name[0]} online={isCharacterOnline(c)} />
+                }
+                name={c.name}
+                preview={preview}
+                time={relTime(c.lastMessage?.createdAt ?? c.lastMessageAt ?? c.arrivedAt)}
+                unread={c.unreadCount}
+                typing={c.isTyping}
+                onPress={() => router.push(`/(app)/characters/${c.id}`)}
               />
             );
           }
+          // group
+          const g = item.data;
+          const last = g.messages?.[0];
+          const preview = last
+            ? last.senderType === 'user'
+              ? `Sen: ${last.content}`
+              : `${last.senderCharacter?.name ?? 'biri'}: ${last.content}`
+            : `${g.members.length} üye`;
           return (
-            <GroupRow
-              item={item.data}
-              onPress={() => router.push(`/(app)/characters/group/${item.data.id}`)}
+            <Row
+              avatar={<GroupAvatar members={g.members} />}
+              name={g.title}
+              preview={preview}
+              time={relTime(last?.createdAt ?? g.updatedAt)}
+              onPress={() => router.push(`/(app)/characters/group/${g.id}`)}
             />
           );
         }}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ItemSeparatorComponent={() => <View style={s.separator} />}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.accent} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
+            tintColor={C.accent}
+          />
         }
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
       />
@@ -427,33 +494,20 @@ export default function SessionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
   header: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    paddingTop: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    paddingTop: 4,
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  newGroupBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
-    backgroundColor: C.accentSofter,
-    marginBottom: 6,
-  },
-  newGroupBtnText: {
-    fontFamily: font.semibold,
-    fontSize: 13,
-    color: C.accent,
-    letterSpacing: -0.2,
+    paddingHorizontal: 4,
   },
   title: {
     fontFamily: font.bold,
@@ -461,106 +515,56 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
     color: '#0A0A0A',
   },
-  subtitle: {
+  composeBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchWrap: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 36,
+    gap: 6,
+  },
+  searchInput: {
+    flex: 1,
     fontFamily: font.regular,
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
+    fontSize: 16,
+    color: '#0A0A0A',
+    paddingVertical: 0,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    minHeight: 72,
-  },
-  avatarBox: {
-    width: 56,
-    height: 56,
-    marginRight: 14,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarFallback: {
-    fontFamily: font.semibold,
-    fontSize: 22,
-    color: C.accent,
-  },
-  pinBadge: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
+    minHeight: 68,
   },
-  pinIcon: {
-    fontSize: 11,
-  },
-  moodBadge: {
-    position: 'absolute',
-    right: -4,
-    bottom: -2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  moodEmoji: {
-    fontSize: 12,
-  },
-  groupAvatarComposite: {
-    width: 56,
-    height: 56,
-    position: 'relative',
-  },
-  groupAvatarPart: {
-    position: 'absolute',
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    overflow: 'hidden',
-  },
-  groupAvatarImg: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 17,
-  },
-  body: {
-    flex: 1,
-  },
+  body: { flex: 1, justifyContent: 'center' },
   titleLine: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    justifyContent: 'space-between',
+    marginBottom: 3,
   },
   name: {
+    flex: 1,
     fontFamily: font.semibold,
     fontSize: 17,
-    color: '#0A0A0A',
     letterSpacing: -0.3,
+    color: '#0A0A0A',
+    marginRight: 8,
   },
   time: {
     fontFamily: font.regular,
     fontSize: 13,
-    color: '#9CA3AF',
+    color: '#8E8E93',
   },
   previewLine: {
     flexDirection: 'row',
@@ -571,14 +575,15 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: font.regular,
     fontSize: 15,
-    color: '#6B7280',
+    lineHeight: 19,
+    color: '#8E8E93',
     marginRight: 8,
   },
-  unreadBadge: {
-    minWidth: 22,
-    height: 22,
-    paddingHorizontal: 7,
-    borderRadius: 11,
+  unread: {
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    borderRadius: 10,
     backgroundColor: C.accent,
     alignItems: 'center',
     justifyContent: 'center',
@@ -589,8 +594,83 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   separator: {
-    height: 1,
-    marginLeft: 90,
-    backgroundColor: '#F3F4F6',
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 78,
+    backgroundColor: '#E5E5EA',
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  archiveBtn: {
+    width: 80,
+    backgroundColor: '#8E8E93',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  archiveText: {
+    fontFamily: font.medium,
+    fontSize: 12,
+    color: '#FFFFFF',
+  },
+});
+
+const a = StyleSheet.create({
+  box: {
+    width: 48,
+    height: 48,
+    marginRight: 12,
+  },
+  img: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  fallback: {
+    fontFamily: font.semibold,
+    fontSize: 19,
+  },
+  dot: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  pinWrap: {
+    position: 'absolute',
+    right: -2,
+    top: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E5E5EA',
+  },
+  groupComposite: {
+    width: 48,
+    height: 48,
+    position: 'relative',
+  },
+  groupPart: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  groupImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 14,
   },
 });
