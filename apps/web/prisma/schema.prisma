@@ -158,6 +158,7 @@ model User {
   characterNotificationPreferences CharacterNotificationPreference[] @relation("UserCharacterNotificationPreferences")
   featureFlags             FeatureFlag[]             @relation("UserFeatureFlags")
   aiCallLogs               AiCallLog[]               @relation("UserAiCallLogs")
+  groupConversations       GroupConversation[]       @relation("UserGroupConversations")
 
   // Push notifications
   expoPushToken        String?
@@ -4334,6 +4335,9 @@ model Character {
   masterAvatarUrl String?  // Tutarlılık çapası — değişmez
   avatarUrl       String?  // Güncel avatar (mood/sahne ile değişir)
   avatarHistory   Json?    // [{url, prompt, generatedAt}]
+  avatarVariantCache Json? // { "<mood>_<scene>": "url", ... } — aynı kombinasyon yeniden üretilmesin
+  lastAvatarMood  String?  // Son üretilen variant'ın mood'u (gereksiz tetik koruması)
+  lastAvatarScene String?  // Son üretilen variant'ın sahnesi
 
   // Yer / saat dilimi
   timezone        String?  // ör: 'Europe/Istanbul' — kendi günlüğü için
@@ -4373,6 +4377,9 @@ model Character {
   relationshipEvents RelationshipEvent[]
   trackingPermissions CharacterTrackingPermission[]
   notificationPreferences CharacterNotificationPreference[]
+  groupMemberships     GroupMember[]
+  groupMessagesSent    GroupMessage[] @relation("GroupMessagesSent")
+  scheduledGroupReplies ScheduledGroupMessage[] @relation("ScheduledGroupReplies")
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -4528,4 +4535,77 @@ model AiCallLog {
   @@index([userId, createdAt])
   @@index([userId, purpose])
   @@index([userId, model])
+}
+
+// ============================================================================
+// V4 Faz F — Grup Sohbet
+// ============================================================================
+
+model GroupConversation {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation("UserGroupConversations", fields: [userId], references: [id], onDelete: Cascade)
+  title         String   @default("Grup")
+  avatarUrl     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  archived      Boolean  @default(false)
+  pinnedAt      DateTime?
+  mutedUntil    DateTime?
+
+  members           GroupMember[]
+  messages          GroupMessage[]
+  scheduledMessages ScheduledGroupMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([userId, archived])
+}
+
+model GroupMember {
+  id          String   @id @default(cuid())
+  groupId     String
+  group       GroupConversation @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  joinedAt    DateTime @default(now())
+  leftAt      DateTime?
+  mutedByUser Boolean  @default(false)
+
+  @@unique([groupId, characterId])
+  @@index([characterId])
+}
+
+model GroupMessage {
+  id                  String   @id @default(cuid())
+  groupId             String
+  group               GroupConversation @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  senderType          String   // 'user' | 'character'
+  senderCharacterId   String?
+  senderCharacter     Character? @relation("GroupMessagesSent", fields: [senderCharacterId], references: [id], onDelete: SetNull)
+  content             String   @db.Text
+  repliedToMessageId  String?
+  repliedToMessage    GroupMessage? @relation("GroupMessageReply", fields: [repliedToMessageId], references: [id], onDelete: SetNull)
+  replies             GroupMessage[] @relation("GroupMessageReply")
+  reactivityProcessed Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  @@index([groupId, createdAt])
+  @@index([senderCharacterId])
+}
+
+model ScheduledGroupMessage {
+  id               String   @id @default(cuid())
+  groupId          String
+  group            GroupConversation @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  characterId      String
+  character        Character @relation("ScheduledGroupReplies", fields: [characterId], references: [id], onDelete: Cascade)
+  triggerMessageId String
+  scheduledFor     DateTime
+  status           String   @default("pending") // pending | sent | cancelled
+  reasoning        String?  @db.Text
+  createdAt        DateTime @default(now())
+  sentAt           DateTime?
+
+  @@index([status, scheduledFor])
+  @@index([groupId, status])
 }

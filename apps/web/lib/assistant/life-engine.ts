@@ -20,6 +20,49 @@ import OpenAI from 'openai'
 import { db } from '@/lib/db/client'
 import { isFlagEnabled } from './feature-flags'
 import { getCharacterTemplate } from './character-templates'
+import { generateVariantAvatar, pickScene, type AvatarMood } from './character-avatar'
+
+const KNOWN_AVATAR_MOODS: AvatarMood[] = [
+  'happy',
+  'calm',
+  'tired',
+  'sad',
+  'anxious',
+  'nostalgic',
+  'focused',
+  'playful',
+]
+
+/**
+ * Karakterin local saati (timezone string'inden hesaplanır).
+ */
+function localHourFor(timezone: string | null): number {
+  try {
+    const tz = timezone ?? 'Europe/Istanbul'
+    const fmt = new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: tz })
+    return parseInt(fmt.format(new Date()), 10)
+  } catch {
+    return new Date().getHours()
+  }
+}
+
+/**
+ * Bu ay kaç variant üretildi? avatarHistory'den sayılır (type: 'variant').
+ * Aylık limit: 4 üretim/karakter (cache hit'ler hariç — onlar para kullanmıyor zaten).
+ */
+function countVariantGenerationsThisMonth(history: unknown): number {
+  if (!Array.isArray(history)) return 0
+  const monthStart = new Date()
+  monthStart.setUTCDate(1)
+  monthStart.setUTCHours(0, 0, 0, 0)
+  return history.filter((h) => {
+    if (typeof h !== 'object' || !h) return false
+    const item = h as { type?: string; generatedAt?: string }
+    if (item.type !== 'variant') return false
+    if (!item.generatedAt) return false
+    return new Date(item.generatedAt) >= monthStart
+  }).length
+}
 
 const MODEL_NANO = 'gpt-4o-mini' // life engine için
 
@@ -135,6 +178,10 @@ export async function runMorningEngineForUser(userId: string): Promise<{
       lifePhase: true,
       currentStorylines: true,
       lastMajorEvent: true,
+      timezone: true,
+      masterAvatarUrl: true,
+      avatarHistory: true,
+      lastAvatarMood: true,
     },
   })
 
@@ -186,6 +233,28 @@ export async function runMorningEngineForUser(userId: string): Promise<{
           },
         })
         stats.livesUpdated++
+
+        // 1.5) Mood değişince avatar variant tetikle (cache hit ücretsiz, fresh $0.04)
+        const newMood = update.newMood as AvatarMood
+        const moodChanged = character.lastAvatarMood !== newMood
+        const isKnownMood = KNOWN_AVATAR_MOODS.includes(newMood)
+        const hasMaster = !!character.masterAvatarUrl
+        const monthlyCount = countVariantGenerationsThisMonth(character.avatarHistory)
+        const underBudget = monthlyCount < 4
+
+        if (moodChanged && isKnownMood && hasMaster && underBudget) {
+          const scene = pickScene({
+            localHour: localHourFor(character.timezone),
+            activity: update.newActivity,
+          })
+          // fire-and-forget: morning engine bekletilmemeli
+          generateVariantAvatar({
+            characterId: character.id,
+            templateKey: character.name.toLowerCase(),
+            mood: newMood,
+            scene,
+          }).catch((e) => console.error('[life-engine variant]', e))
+        }
       }
 
       // 2) Hayat olayı zarı
