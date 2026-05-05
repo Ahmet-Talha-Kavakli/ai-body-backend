@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "NODE_OPTIONS='--max-old-space-size=8192' next dev",
+    "dev:cron": "bash scripts/dev-cron-poller.sh",
     "build": "prisma generate && prisma generate --schema=prisma/off-schema.prisma && next build",
     "start": "next start",
     "lint": "next lint",
