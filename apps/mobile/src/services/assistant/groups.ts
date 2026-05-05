@@ -63,6 +63,7 @@ export async function listGroups(token: string): Promise<{
   const res = await fetch(`${API_URL}/api/assistant/groups`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (res.status === 401) return { groups: [], flagEnabled: false }; // token süresi dolmuş, bir sonraki polling'de yenilenir
   if (!res.ok) throw new Error(`listGroups failed: ${res.status}`);
   return res.json();
 }
@@ -87,10 +88,11 @@ export async function createGroup(
   return data.group;
 }
 
-export async function getGroup(token: string, id: string): Promise<GroupListItem> {
+export async function getGroup(token: string, id: string): Promise<GroupListItem | null> {
   const res = await fetch(`${API_URL}/api/assistant/groups/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (res.status === 401 || res.status === 404) return null;
   if (!res.ok) throw new Error(`getGroup failed: ${res.status}`);
   const data = await res.json();
   return data.group;
@@ -108,6 +110,7 @@ export async function listGroupMessages(
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (res.status === 401) return []; // token expired, bir sonraki polling'de yenilenir
   if (!res.ok) throw new Error(`listGroupMessages failed: ${res.status}`);
   const data = await res.json();
   return data.messages;

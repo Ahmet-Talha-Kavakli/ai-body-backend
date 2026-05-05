@@ -121,9 +121,9 @@ export default function GroupChatScreen() {
       const token = await getToken();
       if (!token || !id) return;
       const g = await getGroup(token, id);
-      setGroup(g);
+      if (g) setGroup(g); // null ise (401 vb.) eski state'i koru
     } catch (e) {
-      console.error('[group] loadGroup', e);
+      // 401 spam'ini yutar — Clerk token bir sonraki getToken çağrısında yenilenir
     }
   }, [getToken, id]);
 
@@ -148,7 +148,7 @@ export default function GroupChatScreen() {
         return merged;
       });
     } catch (e) {
-      console.error('[group] loadMessages', e);
+      // 401 spam'ini yutar
     }
   }, [getToken, id]);
 
