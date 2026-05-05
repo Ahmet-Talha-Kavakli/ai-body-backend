@@ -229,6 +229,13 @@ export default function AdminFlagsScreen() {
           <Text style={styles.spawnBtnText}>🎨 Eksik avatarları üret</Text>
         </Pressable>
 
+        <Pressable
+          onPress={() => router.push('/(app)/characters/cost')}
+          style={[styles.gotoBtn, { backgroundColor: '#1F2937', marginTop: 14 }]}
+        >
+          <Text style={styles.gotoBtnText}>💰 AI Maliyeti</Text>
+        </Pressable>
+
         <Pressable onPress={() => router.push('/(app)/characters')} style={styles.gotoBtn}>
           <Text style={styles.gotoBtnText}>Karakterlere git →</Text>
         </Pressable>
