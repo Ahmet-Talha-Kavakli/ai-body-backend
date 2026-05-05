@@ -35,7 +35,7 @@ import {
   type GroupMessage,
 } from '../../../../src/services/assistant/groups';
 
-const POLL_MS = 5000;
+const POLL_MS = 10000;
 
 function characterBubbleColor(id: string): { bg: string; name: string } {
   let h = 0;
@@ -218,16 +218,24 @@ export default function GroupChatScreen() {
       if (!token || !id) throw new Error('no_token');
       const result = await sendGroupMessage(token, id, content);
 
-      // "Yazıyor..." göstergesi — cevap verecek karakterler
-      const typerNames = result.decisions.filter((d) => d.respond).map((d) => d.characterName);
-      setPendingTypers(typerNames);
-      // Güvenlik timeout — cron gecikirse 60sn sonra typer'ı kaldır (UI sonsuza kalmasın)
-      if (typerNames.length > 0) {
-        setTimeout(
-          () => setPendingTypers((cur) => cur.filter((n) => !typerNames.includes(n))),
-          60000,
-        );
-      }
+      // "Yazıyor..." göstergesi — gerçek hayat dinamiği:
+      // Kullanıcı mesajı görür gibi davranır, sonra yazmaya başlar.
+      // delaySec'in son ~6-10sn'sinde typing göster. Çok kısa delaySec'lerde anında göster.
+      result.decisions
+        .filter((d) => d.respond)
+        .forEach((d) => {
+          const typingDuration = Math.min(8, Math.max(3, d.delaySec * 0.5));
+          const typingStartMs = Math.max(0, (d.delaySec - typingDuration) * 1000);
+          setTimeout(() => {
+            setPendingTypers((cur) =>
+              cur.includes(d.characterName) ? cur : [...cur, d.characterName],
+            );
+            // Güvenlik: typing en fazla 30sn kalsın (cron gecikirse sonsuza takılmasın)
+            setTimeout(() => {
+              setPendingTypers((cur) => cur.filter((n) => n !== d.characterName));
+            }, 30000);
+          }, typingStartMs);
+        });
 
       // Optimistic mesajı SİL — polling zaten 5sn içinde server kaydını getirecek
       // (id swap + polling birleşimi duplicate key bug'ı yapıyordu)
