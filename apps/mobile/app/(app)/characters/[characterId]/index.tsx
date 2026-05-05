@@ -214,13 +214,16 @@ export default function CharacterChatScreen() {
       if (!token) return;
       const data = await fetchCharacterMessages(token, characterId);
       setHeader(data.character);
-      setMessages(data.messages);
-      // Mesajları okundu işaretle (fire-and-forget)
+      // Akıllı merge: optimistic (tmp-) mesajları koru, ama içeriği server'da varsa sil
+      setMessages((prev) => {
+        const tmpMessages = prev.filter((m) => m.id.startsWith('tmp-'));
+        const serverContents = new Set(data.messages.map((m) => m.content));
+        const stillPending = tmpMessages.filter((m) => !serverContents.has(m.content));
+        return [...data.messages, ...stillPending];
+      });
       markCharacterAsRead(token, characterId).catch(() => {});
     } catch (e) {
-      console.error('[character-chat] load fail:', e);
-    } finally {
-      setLoading(false);
+      // 401 vb. sessizce geç
     }
   }, [characterId, getToken]);
 
@@ -328,8 +331,12 @@ export default function CharacterChatScreen() {
           console.error('[character-chat] stream error:', msg);
           setStreamingMessageId(null);
           setStreamingText('');
+          // Optimistic kullanıcı mesajını koru (server'a yazıldı), sadece stream durdu
+          // load() çağırınca akıllı merge zaten doğru sonucu verir
         },
       });
+      // Stream başarılı bitti — server'dan kesin gerçek mesajı çek (id'leri eşitle)
+      load();
     } catch (e) {
       console.error('[character-chat] send fail:', e);
       setStreamingMessageId(null);

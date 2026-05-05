@@ -238,6 +238,9 @@ export default function CharactersScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
+      // Sayfa açıkken her 8sn'de yenile (yeni mesajlar için)
+      const id = setInterval(load, 8000);
+      return () => clearInterval(id);
     }, [load]),
   );
 
