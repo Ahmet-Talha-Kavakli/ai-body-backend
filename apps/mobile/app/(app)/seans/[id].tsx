@@ -452,6 +452,8 @@ export default function SeansChatScreen() {
           }
           if (event.type === 'done') {
             aiAccumulated = event.finalText;
+            // Mesaj geldi — haptic ding
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             return;
           }
           if (event.type === 'saved') {
@@ -619,6 +621,7 @@ export default function SeansChatScreen() {
 
           if (event.type === 'done') {
             aiAccumulated = event.finalText;
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             return;
           }
 
@@ -968,6 +971,7 @@ export default function SeansChatScreen() {
                 <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
                   <Pressable
                     onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                       triggerSendPulse();
                       send();
                     }}

@@ -353,6 +353,8 @@ export default function CharacterChatScreen() {
           setStreamingText(accumulated);
         },
         onComplete: (messageId) => {
+          // Mesaj geldi — soft haptic ding
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           // Stream'i kalıcı mesaja çevir — duplicate id varsa eklemeyi atla
           setMessages((prev) => {
             if (prev.some((m) => m.id === messageId)) return prev;
@@ -535,6 +537,7 @@ export default function CharacterChatScreen() {
         <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
           <Pressable
             onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
               Animated.sequence([
                 Animated.timing(sendBtnScale, {
                   toValue: 0.85,
