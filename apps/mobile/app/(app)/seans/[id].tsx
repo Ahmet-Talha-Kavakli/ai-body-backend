@@ -149,7 +149,14 @@ export default function SeansChatScreen() {
         if (!alive) return;
         if (p.profile?.name) setProfileName(p.profile.name);
         if (p.profile && p.profile.onboardingCompleted === false) setOnboardingActive(true);
-        setMessages(c.messages ?? []);
+        // Akıllı merge: optimistic (tmp-) mesajları koru, server'da içeriği varsa sil
+        setMessages((prev) => {
+          const serverMsgs = (c.messages ?? []) as Message[];
+          const tmpMsgs = prev.filter((m) => typeof m.id === 'string' && m.id.startsWith('tmp-'));
+          const serverContents = new Set(serverMsgs.map((m) => m.content));
+          const stillPending = tmpMsgs.filter((m) => !serverContents.has(m.content));
+          return [...serverMsgs, ...stillPending];
+        });
 
         // V3 Faz B: AI'nın mesajlarını okundu olarak işaretle (background)
         fetch(`${API_URL}/api/assistant/messages/mark-read`, {
