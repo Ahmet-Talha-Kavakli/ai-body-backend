@@ -151,19 +151,34 @@ export const POST = withAuth(async (req: NextRequest, { user, params }) => {
   )
 
   // 5) Cevap vereceklerini ScheduledGroupMessage'a yaz
+  // Halihazırda pending schedule'ı olan karakter atlanır (üst üste mesaj engeli)
   const now = Date.now()
-  const scheduled = decisions.filter((d) => d.decision.respond)
+  const willRespond = decisions.filter((d) => d.decision.respond)
+  let scheduled: typeof willRespond = []
 
-  if (scheduled.length > 0) {
-    await db.scheduledGroupMessage.createMany({
-      data: scheduled.map((s) => ({
+  if (willRespond.length > 0) {
+    const existingPending = await db.scheduledGroupMessage.findMany({
+      where: {
         groupId: id,
-        characterId: s.member.character.id,
-        triggerMessageId: userMessage.id,
-        scheduledFor: new Date(now + s.decision.delaySec * 1000),
-        reasoning: s.decision.reasoning,
-      })),
+        status: 'pending',
+        characterId: { in: willRespond.map((s) => s.member.character.id) },
+      },
+      select: { characterId: true },
     })
+    const blocked = new Set(existingPending.map((e) => e.characterId))
+    scheduled = willRespond.filter((s) => !blocked.has(s.member.character.id))
+
+    if (scheduled.length > 0) {
+      await db.scheduledGroupMessage.createMany({
+        data: scheduled.map((s) => ({
+          groupId: id,
+          characterId: s.member.character.id,
+          triggerMessageId: userMessage.id,
+          scheduledFor: new Date(now + s.decision.delaySec * 1000),
+          reasoning: s.decision.reasoning,
+        })),
+      })
+    }
   }
 
   return NextResponse.json({

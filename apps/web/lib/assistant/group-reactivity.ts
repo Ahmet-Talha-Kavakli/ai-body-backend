@@ -106,8 +106,22 @@ export async function triggerReactivity(args: {
   const willReact = decisions.filter((d) => d.decision.respond)
   if (willReact.length === 0) return { scheduled: 0 }
 
+  // Bir karakterin halihazırda pending schedule'ı varsa yeni yazma
+  // (yoksa aynı kişi arka arkaya 2 cevap atıyor — kendi kendine konuşuyor gibi)
+  const existingPending = await db.scheduledGroupMessage.findMany({
+    where: {
+      groupId: args.groupId,
+      status: 'pending',
+      characterId: { in: willReact.map((s) => s.member.character.id) },
+    },
+    select: { characterId: true },
+  })
+  const blockedIds = new Set(existingPending.map((e) => e.characterId))
+  const filtered = willReact.filter((s) => !blockedIds.has(s.member.character.id))
+  if (filtered.length === 0) return { scheduled: 0 }
+
   await db.scheduledGroupMessage.createMany({
-    data: willReact.map((s) => ({
+    data: filtered.map((s) => ({
       groupId: args.groupId,
       characterId: s.member.character.id,
       triggerMessageId: args.newMessageId,
@@ -116,5 +130,5 @@ export async function triggerReactivity(args: {
     })),
   })
 
-  return { scheduled: willReact.length }
+  return { scheduled: filtered.length }
 }
