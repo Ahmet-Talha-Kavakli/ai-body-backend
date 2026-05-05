@@ -123,14 +123,25 @@ export async function streamCharacterMessage(
     onError?: (message: string) => void;
   },
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/api/assistant/characters/${characterId}/stream`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ content }),
-  });
+  // 90sn timeout — donma koruma
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90_000);
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/api/assistant/characters/${characterId}/stream`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ content }),
+      signal: controller.signal,
+    });
+  } catch (e: any) {
+    clearTimeout(timeoutId);
+    callbacks.onError?.(e?.name === 'AbortError' ? 'timeout' : 'network');
+    return;
+  }
 
   if (!res.ok) {
     const txt = await res.text().catch(() => '');
@@ -207,5 +218,7 @@ export async function streamCharacterMessage(
     if (!receivedAnyEvent) {
       callbacks.onError?.(e instanceof Error ? e.message : 'stream read failed');
     }
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

@@ -51,9 +51,15 @@ export async function streamAssistantMessage(args: {
     };
 
     xhr.open('POST', url);
+    xhr.timeout = 90_000; // 90sn — uzun AI cevapları için tampon, donmayı engeller
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     xhr.setRequestHeader('Accept', 'text/event-stream');
+
+    xhr.ontimeout = () => {
+      onEvent({ type: 'error', message: 'timeout' });
+      resolve();
+    };
 
     xhr.onreadystatechange = () => {
       // readyState 3 = LOADING — yanıt gövdesi parça parça geliyor
