@@ -19,10 +19,12 @@ export async function loadAssistantContext(userId: string) {
     lastConversation,
     permissions,
     recentMoods,
+    starredMessages,
   ] = await Promise.all([
     db.assistantProfile.findUnique({
       where: { userId },
       select: {
+        id: true,
         name: true,
         formality: true,
         humor: true,
@@ -39,6 +41,11 @@ export async function loadAssistantContext(userId: string) {
         currentMood: true,
         moodReason: true,
         relationshipState: true,
+        // V3 Faz C — biyografi alanları
+        ageAtCreation: true,
+        bornAt: true,
+        worldview: true,
+        verbalTics: true,
       },
     }),
     db.user.findUnique({
@@ -112,7 +119,100 @@ export async function loadAssistantContext(userId: string) {
       take: 7,
       select: { mood: true, moodScore: true, note: true, loggedAt: true },
     }),
+    // V3 Faz C — Yıldızlanan mesajlar (favori anlar) — context'e enjekte
+    db.assistantMessage.findMany({
+      where: {
+        conversation: { userId },
+        starredAt: { not: null },
+      },
+      orderBy: { starredAt: 'desc' },
+      take: 10,
+      select: {
+        id: true,
+        role: true,
+        content: true,
+        starredBy: true,
+        starredAt: true,
+        createdAt: true,
+      },
+    }),
   ])
+
+  // V3 Faz C — Karakter hikayesi + milestone'lar (varsa)
+  let characterStory: {
+    birthplace: string | null
+    childhood: string | null
+    familyDynamics: string | null
+    firstLoss: string | null
+    firstLove: string | null
+    passion: string | null
+    achievement: string | null
+    failure: string | null
+    turningPoint: string | null
+    currentSituation: string | null
+    storyCreatedAt: Date | null // V3 Faz C — yaş hesabı + birliktelik süresi
+    openedMilestones: Array<{
+      id: string
+      title: string
+      bodyText: string
+      age: number | null
+      year: number | null
+      location: string | null
+      emotion: string | null
+      chronologicalOrder: number
+    }>
+    lockedMilestoneTitles: Array<{
+      id: string
+      title: string
+      age: number | null
+      emotion: string | null
+      importance: number
+    }>
+  } | null = null
+  if (profile?.id) {
+    const story = await db.characterStory.findUnique({
+      where: { assistantProfileId: profile.id },
+      include: {
+        milestones: {
+          orderBy: { chronologicalOrder: 'asc' },
+        },
+      },
+    })
+    if (story && story.generationStatus === 'ready') {
+      const opened = story.milestones.filter((m) => !m.isLocked)
+      const locked = story.milestones.filter((m) => m.isLocked)
+      characterStory = {
+        birthplace: story.birthplace,
+        childhood: story.childhood,
+        familyDynamics: story.familyDynamics,
+        firstLoss: story.firstLoss,
+        firstLove: story.firstLove,
+        passion: story.passion,
+        achievement: story.achievement,
+        failure: story.failure,
+        turningPoint: story.turningPoint,
+        currentSituation: story.currentSituation,
+        storyCreatedAt: story.createdAt,
+        openedMilestones: opened.map((m) => ({
+          id: m.id,
+          title: m.title,
+          bodyText: m.bodyText,
+          age: m.age,
+          year: m.year,
+          location: m.location,
+          emotion: m.emotion,
+          chronologicalOrder: m.chronologicalOrder,
+        })),
+        lockedMilestoneTitles: locked.map((m) => ({
+          id: m.id,
+          title: m.title,
+          age: m.age,
+          emotion: m.emotion,
+          importance: m.importance,
+        })),
+      }
+    }
+  }
 
   // Çevre verisi varsa otomatik hava + deprem çek (paralel, cache'li)
   let weatherSummary: string | null = null
@@ -164,5 +264,7 @@ export async function loadAssistantContext(userId: string) {
     environment: environment ? { city: environment.city, weatherSummary, earthquakeAlert } : null,
     greetingContext,
     grantedCapabilities: permissions.map((p) => p.capability),
+    characterStory,
+    starredMessages,
   }
 }

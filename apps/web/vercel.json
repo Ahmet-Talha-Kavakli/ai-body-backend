@@ -45,6 +45,14 @@
     {
       "path": "/api/cron/mood-rotation",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/surprise-arcs",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron/ai-aging",
+      "schedule": "0 5 * * *"
     }
   ]
 }

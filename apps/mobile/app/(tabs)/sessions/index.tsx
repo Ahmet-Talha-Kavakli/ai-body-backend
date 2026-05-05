@@ -23,6 +23,7 @@ import { useSleepFonts } from '../../(app)/tracking/uyku/_components/useSleepFon
 import {
   registerForPushNotificationsAsync,
   setupNotificationHandler,
+  setupNotificationActionsListener,
 } from '../../../src/services/pushNotifications';
 import { runAllAssistantSyncs } from '../../../src/services/assistant/sync';
 import * as Notifications from 'expo-notifications';
@@ -30,6 +31,7 @@ import * as Notifications from 'expo-notifications';
 interface Profile {
   id: string;
   name: string;
+  characterTestCompletedAt?: string | null;
 }
 
 interface Conversation {
@@ -37,6 +39,9 @@ interface Conversation {
   title: string;
   createdAt: string;
   updatedAt: string;
+  aiTypingUntil?: string | null;
+  pinnedAt?: string | null;
+  mutedUntil?: string | null;
   _count: { messages: number };
   messages: Array<{ content: string; role: string; createdAt: string }>;
 }
@@ -66,16 +71,26 @@ export default function SessionsScreen() {
     runAllAssistantSyncs({ apiUrl: API_URL, getToken }).catch(() => {});
   }, [profile, getToken]);
 
-  // Notification tıklanınca o sohbete git
+  // Notification tıklanınca o sohbete git (sadece default tap)
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as { conversationId?: string };
-      if (data?.conversationId) {
+      // V3 Faz C — Action ID 'default' ise (banner'a tap), action varsa ayrı listener handle eder
+      if (
+        response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER &&
+        data?.conversationId
+      ) {
         router.push(`/seans/${data.conversationId}`);
       }
     });
     return () => sub.remove();
   }, [router]);
+
+  // V3 Faz C — Bildirim aksiyon listener (Yanıtla / Sessize al)
+  useEffect(() => {
+    const sub = setupNotificationActionsListener({ apiUrl: API_URL, getToken });
+    return () => sub.remove();
+  }, [getToken]);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -92,6 +107,18 @@ export default function SessionsScreen() {
       const convsData = await convsRes.json();
       setProfile(profileData.profile ?? null);
       setConversations(convsData.conversations ?? []);
+
+      // V3 Faz C — Karakter testi yapılmamışsa yönlendir
+      // (profil yoksa da test bizim için profili oluşturuyor; ilk girişte de teste git)
+      if (profileData.profile && !profileData.profile.characterTestCompletedAt) {
+        router.replace('/seans/character-test' as never);
+        return;
+      }
+      if (!profileData.profile) {
+        // Profil hiç yoksa: test profili kuracak
+        router.replace('/seans/character-test' as never);
+        return;
+      }
     } catch (e) {
       console.error('[sessions]', e);
     } finally {
@@ -103,13 +130,52 @@ export default function SessionsScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchAll();
+      // V3 Faz B — typing indicator için 5s polling
+      const t = setInterval(fetchAll, 5_000);
+      return () => clearInterval(t);
     }, [fetchAll]),
   );
 
-  // Sohbet long-press menü (rename / archive / delete)
+  // Sohbet long-press menü
   const handleConvLongPress = useCallback(
-    (convId: string, title: string) => {
-      Alert.alert(title, undefined, [
+    (conv: Conversation) => {
+      const isPinned = !!conv.pinnedAt;
+      const isMuted = !!conv.mutedUntil && new Date(conv.mutedUntil).getTime() > Date.now();
+      const patch = async (body: object) => {
+        const tk = await getToken();
+        await fetch(`${API_URL}/api/assistant/conversations/${conv.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
+          body: JSON.stringify(body),
+        });
+        fetchAll();
+      };
+      Alert.alert(conv.title, undefined, [
+        {
+          text: isPinned ? 'Sabitlemeyi Kaldır' : 'Sabitle',
+          onPress: async () => {
+            Haptics.selectionAsync();
+            await patch({ pinned: !isPinned }).catch(() => {});
+          },
+        },
+        {
+          text: isMuted ? 'Sessizden Çıkar' : 'Sessize Al',
+          onPress: async () => {
+            if (isMuted) {
+              Haptics.selectionAsync();
+              await patch({ mute: 'off' }).catch(() => {});
+              return;
+            }
+            // Mute süre seçici
+            Alert.alert('Sessize Al', 'Ne kadar süre?', [
+              { text: '8 saat', onPress: () => patch({ mute: '8h' }).catch(() => {}) },
+              { text: '1 gün', onPress: () => patch({ mute: '1d' }).catch(() => {}) },
+              { text: '1 hafta', onPress: () => patch({ mute: '1w' }).catch(() => {}) },
+              { text: 'Sonsuz', onPress: () => patch({ mute: 'forever' }).catch(() => {}) },
+              { text: 'Vazgeç', style: 'cancel' },
+            ]);
+          },
+        },
         {
           text: 'Yeniden Adlandır',
           onPress: () => {
@@ -118,34 +184,16 @@ export default function SessionsScreen() {
               undefined,
               async (text) => {
                 if (!text?.trim()) return;
-                try {
-                  const tk = await getToken();
-                  await fetch(`${API_URL}/api/assistant/conversations/${convId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
-                    body: JSON.stringify({ title: text.trim().slice(0, 80) }),
-                  });
-                  fetchAll();
-                } catch {}
+                await patch({ title: text.trim().slice(0, 80) }).catch(() => {});
               },
               'plain-text',
-              title,
+              conv.title,
             );
           },
         },
         {
           text: 'Arşivle',
-          onPress: async () => {
-            try {
-              const tk = await getToken();
-              await fetch(`${API_URL}/api/assistant/conversations/${convId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
-                body: JSON.stringify({ archived: true }),
-              });
-              fetchAll();
-            } catch {}
-          },
+          onPress: () => patch({ archived: true }).catch(() => {}),
         },
         {
           text: 'Sil',
@@ -159,7 +207,7 @@ export default function SessionsScreen() {
                 onPress: async () => {
                   try {
                     const tk = await getToken();
-                    await fetch(`${API_URL}/api/assistant/conversations/${convId}`, {
+                    await fetch(`${API_URL}/api/assistant/conversations/${conv.id}`, {
                       method: 'DELETE',
                       headers: { Authorization: `Bearer ${tk}` },
                     });
@@ -380,6 +428,13 @@ export default function SessionsScreen() {
                 const last = c.messages[0]?.content ?? '';
                 return last.toLowerCase().includes(q);
               })
+              // V3 Faz B — Sabitlenmiş sohbetler en üstte
+              .sort((a, b) => {
+                const aPin = a.pinnedAt ? 1 : 0;
+                const bPin = b.pinnedAt ? 1 : 0;
+                if (aPin !== bPin) return bPin - aPin;
+                return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+              })
               .map((c) => (
                 <ConversationCard
                   key={c.id}
@@ -389,7 +444,7 @@ export default function SessionsScreen() {
                     Haptics.selectionAsync();
                     router.push(`/seans/${c.id}`);
                   }}
-                  onLongPress={() => handleConvLongPress(c.id, c.title)}
+                  onLongPress={() => handleConvLongPress(c)}
                 />
               ))}
             {/* Boş arama sonucu */}
@@ -485,6 +540,9 @@ function ConversationCard({
   const last = conv.messages[0];
   const lastPreview = last?.content.slice(0, 70) ?? '';
   const date = new Date(conv.updatedAt);
+  const typing = conv.aiTypingUntil && new Date(conv.aiTypingUntil).getTime() > Date.now();
+  const isPinned = !!conv.pinnedAt;
+  const isMuted = !!conv.mutedUntil && new Date(conv.mutedUntil).getTime() > Date.now();
   return (
     <Pressable
       onPress={onPress}
@@ -502,11 +560,38 @@ function ConversationCard({
           <Text style={cardSt.title} numberOfLines={1}>
             {conv.title}
           </Text>
+          {isMuted && (
+            <SymbolView
+              name="bell.slash.fill"
+              size={11}
+              tintColor={SLEEP.textDim}
+              fallback={<Text style={{ color: SLEEP.textDim, fontSize: 11 }}>🔕</Text>}
+              style={{ marginLeft: 4 }}
+            />
+          )}
+          {isPinned && (
+            <SymbolView
+              name="pin.fill"
+              size={11}
+              tintColor={SLEEP.accent}
+              fallback={<Text style={{ color: SLEEP.accent, fontSize: 11 }}>📌</Text>}
+              style={{ marginLeft: 4 }}
+            />
+          )}
           <Text style={cardSt.time}>{formatRelativeDate(date)}</Text>
         </View>
-        <Text style={cardSt.preview} numberOfLines={1}>
-          {lastPreview}
-        </Text>
+        {typing ? (
+          <Text
+            style={[cardSt.preview, { color: '#5E5CE6', fontFamily: font.medium }]}
+            numberOfLines={1}
+          >
+            yazıyor...
+          </Text>
+        ) : (
+          <Text style={cardSt.preview} numberOfLines={1}>
+            {lastPreview}
+          </Text>
+        )}
       </View>
     </Pressable>
   );
@@ -526,15 +611,69 @@ function EmptyHero({
 }) {
   const starters = getEmptyStarters(profileName);
 
+  // V3 Faz B — açılış sahnesi animasyonu (stagger)
+  const avatarScale = useRef(new Animated.Value(0.85)).current;
+  const avatarOpacity = useRef(new Animated.Value(0)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const titleY = useRef(new Animated.Value(8)).current;
+  const subOpacity = useRef(new Animated.Value(0)).current;
+  const subY = useRef(new Animated.Value(8)).current;
+
+  useEffect(() => {
+    const ease = Easing.bezier(0.16, 1, 0.3, 1);
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(avatarOpacity, {
+          toValue: 1,
+          duration: 480,
+          easing: ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(avatarScale, {
+          toValue: 1,
+          duration: 480,
+          easing: ease,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(titleOpacity, {
+          toValue: 1,
+          duration: 360,
+          easing: ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(titleY, { toValue: 0, duration: 360, easing: ease, useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(subOpacity, {
+          toValue: 1,
+          duration: 360,
+          easing: ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(subY, { toValue: 0, duration: 360, easing: ease, useNativeDriver: true }),
+      ]),
+    ]).start();
+  }, [avatarScale, avatarOpacity, titleOpacity, titleY, subOpacity, subY]);
+
   return (
     <View style={emptySt.wrap}>
-      <View style={emptySt.avatar}>
+      <Animated.View
+        style={[emptySt.avatar, { opacity: avatarOpacity, transform: [{ scale: avatarScale }] }]}
+      >
         <Text style={emptySt.avatarTxt}>{profileName[0]?.toUpperCase()}</Text>
-      </View>
-      <Text style={emptySt.title}>{profileName}</Text>
-      <Text style={emptySt.sub}>
+      </Animated.View>
+      <Animated.Text
+        style={[emptySt.title, { opacity: titleOpacity, transform: [{ translateY: titleY }] }]}
+      >
+        {profileName}
+      </Animated.Text>
+      <Animated.Text
+        style={[emptySt.sub, { opacity: subOpacity, transform: [{ translateY: subY }] }]}
+      >
         Sağlığın, alışkanlıkların, hayatın hakkında bilebileceğin her şey için buradayım.
-      </Text>
+      </Animated.Text>
 
       {/* Starter chip'ler */}
       <View style={{ alignSelf: 'stretch', gap: 8, marginTop: 24 }}>

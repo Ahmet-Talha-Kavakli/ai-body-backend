@@ -7,6 +7,8 @@ import { runAssistantStream, StreamEvent } from '@/lib/assistant/run-stream'
 import { extractAndStoreFacts } from '@/lib/assistant/memory-extractor'
 import { embedAndStoreMessage, searchSimilarMessages } from '@/lib/assistant/rag'
 import { maybeEvolvePersonality } from '@/lib/assistant/personality-evolver'
+import { detectAndUnlockSharedMilestones } from '@/lib/assistant/milestone-detector'
+import { maybeUnlockTimeBasedMilestones } from '@/lib/assistant/shared-milestones'
 import { detectEmergency } from '@/lib/assistant/emergency'
 import { routeMessage, modelForDifficulty, maxTokensForDifficulty } from '@/lib/assistant/router'
 import { analyzeTone, toneToPromptHint } from '@/lib/assistant/tone-analyzer'
@@ -53,9 +55,16 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
   if (!user) return new Response('Unauthorized', { status: 401 })
 
   const { id } = await routeCtx.params
-  const body = (await req.json()) as { content: string }
-  const content = body.content?.trim()
-  if (!content) {
+  const body = (await req.json()) as {
+    content?: string
+    // V3 Faz B — Vision: kullanıcı yeni text yazmadı, daha önce upload edilmiş bir
+    // attachment mesajı için AI cevabı istiyoruz (fotoğraf yorumla, vs.)
+    forAttachmentMessageId?: string
+  }
+  let content = body.content?.trim() ?? ''
+  const forAttachmentMessageId = body.forAttachmentMessageId
+
+  if (!content && !forAttachmentMessageId) {
     return new Response('empty', { status: 400 })
   }
 
@@ -70,11 +79,33 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
   // V3 Faz A: Engelleme süresi dolmuş mu? Doluysa state'i hafiflet
   await checkAndResetExpiredBlock(user.id).catch(() => {})
 
-  // Kullanıcı mesajını hemen kaydet
-  const userMessage = await db.assistantMessage.create({
-    data: { conversationId: id, role: 'user', content },
-  })
-  embedAndStoreMessage(userMessage.id, content).catch(() => {})
+  // V3 Faz B — Vision: attachment'a yanıt isteniyorsa, mevcut mesajı kullan
+  let userMessage: { id: string; content: string }
+  let imageUrls: string[] = []
+  if (forAttachmentMessageId) {
+    const existing = await db.assistantMessage.findFirst({
+      where: { id: forAttachmentMessageId, conversationId: id, role: 'user' },
+      select: { id: true, content: true, attachments: true },
+    })
+    if (!existing) {
+      return new Response('attachment_not_found', { status: 404 })
+    }
+    userMessage = { id: existing.id, content: existing.content }
+    // attachments JSON içinden image url'leri al
+    const atts = (existing.attachments as Array<{ kind?: string; url?: string }> | null) ?? []
+    imageUrls = atts
+      .filter((a) => a?.kind === 'image' && typeof a.url === 'string')
+      .map((a) => a.url!)
+      .slice(0, 4) // max 4 image
+    // Analyzer + AI prompt için: caption varsa onu, yoksa generic etiket kullan
+    content = existing.content || '[Kullanıcı bana bir fotoğraf gönderdi]'
+  } else {
+    // Kullanıcı mesajını hemen kaydet
+    userMessage = await db.assistantMessage.create({
+      data: { conversationId: id, role: 'user', content },
+    })
+    embedAndStoreMessage(userMessage.id, content).catch(() => {})
+  }
 
   // V3 Faz A: Hostility tespit ve eskalasyon (kullanıcı mesajı kaydedildikten sonra)
   const hostility = await detectHostility(content).catch(() => null)
@@ -247,6 +278,14 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
 
+      // V3 Faz B — Sohbet listesi için typing flag set (TTL 30s, runaway koruması)
+      db.assistantConversation
+        .update({
+          where: { id },
+          data: { aiTypingUntil: new Date(Date.now() + 30_000) },
+        })
+        .catch(() => {})
+
       // ⚡ ACİL DURUM TARAMASI — AI çağırmadan önce
       const emergency = detectEmergency(content)
       if (emergency) {
@@ -305,7 +344,8 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         detectLifeEvent(content),
         loadSummaryContext(user.id),
       ])
-      const selectedModel = modelForDifficulty(route.difficulty)
+      // V3 Faz B — Vision varsa gpt-4o (mini de vision yapar ama 4o daha iyi yorumlar)
+      const selectedModel = imageUrls.length > 0 ? 'gpt-4o' : modelForDifficulty(route.difficulty)
       const selectedMaxTokens = maxTokensForDifficulty(route.difficulty)
       const tonePromptHint = toneToPromptHint(toneAnalysis)
       const lifeEventHint = lifeEvent ? lifeEventToPromptHint(lifeEvent) : ''
@@ -335,6 +375,8 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
               greetingContext: ctx.greetingContext,
               isNewConversation,
               grantedCapabilities: ctx.grantedCapabilities,
+              characterStory: ctx.characterStory,
+              starredMessages: ctx.starredMessages,
             })
           : buildLightSystemPrompt({
               profile: profileSafe,
@@ -344,6 +386,8 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
               greetingContext: ctx.greetingContext,
               isNewConversation,
               grantedCapabilities: ctx.grantedCapabilities,
+              characterStory: ctx.characterStory,
+              starredMessages: ctx.starredMessages,
             })
       // V3 Faz A: mood hint
       const moodHint = profileSafe.currentMood
@@ -398,6 +442,7 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
           model: selectedModel,
           maxTokens: selectedMaxTokens,
           toolCategories: toolCategoriesParam,
+          imageUrls,
           emit: (event) => {
             if (event.type === 'text_delta') {
               finalText += event.text
@@ -426,6 +471,14 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         maybeEvolvePersonality(user.id).catch(() => {})
         // V3 Faz A: hierarchical memory compression Level 1 tetikleyici
         maybeCreateLevel1Summary(user.id, id).catch(() => {})
+        // V3 Faz C: AI mesajda hangi milestone'lardan bahsetti mi tespit et + unlock
+        detectAndUnlockSharedMilestones({
+          userId: user.id,
+          aiMessageId: aiMessage.id,
+          aiResponse: finalText,
+        }).catch(() => {})
+        // V3 Faz C: Zaman/mesaj sayısı milestone'ları (one_week, 100_messages, vb.)
+        maybeUnlockTimeBasedMilestones(user.id).catch(() => {})
 
         await db.assistantConversation.update({
           where: { id },
@@ -504,6 +557,14 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
       } catch (e) {
         send({ type: 'error', message: e instanceof Error ? e.message : 'unknown' })
       }
+
+      // V3 Faz B — typing flag temizle
+      db.assistantConversation
+        .update({
+          where: { id },
+          data: { aiTypingUntil: null },
+        })
+        .catch(() => {})
 
       controller.close()
     },

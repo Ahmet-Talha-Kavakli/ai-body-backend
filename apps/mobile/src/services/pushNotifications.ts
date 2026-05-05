@@ -97,4 +97,72 @@ export function setupNotificationHandler(): void {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any,
   });
+
+  // V3 Faz C — Bildirim aksiyonları (iOS swipe / long-press menü)
+  // Backend push payload'ında { categoryIdentifier: 'assistant_message' } gönderirse
+  // bu actions çıkar. textInput "Yanıtla" — telefon kilitlenmeden cevap verme imkanı.
+  Notifications.setNotificationCategoryAsync('assistant_message', [
+    {
+      identifier: 'reply',
+      buttonTitle: 'Yanıtla',
+      textInput: {
+        submitButtonTitle: 'Gönder',
+        placeholder: 'Mesaj yaz...',
+      },
+      options: { opensAppToForeground: false },
+    },
+    {
+      identifier: 'mute_8h',
+      buttonTitle: 'Sessize al (8s)',
+      options: { isDestructive: false, opensAppToForeground: false },
+    },
+  ]).catch(() => {});
+}
+
+/**
+ * V3 Faz C — Kullanıcı bildirim aksiyonu yaptığında ("Yanıtla", "Sessize al")
+ * çağrılan listener. App start'ta bir kez setup edilir.
+ */
+export function setupNotificationActionsListener(args: {
+  apiUrl: string;
+  getToken: () => Promise<string | null>;
+}): { remove: () => void } {
+  const sub = Notifications.addNotificationResponseReceivedListener(async (response) => {
+    const action = response.actionIdentifier;
+    const data = response.notification.request.content.data as
+      | { conversationId?: string; type?: string }
+      | undefined;
+
+    if (action === 'reply' && response.userText && data?.conversationId) {
+      // Kullanıcı bildirimde yazdığı text'i backend'e gönder (stream)
+      try {
+        const token = (await args.getToken()) ?? '';
+        await fetch(`${args.apiUrl}/api/assistant/conversations/${data.conversationId}/message`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ content: response.userText }),
+        });
+      } catch (e) {
+        console.error('[notif/reply]', e);
+      }
+    } else if (action === 'mute_8h' && data?.conversationId) {
+      try {
+        const token = (await args.getToken()) ?? '';
+        await fetch(`${args.apiUrl}/api/assistant/conversations/${data.conversationId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ mute: '8h' }),
+        });
+      } catch (e) {
+        console.error('[notif/mute]', e);
+      }
+    }
+  });
+  return { remove: () => sub.remove() };
 }

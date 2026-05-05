@@ -92,6 +92,8 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
           greetingContext: ctx.greetingContext,
           isNewConversation,
           grantedCapabilities: ctx.grantedCapabilities,
+          characterStory: ctx.characterStory,
+          starredMessages: ctx.starredMessages,
         })
       : buildLightSystemPrompt({
           profile: ctx.profile,
@@ -101,6 +103,8 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
           greetingContext: ctx.greetingContext,
           isNewConversation,
           grantedCapabilities: ctx.grantedCapabilities,
+          characterStory: ctx.characterStory,
+          starredMessages: ctx.starredMessages,
         })
 
   const toolCategoriesParam =

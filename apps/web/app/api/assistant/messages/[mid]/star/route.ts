@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { db } from '@/lib/db/client'
+import { ensureSharedMilestone } from '@/lib/assistant/shared-milestones'
 
 type Params = { params: Promise<{ mid: string }> }
 
@@ -32,6 +33,15 @@ export const POST = withAuth<Params>(async (req, { user, params }) => {
       isPinned: shouldStar,
     },
   })
+
+  // V3 Faz C — İlk yıldızlama milestone'u
+  if (shouldStar) {
+    ensureSharedMilestone({
+      userId: user.id,
+      type: 'first_star',
+      relatedMessageId: mid,
+    }).catch(() => {})
+  }
 
   return NextResponse.json({
     id: updated.id,

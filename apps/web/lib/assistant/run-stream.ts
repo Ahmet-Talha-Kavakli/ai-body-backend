@@ -37,19 +37,34 @@ export async function runAssistantStream(args: {
   model?: string // default 'gpt-4o'
   maxTokens?: number // default 800
   toolCategories?: string[] | 'all' // default 'all'
+  // V3 Faz B — Vision desteği (multimodal user mesajı)
+  imageUrls?: string[]
 }): Promise<void> {
   const { userId, systemPrompt, history, userMessage, emit } = args
   const model = args.model ?? 'gpt-4o'
   const maxTokens = args.maxTokens ?? 800
   const toolDefs = args.toolCategories ? getToolDefsForCategories(args.toolCategories) : undefined
+  const imageUrls = args.imageUrls ?? []
 
   const openai = new OpenAI()
   const tools = toOpenAIFunctions(toolDefs)
 
+  // V3 Faz B — Image varsa multimodal content, yoksa düz text
+  const userContent: OpenAI.Chat.ChatCompletionUserMessageParam['content'] =
+    imageUrls.length > 0
+      ? [
+          ...(userMessage ? [{ type: 'text' as const, text: userMessage }] : []),
+          ...imageUrls.map((url) => ({
+            type: 'image_url' as const,
+            image_url: { url, detail: 'auto' as const },
+          })),
+        ]
+      : userMessage
+
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: 'system', content: systemPrompt },
     ...history.map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user', content: userMessage },
+    { role: 'user', content: userContent },
   ]
 
   const recordedToolCalls: Array<{ id: string; name: string; args: unknown; result: ToolResult }> =

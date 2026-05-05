@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -7,6 +7,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Linking,
+  PanResponder,
   Platform,
   Pressable,
   StyleSheet,
@@ -14,7 +15,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
 import { SymbolView } from 'expo-symbols';
@@ -38,6 +39,11 @@ import {
   captureAndUploadPhoto,
   pickAndUploadDocument,
 } from '../../../src/services/assistant/attachment';
+import { sendSticker, type TenorItem } from '../../../src/services/assistant/stickers';
+import { StickerGifPanel } from '../../../components/seans/StickerGifPanel';
+import { fetchAIPresence, type AIStatus } from '../../../src/services/assistant/presence';
+import { ChatBackground } from '../../../components/seans/ChatBackground';
+import ContextMenu from 'react-native-context-menu-view';
 import { font, C, API_URL } from '../../../lib/theme';
 import { streamAssistantMessage } from './_streamClient';
 
@@ -64,11 +70,14 @@ interface ToolCallRecord {
 }
 
 interface Attachment {
-  kind: 'image' | 'video' | 'document';
+  kind: 'image' | 'video' | 'document' | 'sticker' | 'gif';
   url: string;
+  previewUrl?: string;
   filename?: string;
   size?: number;
   mime?: string;
+  width?: number;
+  height?: number;
 }
 
 interface Message {
@@ -107,6 +116,9 @@ export default function SeansChatScreen() {
     content: string;
   } | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [stickerPanelOpen, setStickerPanelOpen] = useState(false);
+  const [sendingSticker, setSendingSticker] = useState(false);
+  const [aiStatus, setAiStatus] = useState<{ status: AIStatus; label: string } | null>(null);
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recordingDuration = useRef(0);
   const durationTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -166,6 +178,57 @@ export default function SeansChatScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
+
+  // V3 Faz B — AI presence polling (60s)
+  useEffect(() => {
+    let alive = true;
+    const fetchOnce = async () => {
+      const token = (await getToken()) ?? '';
+      if (!token) return;
+      const res = await fetchAIPresence({ apiUrl: API_URL, token });
+      if (alive && res) setAiStatus(res);
+    };
+    fetchOnce();
+    const t = setInterval(fetchOnce, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // V3 Faz B — sohbet ekranı focus'a dönünce mesajları yenile
+  // (kullanıcı çıkıp girince arkada tamamlanmış AI cevabını al)
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      // İlk mount'ta zaten yukarıdaki useEffect çekiyor; sadece yeniden focus'ta çek
+      // (id değişince useEffect zaten tetikleniyor, focus'ta tekrar tetiklemiyor)
+      const refresh = async () => {
+        try {
+          const token = await getToken();
+          const res = await fetch(`${API_URL}/api/assistant/conversations/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) return;
+          const c = await res.json();
+          if (!alive) return;
+          setMessages((prev) => {
+            // Optimistik tmp mesajları koru, ID'leri yenile
+            const incoming = c.messages ?? [];
+            const incomingIds = new Set(incoming.map((m: Message) => m.id));
+            const tmpKeep = prev.filter((m) => m.id.startsWith('tmp-') && !incomingIds.has(m.id));
+            return [...incoming, ...tmpKeep];
+          });
+        } catch {}
+      };
+      refresh();
+      return () => {
+        alive = false;
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id]),
+  );
 
   const startRecording = async () => {
     try {
@@ -297,7 +360,7 @@ export default function SeansChatScreen() {
 
       if (result) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        // Optimistic mesaj ekle
+        // Optimistic kullanıcı mesajı ekle (zaten DB'de kaydedildi)
         const newMsg: Message = {
           id: result.messageId,
           role: 'user',
@@ -305,16 +368,126 @@ export default function SeansChatScreen() {
             caption ||
             `[${result.attachment.kind === 'image' ? 'Fotoğraf' : result.attachment.kind === 'video' ? 'Video' : 'Dosya'}]`,
           createdAt: new Date().toISOString(),
+          attachments: [
+            {
+              kind: result.attachment.kind,
+              url: result.attachment.url,
+              filename: result.attachment.filename,
+              size: result.attachment.size,
+              mime: result.attachment.mime,
+            },
+          ],
         };
         setMessages((prev) => [...prev, newMsg]);
         setInput('');
         stickToBottomRef.current = true;
+
+        // V3 Faz B — Fotoğraf yüklendiyse AI cevabını tetikle (vision)
+        if (result.attachment.kind === 'image') {
+          await runVisionStream(result.messageId);
+        }
       }
     } catch (e) {
       console.error('[upload]', e);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setUploadingAttachment(false);
+    }
+  };
+
+  // V3 Faz B — Vision stream: bir attachment mesajına AI cevabı iste
+  const runVisionStream = async (attachmentMessageId: string) => {
+    const aiTmpId = `tmp-ai-${Date.now()}`;
+    const optimisticAi: Message = {
+      id: aiTmpId,
+      role: 'assistant',
+      content: '',
+      createdAt: new Date().toISOString(),
+      toolCalls: [],
+    };
+    setMessages((prev) => [...prev, optimisticAi]);
+    setSending(true);
+    setThinking(true);
+
+    let aiAccumulated = '';
+    try {
+      const token = await getToken();
+      await streamAssistantMessage({
+        url: `${API_URL}/api/assistant/conversations/${id}/stream`,
+        token: token ?? '',
+        forAttachmentMessageId: attachmentMessageId,
+        onEvent: (event) => {
+          if (event.type === 'text_delta') {
+            setThinking(false);
+            aiAccumulated += event.text;
+            setMessages((prev) =>
+              prev.map((m) => (m.id === aiTmpId ? { ...m, content: aiAccumulated } : m)),
+            );
+            return;
+          }
+          if (event.type === 'done') {
+            aiAccumulated = event.finalText;
+            return;
+          }
+          if (event.type === 'saved') {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === aiTmpId ? { ...m, id: event.aiMessageId } : m)),
+            );
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            return;
+          }
+          if (event.type === 'error') {
+            console.error('[vision-stream]', event.message);
+            setMessages((prev) => prev.filter((m) => m.id !== aiTmpId || !!m.content));
+            return;
+          }
+        },
+      });
+    } catch (e) {
+      console.error('[vision-stream/network]', e);
+      setMessages((prev) => prev.filter((m) => m.id !== aiTmpId));
+    } finally {
+      setSending(false);
+      setThinking(false);
+    }
+  };
+
+  const handlePickEmoji = (emoji: string) => {
+    setInput((prev) => prev + emoji);
+  };
+
+  const handlePickSticker = async (item: TenorItem) => {
+    if (sendingSticker) return;
+    setSendingSticker(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const token = (await getToken()) ?? '';
+      const result = await sendSticker({ apiUrl: API_URL, token, conversationId: id, item });
+      if (result) {
+        const newMsg: Message = {
+          id: result.messageId,
+          role: 'user',
+          content: item.kind === 'sticker' ? '[Sticker]' : '[GIF]',
+          createdAt: new Date().toISOString(),
+          attachments: [
+            {
+              kind: item.kind,
+              url: item.url,
+              previewUrl: item.previewUrl,
+              width: item.width,
+              height: item.height,
+            } as Attachment,
+          ],
+        };
+        setMessages((prev) => [...prev, newMsg]);
+        stickToBottomRef.current = true;
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setStickerPanelOpen(false);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } finally {
+      setSendingSticker(false);
     }
   };
 
@@ -536,6 +709,7 @@ export default function SeansChatScreen() {
         style={[st.root, { paddingTop: insets.top }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <ChatBackground />
         {/* Header */}
         <View style={st.header}>
           <Pressable onPress={() => router.back()} hitSlop={14} style={st.backBtn}>
@@ -556,7 +730,10 @@ export default function SeansChatScreen() {
             <View style={st.avatarSmall}>
               <Text style={st.avatarTxt}>{profileName[0]?.toUpperCase()}</Text>
             </View>
-            <Text style={st.headerName}>{profileName}</Text>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={st.headerName}>{profileName}</Text>
+              <PresenceLine thinking={thinking} status={aiStatus} />
+            </View>
           </Pressable>
           {onboardingActive ? (
             <Pressable
@@ -723,7 +900,29 @@ export default function SeansChatScreen() {
                 returnKeyType="send"
                 maxLength={2000}
                 editable={!sending && !transcribing}
+                onFocus={() => stickerPanelOpen && setStickerPanelOpen(false)}
               />
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setStickerPanelOpen((v) => !v);
+                }}
+                hitSlop={8}
+                style={st.emojiBtn}
+              >
+                <SymbolView
+                  name={stickerPanelOpen ? 'keyboard' : 'face.smiling'}
+                  size={20}
+                  tintColor={stickerPanelOpen ? C.accent : C.textMuted}
+                  fallback={
+                    <Text
+                      style={{ color: stickerPanelOpen ? C.accent : C.textMuted, fontSize: 18 }}
+                    >
+                      {stickerPanelOpen ? '⌨' : '☺'}
+                    </Text>
+                  }
+                />
+              </Pressable>
               {!input.trim() && !transcribing ? (
                 <Pressable
                   onPress={startRecording}
@@ -756,6 +955,14 @@ export default function SeansChatScreen() {
               )}
             </View>
           )}
+          <StickerGifPanel
+            visible={stickerPanelOpen}
+            apiUrl={API_URL}
+            getToken={getToken}
+            onClose={() => setStickerPanelOpen(false)}
+            onPickSticker={handlePickSticker}
+            onPickEmoji={handlePickEmoji}
+          />
         </View>
       </KeyboardAvoidingView>
     </>
@@ -784,6 +991,61 @@ function MessageBubble({
   // Entrance animasyonu
   const translateY = useRef(new Animated.Value(8)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+
+  // V3 Faz B — Sağa swipe yanıtla (sadece tmp olmayan mesajlarda)
+  const swipeX = useRef(new Animated.Value(0)).current;
+  const SWIPE_THRESHOLD = 56;
+  const replyTriggeredRef = useRef(false);
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_evt, gs) => {
+          // Sadece yatay sağa swipe (vertical scroll'u blokla)
+          return (
+            !!onReply &&
+            !message.id.startsWith('tmp-') &&
+            Math.abs(gs.dx) > 8 &&
+            Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5 &&
+            gs.dx > 0
+          );
+        },
+        onPanResponderMove: (_e, gs) => {
+          if (gs.dx > 0) {
+            // Hafif dirençli movement (resistance)
+            const resisted = Math.min(gs.dx * 0.6, 80);
+            swipeX.setValue(resisted);
+            if (!replyTriggeredRef.current && gs.dx >= SWIPE_THRESHOLD) {
+              replyTriggeredRef.current = true;
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
+          }
+        },
+        onPanResponderRelease: (_e, gs) => {
+          if (gs.dx >= SWIPE_THRESHOLD && onReply) {
+            onReply(message);
+          }
+          replyTriggeredRef.current = false;
+          Animated.spring(swipeX, {
+            toValue: 0,
+            useNativeDriver: true,
+            friction: 7,
+            tension: 80,
+          }).start();
+        },
+        onPanResponderTerminate: () => {
+          replyTriggeredRef.current = false;
+          Animated.spring(swipeX, {
+            toValue: 0,
+            useNativeDriver: true,
+            friction: 7,
+            tension: 80,
+          }).start();
+        },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [message.id, onReply],
+  );
   useEffect(() => {
     Animated.parallel([
       Animated.timing(translateY, {
@@ -998,12 +1260,58 @@ function MessageBubble({
 
   return (
     <Animated.View
+      {...panResponder.panHandlers}
       style={[
         bubbleSt.row,
         { marginTop: showSpacing ? 12 : 3 },
-        { transform: [{ translateY }], opacity },
+        { transform: [{ translateY }, { translateX: swipeX }], opacity },
       ]}
     >
+      {/* Sağa swipe ipucu — sol kenarda yanıt ikonu */}
+      {!message.id.startsWith('tmp-') && (
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: -36,
+            top: 0,
+            bottom: 0,
+            justifyContent: 'center',
+            opacity: swipeX.interpolate({
+              inputRange: [0, 30, 80],
+              outputRange: [0, 0.4, 1],
+              extrapolate: 'clamp',
+            }),
+            transform: [
+              {
+                scale: swipeX.interpolate({
+                  inputRange: [0, 56, 80],
+                  outputRange: [0.6, 1, 1.1],
+                  extrapolate: 'clamp',
+                }),
+              },
+            ],
+          }}
+        >
+          <View
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              backgroundColor: C.accent,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <SymbolView
+              name="arrowshape.turn.up.left.fill"
+              size={14}
+              tintColor="#fff"
+              fallback={<Text style={{ color: '#fff', fontSize: 12 }}>↩</Text>}
+            />
+          </View>
+        </Animated.View>
+      )}
       {/* AI mesajı — Flow modeli */}
       {!isUser && (
         <View style={bubbleSt.aiOuter}>
@@ -1019,69 +1327,68 @@ function MessageBubble({
                   ))}
                 </View>
               )}
-              {/* Mesaj metni */}
+              {/* Mesaj metni — WhatsApp tarzı uzun bas context menu */}
               {!!message.content && (
-                <Pressable
-                  onLongPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    const buttons: Array<{
-                      text: string;
-                      onPress?: () => void;
-                      style?: 'cancel' | 'destructive';
-                    }> = [];
-                    if (!message.id.startsWith('tmp-')) {
-                      buttons.push({
-                        text: 'Yanıtla',
-                        onPress: () => {
-                          onReply?.(message);
-                        },
-                      });
-                    }
-                    buttons.push({
-                      text: 'Kopyala',
-                      onPress: async () => {
+                <ContextMenu
+                  actions={
+                    message.id.startsWith('tmp-')
+                      ? [{ title: 'Kopyala', systemIcon: 'doc.on.doc' }]
+                      : [
+                          { title: 'Yanıtla', systemIcon: 'arrowshape.turn.up.left' },
+                          { title: 'Kopyala', systemIcon: 'doc.on.doc' },
+                          {
+                            title: message.isPinned ? 'Yıldızı Kaldır' : 'Yıldızla',
+                            systemIcon: message.isPinned ? 'star.slash' : 'star',
+                          },
+                        ]
+                  }
+                  onPress={async (e) => {
+                    const idx = e.nativeEvent.index;
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    if (message.id.startsWith('tmp-')) {
+                      if (idx === 0) {
                         await Clipboard.setStringAsync(message.content);
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                      },
-                    });
-                    if (!message.id.startsWith('tmp-')) {
-                      buttons.push({
-                        text: message.isPinned ? 'Yıldızı Kaldır' : 'Yıldızla',
-                        onPress: async () => {
-                          try {
-                            const tk = await getToken();
-                            await fetch(`${API_URL}/api/assistant/messages/${message.id}/star`, {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                Authorization: `Bearer ${tk}`,
-                              },
-                              body: JSON.stringify({ starred: !message.isPinned }),
-                            });
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          } catch {}
-                        },
-                      });
+                      }
+                      return;
                     }
-                    buttons.push({ text: 'Vazgeç', style: 'cancel' });
-                    Alert.alert('Mesaj', undefined, buttons);
+                    if (idx === 0) {
+                      onReply?.(message);
+                    } else if (idx === 1) {
+                      await Clipboard.setStringAsync(message.content);
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    } else if (idx === 2) {
+                      try {
+                        const tk = await getToken();
+                        await fetch(`${API_URL}/api/assistant/messages/${message.id}/star`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${tk}`,
+                          },
+                          body: JSON.stringify({ starred: !message.isPinned }),
+                        });
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      } catch {}
+                    }
                   }}
-                  style={bubbleSt.aiTextWrap}
                 >
-                  <Text style={bubbleSt.aiText}>
-                    {message.content}
-                    {isStreaming && <StreamingCaret />}
-                  </Text>
-                  {message.isPinned && (
-                    <SymbolView
-                      name="pin.fill"
-                      size={10}
-                      tintColor={C.textDim}
-                      fallback={<Text>📌</Text>}
-                      style={{ position: 'absolute', top: 2, right: 0 }}
-                    />
-                  )}
-                </Pressable>
+                  <View style={bubbleSt.aiTextWrap}>
+                    <Text style={bubbleSt.aiText}>
+                      {message.content}
+                      {isStreaming && <StreamingCaret />}
+                    </Text>
+                    {message.isPinned && (
+                      <SymbolView
+                        name="pin.fill"
+                        size={10}
+                        tintColor={C.textDim}
+                        fallback={<Text>📌</Text>}
+                        style={{ position: 'absolute', top: 2, right: 0 }}
+                      />
+                    )}
+                  </View>
+                </ContextMenu>
               )}
             </View>
           </View>
@@ -1089,76 +1396,86 @@ function MessageBubble({
       )}
 
       {/* User mesajı — Bubble */}
-      {isUser && (
-        <View style={bubbleSt.userOuter}>
-          {/* Attachment thumbnails (image/video/document) */}
-          {message.attachments && message.attachments.length > 0 && (
-            <View style={bubbleSt.attachmentRow}>
-              {message.attachments.map((att, i) => (
-                <AttachmentPreview key={i} attachment={att} />
-              ))}
-            </View>
-          )}
-          <Pressable
-            onLongPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              const buttons: Array<{
-                text: string;
-                onPress?: () => void;
-                style?: 'cancel' | 'destructive';
-              }> = [];
-              if (!message.id.startsWith('tmp-')) {
-                buttons.push({
-                  text: 'Yanıtla',
-                  onPress: () => {
-                    onReply?.(message);
-                  },
-                });
-              }
-              buttons.push({
-                text: 'Kopyala',
-                onPress: async () => {
-                  await Clipboard.setStringAsync(message.content);
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                },
-              });
-              if (!message.id.startsWith('tmp-')) {
-                buttons.push({
-                  text: message.isPinned ? 'Yıldızı Kaldır' : 'Yıldızla',
-                  onPress: async () => {
-                    try {
-                      const tk = await getToken();
-                      await fetch(`${API_URL}/api/assistant/messages/${message.id}/star`, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          Authorization: `Bearer ${tk}`,
-                        },
-                        body: JSON.stringify({ starred: !message.isPinned }),
-                      });
+      {isUser &&
+        (() => {
+          const stickerOnly =
+            !!message.attachments?.length &&
+            message.attachments.every((a) => a.kind === 'sticker' || a.kind === 'gif') &&
+            (message.content === '[Sticker]' ||
+              message.content === '[GIF]' ||
+              !message.content.trim());
+          return (
+            <View style={bubbleSt.userOuter}>
+              {/* Attachment thumbnails (image/video/document/sticker/gif) */}
+              {message.attachments && message.attachments.length > 0 && (
+                <View style={bubbleSt.attachmentRow}>
+                  {message.attachments.map((att, i) => (
+                    <AttachmentPreview key={i} attachment={att} />
+                  ))}
+                </View>
+              )}
+              {!stickerOnly && (
+                <ContextMenu
+                  actions={
+                    message.id.startsWith('tmp-')
+                      ? [{ title: 'Kopyala', systemIcon: 'doc.on.doc' }]
+                      : [
+                          { title: 'Yanıtla', systemIcon: 'arrowshape.turn.up.left' },
+                          { title: 'Kopyala', systemIcon: 'doc.on.doc' },
+                          {
+                            title: message.isPinned ? 'Yıldızı Kaldır' : 'Yıldızla',
+                            systemIcon: message.isPinned ? 'star.slash' : 'star',
+                          },
+                        ]
+                  }
+                  onPress={async (e) => {
+                    const idx = e.nativeEvent.index;
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    if (message.id.startsWith('tmp-')) {
+                      if (idx === 0) {
+                        await Clipboard.setStringAsync(message.content);
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      }
+                      return;
+                    }
+                    if (idx === 0) {
+                      onReply?.(message);
+                    } else if (idx === 1) {
+                      await Clipboard.setStringAsync(message.content);
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    } catch {}
-                  },
-                });
-              }
-              buttons.push({ text: 'Vazgeç', style: 'cancel' });
-              Alert.alert('Mesaj', undefined, buttons);
-            }}
-            style={[bubbleSt.userBubble, message.isPinned && bubbleSt.pinnedUser]}
-          >
-            <Text style={bubbleSt.userText}>{message.content}</Text>
-            {message.isPinned && (
-              <SymbolView
-                name="pin.fill"
-                size={10}
-                tintColor="rgba(255,255,255,0.7)"
-                fallback={<Text>📌</Text>}
-                style={{ position: 'absolute', top: 4, right: 6 }}
-              />
-            )}
-          </Pressable>
-        </View>
-      )}
+                    } else if (idx === 2) {
+                      try {
+                        const tk = await getToken();
+                        await fetch(`${API_URL}/api/assistant/messages/${message.id}/star`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${tk}`,
+                          },
+                          body: JSON.stringify({ starred: !message.isPinned }),
+                        });
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      } catch {}
+                    }
+                  }}
+                >
+                  <View style={[bubbleSt.userBubble, message.isPinned && bubbleSt.pinnedUser]}>
+                    <Text style={bubbleSt.userText}>{message.content}</Text>
+                    {message.isPinned && (
+                      <SymbolView
+                        name="pin.fill"
+                        size={10}
+                        tintColor="rgba(255,255,255,0.7)"
+                        fallback={<Text>📌</Text>}
+                        style={{ position: 'absolute', top: 4, right: 6 }}
+                      />
+                    )}
+                  </View>
+                </ContextMenu>
+              )}
+            </View>
+          );
+        })()}
     </Animated.View>
   );
 }
@@ -1177,6 +1494,28 @@ function AttachmentPreview({ attachment }: { attachment: Attachment }) {
     }
   };
 
+  if (attachment.kind === 'sticker' || attachment.kind === 'gif') {
+    const aspect = attachment.width && attachment.height ? attachment.width / attachment.height : 1;
+    const w = attachment.kind === 'sticker' ? 140 : 200;
+    const h = w / Math.max(0.4, Math.min(2.5, aspect));
+    return (
+      <View
+        style={{
+          width: w,
+          height: h,
+          borderRadius: 14,
+          overflow: 'hidden',
+          backgroundColor: 'transparent',
+        }}
+      >
+        <Animated.Image
+          source={{ uri: attachment.url }}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode={attachment.kind === 'sticker' ? 'contain' : 'cover'}
+        />
+      </View>
+    );
+  }
   if (attachment.kind === 'image') {
     return (
       <Pressable onPress={handlePress} style={attSt.imageWrap}>
@@ -1286,6 +1625,74 @@ const attSt = StyleSheet.create({
   },
   docName: { fontFamily: 'System', fontSize: 14, color: C.text },
   docSize: { fontFamily: 'System', fontSize: 11, color: C.textMuted, marginTop: 2 },
+});
+
+// V3 Faz B — header presence indicator
+function PresenceLine({
+  thinking,
+  status,
+}: {
+  thinking: boolean;
+  status: { status: AIStatus; label: string } | null;
+}) {
+  if (thinking) {
+    return (
+      <View style={presenceSt.row}>
+        <PresenceTypingDots />
+        <Text style={[presenceSt.label, { color: C.accent }]}>yazıyor</Text>
+      </View>
+    );
+  }
+  if (!status) return null;
+  const color =
+    status.status === 'online'
+      ? C.success
+      : status.status === 'sleeping' || status.status === 'dozing'
+        ? C.textMuted
+        : status.status === 'blocked' || status.status === 'silent'
+          ? C.danger
+          : C.textMuted;
+  return (
+    <View style={presenceSt.row}>
+      <View style={[presenceSt.dot, { backgroundColor: color }]} />
+      <Text style={[presenceSt.label, { color: C.textMuted }]}>{status.label}</Text>
+    </View>
+  );
+}
+
+function PresenceTypingDots() {
+  const a1 = useRef(new Animated.Value(0.3)).current;
+  const a2 = useRef(new Animated.Value(0.3)).current;
+  const a3 = useRef(new Animated.Value(0.3)).current;
+  useEffect(() => {
+    const make = (v: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(v, { toValue: 1, duration: 320, useNativeDriver: true }),
+          Animated.timing(v, { toValue: 0.3, duration: 320, useNativeDriver: true }),
+        ]),
+      );
+    const anims = [make(a1, 0), make(a2, 160), make(a3, 320)];
+    anims.forEach((a) => a.start());
+    return () => anims.forEach((a) => a.stop());
+  }, [a1, a2, a3]);
+  return (
+    <View style={{ flexDirection: 'row', gap: 2, marginRight: 4 }}>
+      {[a1, a2, a3].map((a, i) => (
+        <Animated.View
+          key={i}
+          style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: C.accent, opacity: a }}
+        />
+      ))}
+    </View>
+  );
+}
+
+const presenceSt = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', marginTop: 1, gap: 4 },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  label: { fontFamily: font.regular, fontSize: 10.5, letterSpacing: -0.1 },
 });
 
 function StreamingCaret() {
@@ -1953,6 +2360,7 @@ const st = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingBottom: 10,
+    backgroundColor: 'rgba(248,247,255,0.92)',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: C.border,
   },
@@ -1973,7 +2381,7 @@ const st = StyleSheet.create({
   inputWrap: {
     paddingHorizontal: 12,
     paddingTop: 8,
-    backgroundColor: C.page,
+    backgroundColor: 'rgba(248,247,255,0.94)',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: C.border,
   },
@@ -2016,6 +2424,14 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 6,
+    marginBottom: 2,
+  },
+  emojiBtn: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 2,
     marginBottom: 2,
   },
 });

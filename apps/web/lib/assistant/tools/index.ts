@@ -29,6 +29,7 @@ import { travelToolDefs, travelExecutors } from './travel'
 import { homeToolDefs, homeExecutors } from './home'
 import { socialToolDefs, socialExecutors } from './social'
 import { shoppingToolDefs, shoppingExecutors } from './shopping'
+import { storyToolDefs, storyExecutors } from './story'
 
 export const ALL_TOOL_DEFS: ToolDefinition[] = [
   ...healthReadToolDefs,
@@ -57,6 +58,7 @@ export const ALL_TOOL_DEFS: ToolDefinition[] = [
   ...homeToolDefs,
   ...socialToolDefs,
   ...shoppingToolDefs,
+  ...storyToolDefs,
 ]
 
 export const ALL_EXECUTORS: Record<string, ToolExecutor> = {
@@ -86,6 +88,7 @@ export const ALL_EXECUTORS: Record<string, ToolExecutor> = {
   ...homeExecutors,
   ...socialExecutors,
   ...shoppingExecutors,
+  ...storyExecutors,
 }
 
 /**
@@ -129,6 +132,7 @@ const DEFAULT_HARD_CATEGORIES = [
   'knowledge',
   'people',
   'environment',
+  'story', // V3 Faz C — AI'ın anı paylaşımı için her zaman gerekli
 ]
 
 export function getToolDefsForCategories(categories: string[] | 'all'): ToolDefinition[] {
@@ -136,8 +140,10 @@ export function getToolDefsForCategories(categories: string[] | 'all'): ToolDefi
     const defs = ALL_TOOL_DEFS.filter((t) => DEFAULT_HARD_CATEGORIES.includes(t.category))
     return defs.slice(0, OPENAI_TOOLS_LIMIT)
   }
-  // Boş array → hiç tool gönderme (easy mesaj için tasarruf)
-  if (categories.length === 0) return []
+  // V3 Faz C — Boş array bile olsa story tool'u her zaman geçer (anı paylaşımı için)
+  if (categories.length === 0) {
+    return ALL_TOOL_DEFS.filter((t) => t.category === 'story')
+  }
 
   // Sadece kullanıcı bir kategori istediğinde memory'i de ekle (recall için)
   // Always-on listesi sıkılaştırıldı: artık her medium'da memory + people gönderilmiyor
@@ -178,6 +184,8 @@ export function getToolDefsForCategories(categories: string[] | 'all'): ToolDefi
     const mapped = ROUTER_TO_TOOL_CAT[c] ?? [c]
     for (const m of mapped) toolCats.add(m)
   }
+  // V3 Faz C — story tool her zaman dahil (anı paylaşımı her routing'de gerekli)
+  toolCats.add('story')
 
   return ALL_TOOL_DEFS.filter((t) => toolCats.has(t.category)).slice(0, OPENAI_TOOLS_LIMIT)
 }

@@ -28,6 +28,7 @@ export type ToolCategory =
   | 'home'
   | 'social_life'
   | 'shopping'
+  | 'story'
 
 export interface ToolDefinition {
   name: string

@@ -75,6 +75,7 @@ model User {
   assistantConversations  AssistantConversation[] @relation("UserAssistantConversations")
   assistantMemoryFacts    AssistantMemoryFact[]   @relation("UserAssistantMemoryFacts")
   assistantPermissions    AssistantPermission[]   @relation("UserAssistantPermissions")
+  milestoneComments       MilestoneComment[]      @relation("UserMilestoneComments")
   conversationSummaries   ConversationSummary[]   @relation("UserConversationSummaries")
   hostilityEvents         HostilityEvent[]        @relation("UserHostilityEvents")
   blockEvents             BlockEvent[]            @relation("UserBlockEvents")
@@ -1826,6 +1827,7 @@ model AssistantProfile {
   verbalTics           String[] @default([])            // ["valla", "abi", "bence" gibi karakter ifadeleri]
   worldview            String?  @db.Text                // hayata bakışı, kısa paragraf
   coreSecret           String?  @db.Text                // yıllar boyu kilitli kalan ana sır
+  coreSecretRevealedAt DateTime?                        // V3 Faz C — kullanıcıyla paylaşıldığında set
 
   // Yaşlanma — AI gerçek zamanla yaşlanır
   bornAt               DateTime?                        // AI'nın "doğum" tarihi
@@ -1841,6 +1843,11 @@ model AssistantProfile {
   relationshipState    String   @default("normal")      // 'normal' | 'cold' | 'silent' | 'blocked'
   relationshipStateChangedAt DateTime?
   blockedUntil         DateTime?
+
+  // V3 Faz C — Karakter eşleştirme testi
+  characterTestCompletedAt DateTime?
+  // V3 Faz C — AI'ın hikayesi (test sonrası üretilir)
+  characterStory       CharacterStory?
 
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -1865,10 +1872,194 @@ model AssistantConversation {
   pinnedAt   DateTime?
   mutedUntil DateTime?
 
+  // V3 Faz B — Typing indicator (sohbet listesinde "yazıyor...")
+  // AI cevap üretirken set edilir, bittiğinde null. TTL fallback'i için tarih.
+  aiTypingUntil DateTime?
+
   summaries ConversationSummary[]
 
   @@index([userId, updatedAt])
   @@index([userId, archived])
+}
+
+// V3 Faz C — AI'ın Kendi Hikayesi
+// Test sonrası AI için unique bir biyografi üretilir. Milestone'lar bu hikayeden doğar.
+model CharacterStory {
+  id                String  @id @default(cuid())
+  assistantProfileId String @unique
+  assistantProfile  AssistantProfile @relation(fields: [assistantProfileId], references: [id], onDelete: Cascade)
+
+  // AI'ın doğum yeri, çocukluk vs.
+  birthplace        String?
+  childhood         String? @db.Text
+  familyDynamics    String? @db.Text
+  firstLoss         String? @db.Text
+  firstLove         String? @db.Text
+  passion           String? @db.Text
+  achievement       String? @db.Text
+  failure           String? @db.Text
+  turningPoint      String? @db.Text
+  currentSituation  String? @db.Text
+
+  // Generation state
+  generatedAt       DateTime?
+  generationStatus  String   @default("pending") // 'pending' | 'generating' | 'ready' | 'failed'
+  generationError   String?  @db.Text
+
+  milestones        Milestone[]
+  sharedMilestones  SharedMilestone[]
+  surpriseArcs      SurpriseArc[]
+  characters        MilestoneCharacter[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// V3 Faz C — Hayat Anıları
+// AI'ın hayat hikayesindeki her dönüm noktası, ufak/büyük olay.
+model Milestone {
+  id                 String  @id @default(cuid())
+  characterStoryId   String
+  characterStory     CharacterStory @relation(fields: [characterStoryId], references: [id], onDelete: Cascade)
+
+  // İçerik
+  title              String
+  bodyText           String  @db.Text  // 1. tekil ağzından paragraf
+  illustrationUrl    String?           // DALL-E ile üretilmiş
+
+  // Metadata
+  age                Int?     // AI'nın o anki yaşı
+  year               Int?     // gerçek yıl
+  location           String?
+  emotion            String?  // 'sad' | 'happy' | 'fear' | 'pride' | 'shame' | ...
+
+  // State
+  isLocked           Boolean  @default(true)
+  unlockedAt         DateTime?
+  openedInMessageId  String?
+
+  // Kategori
+  arcType            String   // 'core' | 'surprise' | 'shared'
+  importance         Int      @default(3) // 1-5
+
+  // Sıralama
+  chronologicalOrder Int     // road map'te sıralama (0 = bebeklik)
+  unlockOrder        Int?    // kullanıcıya hangi sırada açılacak
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  comments           MilestoneComment[]
+
+  @@index([characterStoryId, chronologicalOrder])
+  @@index([characterStoryId, isLocked])
+}
+
+// V3 Faz C — Anılarda geçen kişiler (annem, babam, Eda...)
+// AI'ın hayat hikayesindeki tekrar eden karakterler. Her milestone'a M2M.
+model MilestoneCharacter {
+  id              String   @id @default(cuid())
+  characterStoryId String
+  characterStory  CharacterStory @relation(fields: [characterStoryId], references: [id], onDelete: Cascade)
+
+  name            String   // Anne, Babam, Eda, Dedem, Kardeşim, vs
+  relationship    String   // 'mother' | 'father' | 'sibling' | 'first_love' | 'grandparent' | 'friend' | 'other'
+  description     String?  @db.Text  // 1. tekil ağzından kısa anlatım
+  avatarUrl       String?           // DALL-E ile üretilmiş
+
+  // Hangi milestone'larda geçiyor — Postgres native string array
+  milestoneIds    String[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([characterStoryId])
+}
+
+// V3 Faz C — Kullanıcının milestone'a yorumu
+// Anı kart üzerinde "yorum yaz" — kullanıcı not bırakır, AI hatırlar.
+model MilestoneComment {
+  id              String   @id @default(cuid())
+  milestoneId     String?  // Past milestone (nullable çünkü shared olabilir)
+  milestone       Milestone? @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  sharedMilestoneId String?
+  sharedMilestone SharedMilestone? @relation(fields: [sharedMilestoneId], references: [id], onDelete: Cascade)
+
+  userId          String
+  user            User @relation("UserMilestoneComments", fields: [userId], references: [id], onDelete: Cascade)
+
+  content         String   @db.Text
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([milestoneId])
+  @@index([sharedMilestoneId])
+  @@index([userId])
+}
+
+// V3 Faz C — Sürpriz Arklar
+// AI'ın hayatında beklenmedik olaylar. Cron ile günde bir tetiklenir,
+// %30 olasılıkla yeni ark üretilir. AI proaktif olarak mesaj atar,
+// road map'te yeni node belirir.
+model SurpriseArc {
+  id                  String   @id @default(cuid())
+  characterStoryId    String
+  characterStory      CharacterStory @relation(fields: [characterStoryId], references: [id], onDelete: Cascade)
+
+  title               String
+  initialEvent        String   @db.Text  // başlangıç olayı (1. tekil ağzından)
+  emotion             String?  // 'happy' | 'sad' | 'fear' | ...
+  intensity           String   @default("medium") // 'small' | 'medium' | 'large'
+
+  // State machine
+  state               String   @default("pending") // 'pending' | 'announced' | 'unfolding' | 'resolved'
+  announcedAt         DateTime?  // AI kullanıcıya ilk mesajı attığında
+  resolvedAt          DateTime?
+  resolution          String?  @db.Text
+
+  // Bağlantılı kayıtlar
+  announcedMessageId  String?  // proaktif mesaj id (AssistantMessage)
+  sharedMilestoneId   String?  // road map'te node yarattıysa
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([characterStoryId, state])
+  @@index([createdAt])
+}
+
+// V3 Faz C — Birlikte Yaşanan Anlar
+// Kullanıcı ile AI'ın ortak hikaye noktaları: ilk konuşma, ilk yıldız,
+// 100 mesaj, 1 ay birlikte, sürpriz ark gibi.
+// Pivot point = "first_meeting" — roadmap'in merkezi, üstü gelecek (birliktelik), altı geçmiş (AI'ın geçmişi).
+model SharedMilestone {
+  id                 String   @id @default(cuid())
+  characterStoryId   String
+  characterStory     CharacterStory @relation(fields: [characterStoryId], references: [id], onDelete: Cascade)
+
+  type               String   // 'first_meeting' | 'naming' | 'first_star' | 'first_block' | 'first_secret' | 'first_ai_story_share' | 'one_week' | 'one_month' | '100_messages' | 'one_year' | 'rescue' | 'surprise_arc' | 'shared_event'
+  title              String
+  bodyText           String?  @db.Text  // 1. tekil ağzından AI tarafından kullanıcıya not (pivot için "tanıştığımız gün" gibi)
+  illustrationUrl    String?
+
+  emotion            String?
+  importance         Int      @default(3) // 1-5
+
+  // Pivot 0, sonrası (geleceğe doğru) artan int
+  // Diğer milestone'lar (geçmiş) characterOrder'a göre, shared'lar ayrı
+  sharedOrder        Int      // pivot=0, sonraki shared'lar 1,2,3...
+
+  occurredAt         DateTime @default(now())
+  relatedMessageId   String?
+
+  createdAt          DateTime @default(now())
+
+  comments           MilestoneComment[]
+
+  @@index([characterStoryId, sharedOrder])
+  @@index([characterStoryId, occurredAt])
+  @@index([characterStoryId, type])
 }
 
 // V3 Faz A — Hostility & Block Sistemi

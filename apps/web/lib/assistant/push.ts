@@ -9,6 +9,8 @@ export interface PushPayload {
   title: string
   body: string
   data?: Record<string, unknown>
+  // V3 Faz C — iOS bildirim aksiyon kategorisi (yanıtla, sessize al)
+  categoryIdentifier?: string
 }
 
 interface ExpoPushMessage {
@@ -19,6 +21,7 @@ interface ExpoPushMessage {
   sound?: 'default'
   badge?: number
   channelId?: string
+  categoryId?: string // Expo SDK iOS category mapping
 }
 
 /**
@@ -63,6 +66,7 @@ export async function sendPushToUser(
     data: payload.data,
     sound: 'default',
     channelId: 'default',
+    categoryId: payload.categoryIdentifier ?? 'assistant_message',
   })
 }
 

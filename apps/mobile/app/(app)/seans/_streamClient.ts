@@ -18,11 +18,13 @@ export type StreamEvent =
 export async function streamAssistantMessage(args: {
   url: string;
   token: string;
-  content: string;
+  content?: string;
+  // V3 Faz B — Vision: foto/dosya yüklenmiş bir mesaja AI cevabı iste
+  forAttachmentMessageId?: string;
   onEvent: (event: StreamEvent) => void;
   onError?: (e: unknown) => void;
 }): Promise<void> {
-  const { url, token, content, onEvent, onError } = args;
+  const { url, token, content, forAttachmentMessageId, onEvent, onError } = args;
 
   return new Promise<void>((resolve) => {
     const xhr = new XMLHttpRequest();
@@ -78,6 +80,12 @@ export async function streamAssistantMessage(args: {
       resolve();
     };
 
-    xhr.send(JSON.stringify({ content }));
+    xhr.send(
+      JSON.stringify(
+        forAttachmentMessageId
+          ? { forAttachmentMessageId, content: content ?? '' }
+          : { content: content ?? '' },
+      ),
+    );
   });
 }
