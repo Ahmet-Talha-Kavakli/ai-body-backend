@@ -42,3 +42,5 @@ coverage
 *.tsbuildinfo
 next-env.d.ts
 .worktrees/
+pnpm-lock*[0-9].yaml
+node_modules*[0-9]/
