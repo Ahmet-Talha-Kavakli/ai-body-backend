@@ -148,6 +148,17 @@ model User {
   fitnessCoachSessions FitnessCoachSession[]
   characterMorphCache  Json?
 
+  // V4 Faz A — Graph Memory + Living Characters
+  memoryNodes              MemoryNode[]              @relation("UserMemoryNodes")
+  memoryEdges              MemoryEdge[]              @relation("UserMemoryEdges")
+  memoryClusters           MemoryCluster[]           @relation("UserMemoryClusters")
+  memoryRelationships      MemoryRelationship[]      @relation("UserMemoryRelationships")
+  characters               Character[]               @relation("UserCharacters")
+  characterTrackingPermissions CharacterTrackingPermission[] @relation("UserCharacterTrackingPermissions")
+  characterNotificationPreferences CharacterNotificationPreference[] @relation("UserCharacterNotificationPreferences")
+  featureFlags             FeatureFlag[]             @relation("UserFeatureFlags")
+  aiCallLogs               AiCallLog[]               @relation("UserAiCallLogs")
+
   // Push notifications
   expoPushToken        String?
   pushTokenUpdatedAt   DateTime?
@@ -1848,6 +1859,11 @@ model AssistantProfile {
   characterTestCompletedAt DateTime?
   // V3 Faz C — AI'ın hikayesi (test sonrası üretilir)
   characterStory       CharacterStory?
+
+  // V4 Faz A — Karakter öz farkındalık (current state)
+  // currentMood zaten yukarıda var. Bu ikisi system prompt'a "[SEN ŞU ANDA]" bloğu olarak yüklenir.
+  currentActivity      String?                          // 'sleeping' | 'eating' | 'working' | 'resting' | ... null = belirsiz/aktif
+  currentLocation      String?                          // 'home' | 'cafe' | 'work' | ... null = belirsiz
 
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -4133,4 +4149,378 @@ model Purchase {
 
   @@index([userId])
   @@index([userId, category])
+}
+
+// =============================================================================
+// V4 — Faz A: Graph Memory + Living Characters + Feature Flags + AI Call Log
+// =============================================================================
+// V3 değişmez — bu modeller eklemedir, V4 feature flag'leri kapalıyken
+// yazılmazlar/okunmazlar. Geri dönüş güvenli.
+
+// V4 — Graph Memory
+// ----------------------------------------------------------------------------
+
+// Her node bir bilgi parçası — kullanıcı veya karakter için.
+// pgvector embedding'i opsiyonel (ilk migration'da raw SQL ile eklenecek).
+model MemoryNode {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation("UserMemoryNodes", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Sahip — bu node kullanıcı için mi karakter için mi?
+  ownerType       String   // 'user' | 'character'
+  ownerId         String   // userId veya characterId
+
+  // Tip — 'person' | 'event' | 'pattern' | 'value' | 'emotion' | 'habit'
+  // 'place' | 'goal' | 'ai_memory' | 'ai_emotion' | 'relationship'
+  // 'tracking_pattern' | 'secret' | 'trauma' | 'dream' | 'belief' | ...
+  type            String
+
+  // İçerik
+  title           String
+  content         String   @db.Text
+  metadata        Json?
+
+  // Anlam araması için (pgvector). Migration sonrası raw SQL ile eklenecek:
+  //   ALTER TABLE "MemoryNode" ADD COLUMN embedding vector(1536);
+  // Prisma bunu doğrudan tipleyemediği için Unsupported. Şimdilik opsiyonel.
+  // Prisma 6+ vector preview gerekirse açılır.
+
+  // Önem / silinme zorluğu
+  importance      Int      @default(2)  // 1-5
+
+  // Görünürlük (sırlar için)
+  visibility      String   @default("public")  // 'public' | 'inner_circle' | 'secret'
+
+  // Güven
+  confidence      Float    @default(1.0)
+
+  // Yaşam döngüsü
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastAccessedAt  DateTime @default(now())
+  archived        Boolean  @default(false)
+
+  // Kanıt
+  sourceMessageId String?
+  sourceType      String?  // 'message' | 'tracking' | 'inference' | 'character_event'
+
+  // İlişkiler
+  outgoingEdges   MemoryEdge[]        @relation("FromNode")
+  incomingEdges   MemoryEdge[]        @relation("ToNode")
+  clusters        MemoryClusterNode[]
+
+  @@index([userId, ownerType, ownerId])
+  @@index([userId, type])
+  @@index([userId, importance])
+  @@index([userId, archived])
+}
+
+model MemoryEdge {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation("UserMemoryEdges", fields: [userId], references: [id], onDelete: Cascade)
+
+  fromNodeId      String
+  fromNode        MemoryNode @relation("FromNode", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNodeId        String
+  toNode          MemoryNode @relation("ToNode", fields: [toNodeId], references: [id], onDelete: Cascade)
+
+  // 'causes' | 'related_to' | 'conflicts_with' | 'parent_of' | 'triggered_by'
+  // 'leads_to' | 'part_of' | 'similar_to' | ...
+  relation        String
+
+  strength        Float    @default(0.5)  // 0-1
+  bidirectional   Boolean  @default(false)
+
+  createdAt       DateTime @default(now())
+  lastReinforcedAt DateTime @default(now())
+  metadata        Json?
+
+  @@unique([fromNodeId, toNodeId, relation])
+  @@index([userId])
+  @@index([fromNodeId])
+  @@index([toNodeId])
+}
+
+model MemoryCluster {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation("UserMemoryClusters", fields: [userId], references: [id], onDelete: Cascade)
+
+  name            String
+  theme           String   @db.Text
+  importance      Int      @default(2)
+
+  nodes           MemoryClusterNode[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model MemoryClusterNode {
+  clusterId       String
+  cluster         MemoryCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  nodeId          String
+  node            MemoryNode    @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@id([clusterId, nodeId])
+  @@index([nodeId])
+}
+
+// Kullanıcı–karakter ilişki skorları (V3 AssistantProfile.relationshipState
+// V4'te bunun bir özetini tutuyor, V4 burada genişliyor).
+model MemoryRelationship {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation("UserMemoryRelationships", fields: [userId], references: [id], onDelete: Cascade)
+  characterId       String   // Character.id (Jarvis dahil)
+
+  // Birikim katmanı
+  accumulationDays  Int      @default(0)
+  totalInteractions Int      @default(0)
+  sharedMemoryNodeIds Json?  // Önemli ortak anılar (id listesi)
+  intimacyDepth     Float    @default(0)  // 0-1
+
+  // Güncel durum
+  trustScore        Float    @default(50)
+  loveScore         Float    @default(50)
+  recentMomentum    Float    @default(0)  // -1 ↔ +1
+
+  // Kırılma geçmişi
+  breakingPoints    Json?    // [{date, severity, reason, healed}]
+
+  // Aktivite
+  lastInteractionAt DateTime?
+  lastMessageAt     DateTime?
+
+  // Durum
+  status            String   @default("active")  // 'active' | 'cold' | 'silent' | 'broken' | 'recovering'
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([userId, characterId])
+  @@index([userId])
+}
+
+// V4 — Living Characters
+// ----------------------------------------------------------------------------
+
+// V3'teki AssistantProfile sadece Jarvis'tir (her kullanıcının ana karakteri).
+// V4'te 5 ek karakter (5 + Jarvis = max 6 aynı anda) Character tablosunda yaşar.
+// Jarvis V4'te de AssistantProfile'da kalır, ek karakterler buraya eklenir.
+// İleride Jarvis de Character'a taşınabilir (faz C+) — şimdilik ayrı tutuyoruz.
+model Character {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation("UserCharacters", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Kimlik
+  name            String
+  archetype       String   // 'comedian' | 'philosopher' | 'street' | 'sage' | ...
+  age             Int
+  gender          String?
+  bio             String?  @db.Text
+
+  // Avatar
+  masterAvatarUrl String?  // Tutarlılık çapası — değişmez
+  avatarUrl       String?  // Güncel avatar (mood/sahne ile değişir)
+  avatarHistory   Json?    // [{url, prompt, generatedAt}]
+
+  // Yer / saat dilimi
+  timezone        String?  // ör: 'Europe/Istanbul' — kendi günlüğü için
+  hometown        String?
+
+  // Öz farkındalık (her mesajda system prompt'a yüklenir)
+  currentMood     String?  // 'tired' | 'energetic' | 'thoughtful' | 'happy' | ...
+  currentActivity String?  // 'sleeping' | 'eating' | 'working' | 'cafe' | ...
+  currentLocation String?  // 'home' | 'cafe' | 'work' | ...
+  currentStateUpdatedAt DateTime?
+
+  // Yaşam dinamiği
+  lifePhase       String?  // 'normal' | 'depressive' | 'growth' | 'recovery' | ...
+  weeklyEnergy    Int      @default(80) // 0-100
+  lastMajorEvent  String?  @db.Text
+  currentStorylines Json?  // ["diet_3rd_week", "english_course", ...]
+
+  // İçerik rating (yaşa göre filtre)
+  contentRating   String   @default("teen") // 'family' | 'teen' | 'mature' | 'explicit'
+
+  // Status
+  status          String   @default("active") // 'active' | 'cold' | 'silent' | 'broken' | 'departed' | 'deceased'
+  arrivedAt       DateTime @default(now())
+  departedAt      DateTime?
+
+  // Konuşma profili (V3 archetype mantığıyla aynı)
+  swearProfile    String   @default("never")
+  addressStyle    String   @default("mixed")
+  verbalTics      String[] @default([])
+
+  // Ses
+  voiceId         String?  // ElevenLabs voice id
+
+  facts           CharacterFact[]
+  outgoingRelationships CharacterRelationship[] @relation("FromCharacter")
+  incomingRelationships CharacterRelationship[] @relation("ToCharacter")
+  relationshipEvents RelationshipEvent[]
+  trackingPermissions CharacterTrackingPermission[]
+  notificationPreferences CharacterNotificationPreference[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+// Karakter geçmişi — IMMUTABLE. Tutarsızlık koruması için graph dışı.
+// Karakter bir kez "babam İzmir'de" dedi → bu tabloya yazılır → değiştirilmez.
+model CharacterFact {
+  id              String   @id @default(cuid())
+  characterId     String
+  character       Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  category        String   // 'family' | 'origin' | 'job' | 'trait' | 'event' | ...
+  fact            String   @db.Text
+  confidence      Float    @default(1.0)
+
+  // Append-only — sadece archived/superseded olabilir
+  superseded      Boolean  @default(false)
+  supersededAt    DateTime?
+  supersededBy    String?  // CharacterFact.id (yenisi)
+
+  createdAt       DateTime @default(now())
+
+  @@index([characterId])
+  @@index([characterId, superseded])
+}
+
+// İki karakter arasındaki ilişki (Mia ↔ Kerem).
+// Kullanıcıdan bağımsız — karakter hayatı.
+model CharacterRelationship {
+  id              String   @id @default(cuid())
+  fromCharacterId String
+  fromCharacter   Character @relation("FromCharacter", fields: [fromCharacterId], references: [id], onDelete: Cascade)
+  toCharacterId   String
+  toCharacter     Character @relation("ToCharacter", fields: [toCharacterId], references: [id], onDelete: Cascade)
+
+  type            String   // 'friend' | 'sibling' | 'lover' | 'ex' | 'rival' | 'mentor' | ...
+  intimacyDepth   Float    @default(0)  // 0-1
+  status          String   @default("active") // 'active' | 'cold' | 'broken' | ...
+  metadata        Json?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([fromCharacterId, toCharacterId, type])
+  @@index([fromCharacterId])
+  @@index([toCharacterId])
+}
+
+// İlişki kırılma/onarılma logu (append-only).
+model RelationshipEvent {
+  id              String   @id @default(cuid())
+  characterId     String
+  character       Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  // Hangi ilişki için: kullanıcıyla mı, başka karakterle mi?
+  targetType      String   // 'user' | 'character'
+  targetId        String   // userId veya Character.id
+
+  eventType       String   // 'breaking_point' | 'reconciliation' | 'cooling' | 'warming' | 'grand_gesture' | ...
+  severity        Int      @default(1) // 1-5
+  reason          String?  @db.Text
+  metadata        Json?
+
+  createdAt       DateTime @default(now())
+
+  @@index([characterId])
+  @@index([targetType, targetId])
+}
+
+// Karakterin tracking erişim izni (Jarvis dışı her karakter için).
+// Jarvis tracking'e tam yetkili — kayıt aranmaz.
+model CharacterTrackingPermission {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation("UserCharacterTrackingPermissions", fields: [userId], references: [id], onDelete: Cascade)
+  characterId     String
+  character       Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  category        String   // 'health' | 'nutrition' | 'mood' | 'medication' | 'finance' | 'calendar' | 'location'
+  type            String   // 'one_time' | 'always' | 'denied'
+
+  grantedAt       DateTime @default(now())
+  expiresAt       DateTime?
+
+  @@unique([userId, characterId, category])
+  @@index([userId, characterId])
+}
+
+// Karakter bazlı bildirim tercihi.
+model CharacterNotificationPreference {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation("UserCharacterNotificationPreferences", fields: [userId], references: [id], onDelete: Cascade)
+  characterId     String
+  character       Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  level           String   @default("all") // 'all' | 'important_only' | 'off'
+  quietHoursStart Int?
+  quietHoursEnd   Int?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, characterId])
+  @@index([userId])
+}
+
+// V4 — Feature Flags
+// ----------------------------------------------------------------------------
+// Her V4 özelliği bir flag arkasında. Faz başında flag açılır, sorun çıkarsa kapatılır.
+// userId null ise global flag (herkes için).
+model FeatureFlag {
+  id              String   @id @default(cuid())
+  userId          String?  // null = global
+  user            User?    @relation("UserFeatureFlags", fields: [userId], references: [id], onDelete: Cascade)
+
+  flagName        String   // 'v4_graph_memory' | 'v4_characters' | 'v4_life_engine' | 'v4_decision_engine' | 'v4_group_chat' | 'v4_ui'
+  enabled         Boolean  @default(false)
+  metadata        Json?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, flagName])
+  @@index([flagName, enabled])
+}
+
+// V4 — AI Call Log (maliyet izleme)
+// ----------------------------------------------------------------------------
+model AiCallLog {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation("UserAiCallLogs", fields: [userId], references: [id], onDelete: Cascade)
+
+  model           String   // 'gpt-4o-mini' | 'gpt-4o' | 'claude-haiku-4-5' | 'gemini-flash' | ...
+  purpose         String   // 'chat' | 'decision_fast' | 'decision_deep' | 'extractor' | 'life_engine' | 'pattern' | 'inner_thought' | 'avatar' | ...
+  provider        String   @default("openai") // 'openai' | 'anthropic' | 'gemini' | 'fal' | 'replicate' | 'elevenlabs'
+
+  inputTokens     Int      @default(0)
+  outputTokens    Int      @default(0)
+  costUsd         Float    @default(0)
+  durationMs      Int      @default(0)
+
+  characterId     String?  // hangi karakter için yapıldı (varsa)
+  metadata        Json?
+
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, purpose])
+  @@index([userId, model])
 }
