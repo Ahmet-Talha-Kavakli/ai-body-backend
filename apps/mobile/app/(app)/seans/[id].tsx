@@ -124,6 +124,24 @@ export default function SeansChatScreen() {
   const durationTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const [recordSecs, setRecordSecs] = useState(0);
 
+  // Send button pulse animasyonu
+  const sendBtnScale = useRef(new Animated.Value(1)).current;
+  const triggerSendPulse = useCallback(() => {
+    Animated.sequence([
+      Animated.timing(sendBtnScale, {
+        toValue: 0.85,
+        duration: 90,
+        useNativeDriver: true,
+      }),
+      Animated.spring(sendBtnScale, {
+        toValue: 1,
+        tension: 200,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [sendBtnScale]);
+
   const listRef = useRef<FlatList<Message>>(null);
   const stickToBottomRef = useRef(true);
   const scrollAt = (animated = true) => {
@@ -947,21 +965,30 @@ export default function SeansChatScreen() {
                   />
                 </Pressable>
               ) : (
-                <Pressable
-                  onPress={send}
-                  disabled={!input.trim() || sending || transcribing}
-                  style={[
-                    st.sendBtn,
-                    { backgroundColor: input.trim() && !sending ? C.accent : '#D1D1D6' },
-                  ]}
-                >
-                  <SymbolView
-                    name="arrow.up"
-                    size={16}
-                    tintColor="#fff"
-                    fallback={<Text style={{ color: '#fff', fontSize: 14 }}>↑</Text>}
-                  />
-                </Pressable>
+                <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
+                  <Pressable
+                    onPress={() => {
+                      triggerSendPulse();
+                      send();
+                    }}
+                    disabled={!input.trim() || sending || transcribing}
+                    style={[
+                      st.sendBtn,
+                      { backgroundColor: input.trim() && !sending ? C.accent : '#D1D1D6' },
+                    ]}
+                  >
+                    <SymbolView
+                      name="arrow.up"
+                      size={16}
+                      tintColor="#fff"
+                      fallback={
+                        <Text style={{ color: '#fff', fontSize: 14, fontFamily: font.regular }}>
+                          ↑
+                        </Text>
+                      }
+                    />
+                  </Pressable>
+                </Animated.View>
               )}
             </View>
           )}
@@ -1001,9 +1028,10 @@ function MessageBubble({
   const visibleTools = (message.toolCalls ?? []).filter((tc) => tc.result?.display);
   const isStreaming = !isUser && message.id.startsWith('tmp-ai-');
 
-  // Entrance animasyonu
-  const translateY = useRef(new Animated.Value(8)).current;
+  // Entrance animasyonu — pop-in (scale + fade + slide)
+  const translateY = useRef(new Animated.Value(10)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.92)).current;
 
   // V3 Faz B — Sağa swipe yanıtla (sadece tmp olmayan mesajlarda)
   const swipeX = useRef(new Animated.Value(0)).current;
@@ -1063,7 +1091,7 @@ function MessageBubble({
     Animated.parallel([
       Animated.timing(translateY, {
         toValue: 0,
-        duration: 220,
+        duration: 280,
         useNativeDriver: true,
         easing: Easing.bezier(0.16, 1, 0.3, 1),
       }),
@@ -1071,7 +1099,13 @@ function MessageBubble({
         toValue: 1,
         duration: 220,
         useNativeDriver: true,
-        easing: Easing.bezier(0.16, 1, 0.3, 1),
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        tension: 180,
+        friction: 12,
+        useNativeDriver: true,
       }),
     ]).start();
     // sadece mount'ta çalışsın
@@ -1277,7 +1311,7 @@ function MessageBubble({
       style={[
         bubbleSt.row,
         { marginTop: showSpacing ? 12 : 3 },
-        { transform: [{ translateY }, { translateX: swipeX }], opacity },
+        { transform: [{ translateY }, { translateX: swipeX }, { scale }], opacity },
       ]}
     >
       {/* Sağa swipe ipucu — sol kenarda yanıt ikonu */}
@@ -1718,28 +1752,49 @@ function PresenceLine({
 }
 
 function PresenceTypingDots() {
-  const a1 = useRef(new Animated.Value(0.3)).current;
-  const a2 = useRef(new Animated.Value(0.3)).current;
-  const a3 = useRef(new Animated.Value(0.3)).current;
+  // WhatsApp tarzı: noktalar yukarı zıplıyor (translateY) + opacity dalga
+  const a1 = useRef(new Animated.Value(0)).current;
+  const a2 = useRef(new Animated.Value(0)).current;
+  const a3 = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const make = (v: Animated.Value, delay: number) =>
       Animated.loop(
         Animated.sequence([
           Animated.delay(delay),
-          Animated.timing(v, { toValue: 1, duration: 320, useNativeDriver: true }),
-          Animated.timing(v, { toValue: 0.3, duration: 320, useNativeDriver: true }),
+          Animated.timing(v, {
+            toValue: 1,
+            duration: 360,
+            useNativeDriver: true,
+            easing: Easing.bezier(0.4, 0, 0.2, 1),
+          }),
+          Animated.timing(v, {
+            toValue: 0,
+            duration: 360,
+            useNativeDriver: true,
+            easing: Easing.bezier(0.4, 0, 0.2, 1),
+          }),
         ]),
       );
-    const anims = [make(a1, 0), make(a2, 160), make(a3, 320)];
+    const anims = [make(a1, 0), make(a2, 140), make(a3, 280)];
     anims.forEach((a) => a.start());
     return () => anims.forEach((a) => a.stop());
   }, [a1, a2, a3]);
   return (
-    <View style={{ flexDirection: 'row', gap: 2, marginRight: 4 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginRight: 5 }}>
       {[a1, a2, a3].map((a, i) => (
         <Animated.View
           key={i}
-          style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: C.accent, opacity: a }}
+          style={{
+            width: 4,
+            height: 4,
+            borderRadius: 2,
+            backgroundColor: C.accent,
+            opacity: a.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }),
+            transform: [
+              { translateY: a.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) },
+              { scale: a.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) },
+            ],
+          }}
         />
       ))}
     </View>

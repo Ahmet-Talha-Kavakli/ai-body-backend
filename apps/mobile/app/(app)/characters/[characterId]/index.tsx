@@ -122,6 +122,34 @@ function ChatBubble({ message, characterName, onStarToggle, isStarred }: ChatBub
   const isPending = 'pending' in message && message.pending;
   const isTemp = message.id.startsWith('tmp-') || message.id.startsWith('streaming-');
 
+  // Pop-in entrance: scale + translate + fade
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(10)).current;
+  const scale = useRef(new Animated.Value(0.92)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.22, 1, 0.36, 1),
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 280,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        tension: 180,
+        friction: 12,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const bubble = (
     <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
       <Text
@@ -130,7 +158,16 @@ function ChatBubble({ message, characterName, onStarToggle, isStarred }: ChatBub
         {message.content || (isPending ? '…' : '')}
       </Text>
       {isStarred && (
-        <Text style={{ position: 'absolute', top: 4, right: 6, fontSize: 10, color: '#FFC107' }}>
+        <Text
+          style={{
+            position: 'absolute',
+            top: 4,
+            right: 6,
+            fontSize: 10,
+            color: '#FFC107',
+            fontFamily: font.regular,
+          }}
+        >
           ⭐
         </Text>
       )}
@@ -140,7 +177,13 @@ function ChatBubble({ message, characterName, onStarToggle, isStarred }: ChatBub
   // Geçici mesaj (gönderilirken / streaming) — sadece kopyala
   if (isTemp || !message.content) {
     return (
-      <View style={[styles.bubbleRow, isUser ? styles.bubbleRowUser : styles.bubbleRowAssistant]}>
+      <Animated.View
+        style={[
+          styles.bubbleRow,
+          isUser ? styles.bubbleRowUser : styles.bubbleRowAssistant,
+          { opacity, transform: [{ translateY }, { scale }] },
+        ]}
+      >
         {message.content ? (
           <ContextMenu
             actions={[{ title: 'Kopyala', systemIcon: 'doc.on.doc' }]}
@@ -156,12 +199,18 @@ function ChatBubble({ message, characterName, onStarToggle, isStarred }: ChatBub
         ) : (
           bubble
         )}
-      </View>
+      </Animated.View>
     );
   }
 
   return (
-    <View style={[styles.bubbleRow, isUser ? styles.bubbleRowUser : styles.bubbleRowAssistant]}>
+    <Animated.View
+      style={[
+        styles.bubbleRow,
+        isUser ? styles.bubbleRowUser : styles.bubbleRowAssistant,
+        { opacity, transform: [{ translateY }, { scale }] },
+      ]}
+    >
       <ContextMenu
         actions={[
           { title: 'Kopyala', systemIcon: 'doc.on.doc' },
@@ -183,7 +232,7 @@ function ChatBubble({ message, characterName, onStarToggle, isStarred }: ChatBub
       >
         {bubble}
       </ContextMenu>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -193,6 +242,8 @@ export default function CharacterChatScreen() {
   const { getToken } = useAuth();
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList>(null);
+  const headerAvatarScale = useRef(new Animated.Value(1)).current;
+  const sendBtnScale = useRef(new Animated.Value(1)).current;
 
   const [header, setHeader] = useState<HeaderState | null>(null);
   const [messages, setMessages] = useState<
@@ -387,14 +438,37 @@ export default function CharacterChatScreen() {
         </Pressable>
         <Pressable
           style={styles.headerCenter}
-          onPress={() => router.push(`/(app)/characters/${characterId}/profile`)}
+          onPress={() => {
+            // Avatar bounce
+            Animated.sequence([
+              Animated.timing(headerAvatarScale, {
+                toValue: 1.15,
+                duration: 110,
+                useNativeDriver: true,
+                easing: Easing.bezier(0.4, 0, 0.2, 1),
+              }),
+              Animated.spring(headerAvatarScale, {
+                toValue: 1,
+                tension: 200,
+                friction: 7,
+                useNativeDriver: true,
+              }),
+            ]).start();
+            Haptics.selectionAsync();
+            router.push(`/(app)/characters/${characterId}/profile`);
+          }}
         >
           {header?.avatarUrl ? (
-            <Image source={{ uri: header.avatarUrl }} style={styles.headerAvatar} />
+            <Animated.Image
+              source={{ uri: header.avatarUrl }}
+              style={[styles.headerAvatar, { transform: [{ scale: headerAvatarScale }] }]}
+            />
           ) : (
-            <View style={styles.headerAvatar}>
+            <Animated.View
+              style={[styles.headerAvatar, { transform: [{ scale: headerAvatarScale }] }]}
+            >
               <Text style={styles.headerAvatarFallback}>{header?.name?.[0]}</Text>
-            </View>
+            </Animated.View>
           )}
           <View style={{ marginLeft: 12 }}>
             <Text style={styles.headerName}>{header?.name}</Text>
@@ -458,17 +532,30 @@ export default function CharacterChatScreen() {
             if (input.trim() && !sending) onSend();
           }}
         />
-        <Pressable
-          onPress={onSend}
-          disabled={!input.trim() || sending}
-          style={({ pressed }) => [
-            styles.sendBtn,
-            (!input.trim() || sending) && { opacity: 0.4 },
-            pressed && { transform: [{ scale: 0.92 }] },
-          ]}
-        >
-          <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
-        </Pressable>
+        <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
+          <Pressable
+            onPress={() => {
+              Animated.sequence([
+                Animated.timing(sendBtnScale, {
+                  toValue: 0.85,
+                  duration: 90,
+                  useNativeDriver: true,
+                }),
+                Animated.spring(sendBtnScale, {
+                  toValue: 1,
+                  tension: 200,
+                  friction: 8,
+                  useNativeDriver: true,
+                }),
+              ]).start();
+              onSend();
+            }}
+            disabled={!input.trim() || sending}
+            style={[styles.sendBtn, (!input.trim() || sending) && { opacity: 0.4 }]}
+          >
+            <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+          </Pressable>
+        </Animated.View>
       </View>
     </KeyboardAvoidingView>
   );

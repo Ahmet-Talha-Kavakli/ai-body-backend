@@ -15,15 +15,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Easing,
   FlatList,
   Image,
+  LayoutAnimation,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   View,
 } from 'react-native';
+
+// Android'de LayoutAnimation aktive et
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { Swipeable } from 'react-native-gesture-handler';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -275,6 +284,17 @@ export default function SessionsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchGlow = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(searchGlow, {
+      toValue: searchFocused ? 1 : 0,
+      duration: 220,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: false,
+    }).start();
+  }, [searchFocused, searchGlow]);
 
   const load = useCallback(async () => {
     try {
@@ -309,6 +329,11 @@ export default function SessionsScreen() {
           };
         }
       }
+      // Sıralama değişimini smooth göster
+      LayoutAnimation.configureNext({
+        duration: 320,
+        update: { type: LayoutAnimation.Types.easeInEaseOut },
+      });
       setJarvis(jv);
       setCharacters(charData.characters);
       setGroups(groupData.groups);
@@ -398,8 +423,23 @@ export default function SessionsScreen() {
           )}
         </View>
 
-        {/* Search — Apple Messages stili */}
-        <View style={s.searchWrap}>
+        {/* Search — Apple Messages stili + focus glow */}
+        <Animated.View
+          style={[
+            s.searchWrap,
+            {
+              borderWidth: 1.5,
+              borderColor: searchGlow.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['rgba(124, 58, 237, 0)', C.accent],
+              }),
+              backgroundColor: searchGlow.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['#E3E3E8', '#FFFFFF'],
+              }),
+            },
+          ]}
+        >
           <SymbolView
             name="magnifyingglass"
             size={15}
@@ -417,6 +457,8 @@ export default function SessionsScreen() {
             returnKeyType="search"
             clearButtonMode="while-editing"
             autoCorrect={false}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
           />
           <SymbolView
             name="mic.fill"
@@ -426,7 +468,7 @@ export default function SessionsScreen() {
               <Text style={{ color: '#8E8E93', fontSize: 14, fontFamily: font.regular }}>🎤</Text>
             }
           />
-        </View>
+        </Animated.View>
       </View>
 
       <FlatList
