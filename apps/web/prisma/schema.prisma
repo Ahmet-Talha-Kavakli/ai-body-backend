@@ -1892,10 +1892,16 @@ model AssistantConversation {
   // AI cevap üretirken set edilir, bittiğinde null. TTL fallback'i için tarih.
   aiTypingUntil DateTime?
 
+  // V4 Faz D — Karakter sohbeti
+  // null → Jarvis sohbeti (V3 davranışı). Set ise bu sohbet o karakter ile.
+  // Index'te characterId arıyoruz çünkü "Mia ile sohbet aç" sorgusu gelir.
+  characterId String?
+
   summaries ConversationSummary[]
 
   @@index([userId, updatedAt])
   @@index([userId, archived])
+  @@index([userId, characterId])
 }
 
 // V3 Faz C — AI'ın Kendi Hikayesi

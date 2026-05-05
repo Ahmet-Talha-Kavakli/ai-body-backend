@@ -65,6 +65,10 @@
     {
       "path": "/api/cron/character-lifecycle",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/life-engine",
+      "schedule": "0 4 * * *"
     }
   ]
 }
