@@ -32,6 +32,7 @@ import {
   updateRelationshipAfterInteraction,
 } from '@/lib/assistant/character-relationship'
 import { loadGraphContext, formatGraphContextForPrompt } from '@/lib/assistant/graph-context'
+import { invalidateCache } from '@/lib/redis/client'
 import { detectEmergency } from '@/lib/assistant/emergency'
 
 export const maxDuration = 60
@@ -327,6 +328,9 @@ export const POST = withAuth(async (req, { user, params }) => {
           },
         })
         send({ type: 'message_complete', messageId: aiMsg.id })
+
+        // V4.5 Perf: liste cache invalidate
+        invalidateCache(`chars:list:${user.id}`).catch(() => {})
 
         // İlişki güncellemesi (pozitif etkileşim)
         await updateRelationshipAfterInteraction({

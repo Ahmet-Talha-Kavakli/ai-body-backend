@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { withAuth } from '@/lib/api/with-auth'
 import { isFlagEnabled } from '@/lib/assistant/feature-flags'
+import { cached } from '@/lib/redis/client'
 
 export const GET = withAuth(async (req: NextRequest, { user }) => {
   const enabled = await isFlagEnabled('v4_characters', user.id)
@@ -19,8 +20,16 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
     return NextResponse.json({ characters: [], flagEnabled: false })
   }
 
+  const cacheKey = `chars:list:${user.id}`
+  const cachedResult = await cached(cacheKey, 5, async () => {
+    return await loadCharacters(user.id)
+  })
+  return NextResponse.json({ characters: cachedResult, flagEnabled: true })
+})
+
+async function loadCharacters(userId: string) {
   const characters = await db.character.findMany({
-    where: { userId: user.id, status: { not: 'departed' } },
+    where: { userId, status: { not: 'departed' } },
     orderBy: { arrivedAt: 'desc' },
     select: {
       id: true,
@@ -38,7 +47,7 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
   })
 
   if (characters.length === 0) {
-    return NextResponse.json({ characters: [], flagEnabled: true })
+    return [] as Array<Record<string, unknown>>
   }
 
   // V4 Perf: Tek raw SQL query ile conversation + son mesaj + okunmamış sayısı
@@ -86,13 +95,13 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
           AND m2.role = 'assistant'
           AND m2."readAt" IS NULL
       ) uc ON TRUE
-      WHERE c."userId" = ${user.id}
+      WHERE c."userId" = ${userId}
         AND c."characterId" = ANY(${characterIds})
         AND c.archived = false
       ORDER BY c."updatedAt" DESC
     `,
     db.memoryRelationship.findMany({
-      where: { userId: user.id, characterId: { in: characterIds } },
+      where: { userId, characterId: { in: characterIds } },
       select: {
         characterId: true,
         status: true,
@@ -150,5 +159,5 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
     }
   })
 
-  return NextResponse.json({ characters: result, flagEnabled: true })
-})
+  return result
+}

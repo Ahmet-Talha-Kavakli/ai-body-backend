@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { generateGroupReply } from '@/lib/assistant/group-reply'
 import { triggerReactivity } from '@/lib/assistant/group-reactivity'
+import { invalidateCache } from '@/lib/redis/client'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -74,10 +75,13 @@ export async function GET(req: NextRequest) {
           repliedToMessageId: sched.triggerMessageId,
         },
       })
-      await db.groupConversation.update({
+      const groupOwner = await db.groupConversation.update({
         where: { id: sched.groupId },
         data: { updatedAt: new Date() },
+        select: { userId: true },
       })
+      // V4.5 Perf: liste cache invalidate
+      invalidateCache(`groups:list:${groupOwner.userId}`).catch(() => {})
 
       // 1-hop reaktivite — diğer üyeler bu mesaja tepki verir mi?
       const r = await triggerReactivity({

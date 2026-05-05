@@ -18,6 +18,7 @@ import {
   parseAddressedNames,
   type GroupDecisionInput,
 } from '@/lib/assistant/group-decision'
+import { invalidateCache } from '@/lib/redis/client'
 
 export const runtime = 'nodejs'
 
@@ -112,6 +113,8 @@ export const POST = withAuth(async (req: NextRequest, { user, params }) => {
     where: { id },
     data: { updatedAt: new Date() },
   })
+  // V4.5 Perf: liste cache invalidate
+  invalidateCache(`groups:list:${user.id}`).catch(() => {})
 
   // 2) Mesaj kime hitap ediyor? (basit isim parse)
   const memberNames = group.members.map((m) => m.character.name)

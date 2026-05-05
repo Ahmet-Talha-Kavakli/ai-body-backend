@@ -21,3 +21,35 @@ export const apiRatelimit = new Ratelimit({
   analytics: true,
   prefix: 'fitai:api',
 })
+
+/**
+ * Cache helper — Redis 5sn TTL ile.
+ * Liste endpoint'lerinde tek-kullanıcılı cache, polling yükünü kapatır.
+ *
+ * Kullanım:
+ *   const data = await cached(`conv:list:${userId}`, 5, async () => {...})
+ */
+export async function cached<T>(key: string, ttlSec: number, loader: () => Promise<T>): Promise<T> {
+  try {
+    const hit = await redis.get<T>(key)
+    if (hit !== null && hit !== undefined) return hit
+  } catch {
+    // Redis erişilemez ise direkt loader
+  }
+  const value = await loader()
+  try {
+    await redis.set(key, value, { ex: ttlSec })
+  } catch {
+    // sessize al
+  }
+  return value
+}
+
+/** Belirli prefix'li cache satırlarını temizle (mesaj atınca invalidate için) */
+export async function invalidateCache(...keys: string[]) {
+  try {
+    if (keys.length > 0) await redis.del(...keys)
+  } catch {
+    // sessize al
+  }
+}

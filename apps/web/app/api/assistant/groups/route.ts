@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { withAuth } from '@/lib/api/with-auth'
 import { isFlagEnabled } from '@/lib/assistant/feature-flags'
+import { cached } from '@/lib/redis/client'
 
 export const runtime = 'nodejs'
 
@@ -16,31 +17,33 @@ export const GET = withAuth(async (_req: NextRequest, { user }) => {
   const enabled = await isFlagEnabled('v4_group_chat', user.id)
   if (!enabled) return NextResponse.json({ groups: [], flagEnabled: false })
 
-  const groups = await db.groupConversation.findMany({
-    where: { userId: user.id, archived: false },
-    include: {
-      members: {
-        where: { leftAt: null },
-        include: {
-          character: {
-            select: { id: true, name: true, avatarUrl: true, currentMood: true },
+  const groups = await cached(`groups:list:${user.id}`, 5, async () => {
+    return await db.groupConversation.findMany({
+      where: { userId: user.id, archived: false },
+      include: {
+        members: {
+          where: { leftAt: null },
+          include: {
+            character: {
+              select: { id: true, name: true, avatarUrl: true, currentMood: true },
+            },
+          },
+        },
+        messages: {
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            content: true,
+            senderType: true,
+            senderCharacterId: true,
+            senderCharacter: { select: { name: true } },
+            createdAt: true,
           },
         },
       },
-      messages: {
-        take: 1,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          content: true,
-          senderType: true,
-          senderCharacterId: true,
-          senderCharacter: { select: { name: true } },
-          createdAt: true,
-        },
-      },
-    },
-    orderBy: { updatedAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
+    })
   })
 
   return NextResponse.json({ groups, flagEnabled: true })

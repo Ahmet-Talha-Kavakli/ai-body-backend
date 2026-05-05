@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { db } from '@/lib/db/client'
+import { cached } from '@/lib/redis/client'
 import {
   shouldShowBriefing,
   loadBriefingContext,
@@ -10,31 +11,35 @@ import {
 // GET /api/assistant/conversations?archived=true
 export const GET = withAuth(async (req: NextRequest, { user }) => {
   const archived = req.nextUrl.searchParams.get('archived') === 'true'
-  const conversations = await db.assistantConversation.findMany({
-    // V4: characterId null = Jarvis sohbeti. Karakter sohbetleri V3 listesinde görünmez.
-    where: { userId: user.id, archived, characterId: null },
-    orderBy: { updatedAt: 'desc' },
-    include: {
-      _count: { select: { messages: true } },
-      messages: {
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-        select: { content: true, role: true, createdAt: true },
+
+  const data = await cached(`conv:list:${user.id}:${archived}`, 5, async () => {
+    const conversations = await db.assistantConversation.findMany({
+      // V4: characterId null = Jarvis sohbeti. Karakter sohbetleri V3 listesinde görünmez.
+      where: { userId: user.id, archived, characterId: null },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        _count: { select: { messages: true } },
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { content: true, role: true, createdAt: true },
+        },
       },
-    },
+    })
+
+    // Her sohbet için okunmamış asistan mesaj sayısı
+    const convWithUnread = await Promise.all(
+      conversations.map(async (c) => {
+        const unreadCount = await db.assistantMessage.count({
+          where: { conversationId: c.id, role: 'assistant', readAt: null },
+        })
+        return { ...c, unreadCount }
+      })
+    )
+    return { conversations: convWithUnread }
   })
 
-  // Her sohbet için okunmamış asistan mesaj sayısı
-  const convWithUnread = await Promise.all(
-    conversations.map(async (c) => {
-      const unreadCount = await db.assistantMessage.count({
-        where: { conversationId: c.id, role: 'assistant', readAt: null },
-      })
-      return { ...c, unreadCount }
-    })
-  )
-
-  return NextResponse.json({ conversations: convWithUnread })
+  return NextResponse.json(data)
 })
 
 // POST /api/assistant/conversations — Jarvis tek sohbet

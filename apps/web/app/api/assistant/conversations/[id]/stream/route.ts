@@ -9,6 +9,7 @@ import { extractAndStoreFacts } from '@/lib/assistant/memory-extractor'
 import { extractGraphFromMessages } from '@/lib/assistant/graph-extractor'
 import { loadGraphContext, formatGraphContextForPrompt } from '@/lib/assistant/graph-context'
 import { embedAndStoreMessage, searchSimilarMessages } from '@/lib/assistant/rag'
+import { invalidateCache } from '@/lib/redis/client'
 import { maybeEvolvePersonality } from '@/lib/assistant/personality-evolver'
 import { detectAndUnlockSharedMilestones } from '@/lib/assistant/milestone-detector'
 import { maybeUnlockTimeBasedMilestones } from '@/lib/assistant/shared-milestones'
@@ -332,24 +333,26 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         .map((m) => `${m.role}: ${m.content.slice(0, 80)}`)
         .join(' | ')
 
-      // V4 Perf: 6 paralel — honesty önceden tone'u bekliyordu (~500-1500ms seri kazanç)
-      // Honesty tone null geldiğinde de güvenli (kendi içinde skip kuralı + fallback)
-      // Bu paralelleştirme V3 cevap süresini ~1sn azaltır.
-      const [route, toneAnalysis, lifeEvent, summaryCtx, graphNodes, honestyEval] =
-        await Promise.all([
-          routeMessage({ message: content, recentContext }),
-          analyzeTone(content),
-          detectLifeEvent(content),
-          loadSummaryContext(user.id),
-          loadGraphContext({ userId: user.id, userMessage: content }),
-          evaluateHonesty({ userMessage: content, recentContext }).catch(() => null),
-        ])
+      // V4.5 Perf: önce route, easy ise pre-stream'in çoğunu skip
+      // Easy mesajlar (selamlaşma, kısa replikler) için 4-6sn kazanç sağlar.
+      const route = await routeMessage({ message: content, recentContext })
+
+      const isEasy = route.difficulty === 'easy'
+      const [toneAnalysis, lifeEvent, summaryCtx, graphNodes, honestyEval] = await Promise.all([
+        isEasy ? Promise.resolve(null) : analyzeTone(content),
+        isEasy ? Promise.resolve(null) : detectLifeEvent(content),
+        isEasy ? Promise.resolve(null) : loadSummaryContext(user.id),
+        loadGraphContext({ userId: user.id, userMessage: content }),
+        isEasy
+          ? Promise.resolve(null)
+          : evaluateHonesty({ userMessage: content, recentContext }).catch(() => null),
+      ])
       const graphContextBlock = formatGraphContextForPrompt(graphNodes)
       const selectedModel = imageUrls.length > 0 ? 'gpt-4o' : modelForDifficulty(route.difficulty)
       const selectedMaxTokens = maxTokensForDifficulty(route.difficulty)
-      const tonePromptHint = toneToPromptHint(toneAnalysis)
+      const tonePromptHint = toneAnalysis ? toneToPromptHint(toneAnalysis) : ''
       const lifeEventHint = lifeEvent ? lifeEventToPromptHint(lifeEvent) : ''
-      const summaryHint = formatSummaryContextForPrompt(summaryCtx)
+      const summaryHint = summaryCtx ? formatSummaryContextForPrompt(summaryCtx) : ''
       const honestyHint = honestyEval ? honestyToPromptHint(honestyEval) : ''
 
       // Easy/medium → light system prompt (~1500 token), hard → full prompt (~6000 token)
@@ -463,6 +466,8 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
         aiMessageId = aiMessage.id
         embedAndStoreMessage(aiMessage.id, finalText).catch(() => {})
         maybeEvolvePersonality(user.id).catch(() => {})
+        // V4.5 Perf: liste cache invalidate — yeni mesaj geldi, anlık yansısın
+        invalidateCache(`conv:list:${user.id}:false`, `conv:list:${user.id}:true`).catch(() => {})
         // V3 Faz A: hierarchical memory compression Level 1 tetikleyici
         maybeCreateLevel1Summary(user.id, id).catch(() => {})
         // V3 Faz C: AI mesajda hangi milestone'lardan bahsetti mi tespit et + unlock
