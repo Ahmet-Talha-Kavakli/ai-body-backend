@@ -33,19 +33,11 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
   // 1.5. Embedding (background)
   embedAndStoreMessage(userMessage.id, content).catch(() => {})
 
-  // 2. İlk gerçek user mesajıysa title güncelle
-  if (conv.messages.filter((m) => m.role === 'user').length === 0) {
-    const title = content.slice(0, 60).replace(/\n/g, ' ')
-    await db.assistantConversation.update({
-      where: { id },
-      data: { title, updatedAt: new Date() },
-    })
-  } else {
-    await db.assistantConversation.update({
-      where: { id },
-      data: { updatedAt: new Date() },
-    })
-  }
+  // Jarvis tek kişi — title hep "Jarvis"
+  await db.assistantConversation.update({
+    where: { id },
+    data: { title: 'Jarvis', updatedAt: new Date() },
+  })
 
   // 3. Context yükle (paralel: facts + people + events + env + RAG search)
   const [ctx, ragResults] = await Promise.all([

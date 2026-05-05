@@ -221,19 +221,11 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
     )
   }
 
-  // Title güncelle (ilk gerçek mesajsa)
-  if (conv.messages.filter((m) => m.role === 'user').length === 0) {
-    const title = content.slice(0, 60).replace(/\n/g, ' ')
-    await db.assistantConversation.update({
-      where: { id },
-      data: { title, updatedAt: new Date() },
-    })
-  } else {
-    await db.assistantConversation.update({
-      where: { id },
-      data: { updatedAt: new Date() },
-    })
-  }
+  // Jarvis tek kişi — title hep "Jarvis"
+  await db.assistantConversation.update({
+    where: { id },
+    data: { title: 'Jarvis', updatedAt: new Date() },
+  })
 
   // Context yükle
   const [ctx, ragResults] = await Promise.all([

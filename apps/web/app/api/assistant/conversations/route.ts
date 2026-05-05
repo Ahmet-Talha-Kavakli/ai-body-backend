@@ -26,10 +26,17 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
   return NextResponse.json({ conversations })
 })
 
-// POST /api/assistant/conversations — yeni sohbet
+// POST /api/assistant/conversations — Jarvis tek sohbet
+// Var olan Jarvis sohbeti varsa onu döndür, yenisini oluşturma (Jarvis tek kişi).
 export const POST = withAuth(async (_req: NextRequest, { user }) => {
+  const existing = await db.assistantConversation.findFirst({
+    where: { userId: user.id, characterId: null, archived: false },
+    orderBy: { updatedAt: 'desc' },
+  })
+  if (existing) return NextResponse.json(existing)
+
   const conversation = await db.assistantConversation.create({
-    data: { userId: user.id },
+    data: { userId: user.id, title: 'Jarvis' },
   })
 
   // Sabah briefing — saat 5-12 arası ve son mesajdan 6+ saat geçtiyse,
