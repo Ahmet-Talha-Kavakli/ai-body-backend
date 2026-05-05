@@ -263,14 +263,60 @@ ${
   }
 
   // --- Sample replies (bağlamlardan) ---
-  // Sadece en alakalı 4 bağlamdan top 2 örnek — token tasarrufu
-  const topContexts = ['empathy', 'self_disclosure', 'humor', 'pushback']
+  // V4.1: Decision hint'e göre bağlam seçimi (200 replik kütüphanesinden alakalı 4 grup × 2 örnek)
+  // Token bütçesi: ~8 replik × ~80 token = 640 token. Sınırlar içinde.
+  const allContexts = Object.keys(template.sampleRepliesByContext)
+
+  // Karar motoru tone'una göre öncelikli bağlamlar
+  const tonePriority: Record<string, string[]> = {
+    warm: ['empathy', 'self_disclosure', 'intimate_disclosure'],
+    tender: ['empathy', 'intimate_disclosure', 'self_disclosure'],
+    playful: ['humor', 'self_disclosure', 'empathy'],
+    cold: ['boundary_setting', 'pushback'],
+    distant: ['boundary_setting', 'pushback', 'identity_challenge'],
+    firm: ['pushback', 'practical_advice', 'boundary_setting'],
+    concerned: ['empathy', 'crisis', 'practical_advice'],
+    neutral: ['empathy', 'self_disclosure', 'humor', 'pushback'],
+  }
+
+  // Decision hint'ten tone parse et — yoksa neutral
+  const toneMatch = decisionHint?.match(/Tonun:\s*(\w+)/)?.[1]
+  let priorityList = tonePriority[toneMatch ?? 'neutral'] ?? tonePriority.neutral
+  // Crisis tonu varsa öncelik crisis'e
+  if (decisionHint?.includes('kriz') || decisionHint?.includes('crisis')) {
+    priorityList = ['crisis', 'empathy', ...priorityList]
+  }
+  // Geç saat → late_night ekle
+  if (nowHour >= 23 || nowHour < 6) {
+    priorityList = ['late_night', ...priorityList]
+  }
+  // Romantik intimacy yüksekse romantic ekle
+  if (relationship && relationship.intimacyDepth > 0.5 && relationship.loveScore > 60) {
+    priorityList = [...priorityList, 'romantic']
+  }
+
+  // Top 4 bağlam seç (mevcut olanlardan), her birinden 2 random
+  const selectedContexts: string[] = []
+  for (const ctx of priorityList) {
+    if (selectedContexts.length >= 4) break
+    if (allContexts.includes(ctx) && !selectedContexts.includes(ctx)) {
+      selectedContexts.push(ctx)
+    }
+  }
+  // Eğer 4 dolmadıysa diğerlerinden tamamla
+  for (const ctx of allContexts) {
+    if (selectedContexts.length >= 4) break
+    if (!selectedContexts.includes(ctx)) selectedContexts.push(ctx)
+  }
+
   const sampleLines: string[] = []
-  for (const ctx of topContexts) {
+  for (const ctx of selectedContexts) {
     const list = template.sampleRepliesByContext[ctx]
     if (list && list.length > 0) {
+      // Random 2 örnek (her seferinde farklı — kullanıcı aynı örnekleri ezbere görmez)
+      const shuffled = [...list].sort(() => Math.random() - 0.5)
       sampleLines.push(`${ctx}:`)
-      for (const r of list.slice(0, 2)) sampleLines.push(`  - "${r}"`)
+      for (const r of shuffled.slice(0, 2)) sampleLines.push(`  - "${r}"`)
     }
   }
   const samplesBlock = `[SENİN ÖRNEK CEVAPLARIN — TON İÇİN]
