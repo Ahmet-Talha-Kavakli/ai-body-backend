@@ -336,6 +336,21 @@ export default function SessionsScreen() {
         <Pressable
           onPress={() => {
             Haptics.selectionAsync();
+            router.push('/(app)/characters/admin');
+          }}
+          hitSlop={12}
+          style={st.headerIconBtn}
+        >
+          <SymbolView
+            name="person.2.fill"
+            size={20}
+            tintColor={SLEEP.accent}
+            fallback={<Text style={{ fontSize: 18 }}>👥</Text>}
+          />
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync();
             router.push('/seans/settings');
           }}
           hitSlop={12}
