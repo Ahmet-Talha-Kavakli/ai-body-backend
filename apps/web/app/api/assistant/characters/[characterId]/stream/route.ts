@@ -228,7 +228,8 @@ export const POST = withAuth(async (req, { user, params }) => {
           await new Promise((r) => setTimeout(r, fast.delayMs))
         }
 
-        // === DERİN KATMAN ===
+        // === DERİN KATMAN + GRAPH CONTEXT (PARALEL) ===
+        // Önce son mesajları çek (her ikisinin de gerekli olduğu durum)
         const recentMessages = await db.assistantMessage.findMany({
           where: { conversationId: conversation!.id },
           orderBy: { createdAt: 'desc' },
@@ -239,20 +240,22 @@ export const POST = withAuth(async (req, { user, params }) => {
           .reverse()
           .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
 
-        const deep = await deepDecisionLayer({
-          characterId,
-          characterName: character.name,
-          recentMessages: recentChrono,
-          userMessage: content,
-          relationshipStatus: relationship?.status ?? null,
-          characterMood: character.currentMood,
-          intimacyDepth: relationship?.intimacyDepth ?? 0,
-        })
+        // Deep + Graph paralel — ikisi de userMessage'a bağlı, birbirinden bağımsız.
+        // Bu paralelleştirme ~2-5sn kazandırıyor (mini AI ~2sn + embedding ~1sn).
+        const [deep, graphNodes] = await Promise.all([
+          deepDecisionLayer({
+            characterId,
+            characterName: character.name,
+            recentMessages: recentChrono,
+            userMessage: content,
+            relationshipStatus: relationship?.status ?? null,
+            characterMood: character.currentMood,
+            intimacyDepth: relationship?.intimacyDepth ?? 0,
+          }),
+          loadGraphContext({ userId: user.id, userMessage: content }),
+        ])
 
         const decisionHint = deep ? decisionToPromptHint(deep) : ''
-
-        // === GRAPH CONTEXT ===
-        const graphNodes = await loadGraphContext({ userId: user.id, userMessage: content })
         const graphContextBlock = formatGraphContextForPrompt(graphNodes)
 
         // === SYSTEM PROMPT ===

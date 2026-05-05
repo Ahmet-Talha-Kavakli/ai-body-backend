@@ -4187,10 +4187,9 @@ model MemoryNode {
   content         String   @db.Text
   metadata        Json?
 
-  // Anlam araması için (pgvector). Migration sonrası raw SQL ile eklenecek:
-  //   ALTER TABLE "MemoryNode" ADD COLUMN embedding vector(1536);
-  // Prisma bunu doğrudan tipleyemediği için Unsupported. Şimdilik opsiyonel.
-  // Prisma 6+ vector preview gerekirse açılır.
+  // Anlam araması için (pgvector). HNSW index raw SQL ile yönetilir (schema.prisma'da
+  // Unsupported tanımlanır ama index Prisma'nın görevi değil — pg_indexes üzerinden korunur).
+  embedding       Unsupported("vector(1536)")?
 
   // Önem / silinme zorluğu
   importance      Int      @default(2)  // 1-5

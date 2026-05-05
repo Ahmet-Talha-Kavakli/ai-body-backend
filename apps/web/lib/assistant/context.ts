@@ -49,6 +49,12 @@ export async function loadAssistantContext(userId: string) {
         // V4 Faz A — öz farkındalık state
         currentActivity: true,
         currentLocation: true,
+        // V4 Perf — Story aynı query'de gelsin (önceden seri await idi, +50-150ms)
+        characterStory: {
+          include: {
+            milestones: { orderBy: { chronologicalOrder: 'asc' } },
+          },
+        },
       },
     }),
     db.user.findUnique({
@@ -173,15 +179,9 @@ export async function loadAssistantContext(userId: string) {
       importance: number
     }>
   } | null = null
-  if (profile?.id) {
-    const story = await db.characterStory.findUnique({
-      where: { assistantProfileId: profile.id },
-      include: {
-        milestones: {
-          orderBy: { chronologicalOrder: 'asc' },
-        },
-      },
-    })
+  // V4 Perf — Story profile sorgusunda include ile geldi, ekstra DB çağrısı yok.
+  if (profile?.id && profile.characterStory) {
+    const story = profile.characterStory
     if (story && story.generationStatus === 'ready') {
       const opened = story.milestones.filter((m) => !m.isLocked)
       const locked = story.milestones.filter((m) => m.isLocked)

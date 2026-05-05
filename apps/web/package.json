@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
-    "clean": "rm -rf .next"
+    "clean": "rm -rf .next",
+    "db:push": "prisma db push && pnpm db:apply-indexes",
+    "db:apply-indexes": "prisma db execute --file prisma/sql/idempotent-indexes.sql --schema prisma/schema.prisma"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
