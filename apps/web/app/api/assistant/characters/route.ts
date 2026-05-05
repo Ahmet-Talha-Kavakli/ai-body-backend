@@ -41,25 +41,56 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
     return NextResponse.json({ characters: [], flagEnabled: true })
   }
 
-  // Her karakterin son sohbeti + ilişki snapshot
+  // V4 Perf: Tek raw SQL query ile conversation + son mesaj + okunmamış sayısı
+  // Önceden 3 round-trip vardı: conversations / relationships / groupBy(unreadCounts).
+  // Şimdi 2 paralel: (conversations+lastMessage+unreadCount via raw SQL) + relationships
   const characterIds = characters.map((c) => c.id)
 
-  const [conversations, relationships] = await Promise.all([
-    db.assistantConversation.findMany({
-      where: { userId: user.id, characterId: { in: characterIds }, archived: false },
-      orderBy: { updatedAt: 'desc' },
-      select: {
-        id: true,
-        characterId: true,
-        updatedAt: true,
-        aiTypingUntil: true,
-        messages: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-          select: { role: true, content: true, createdAt: true, readAt: true },
-        },
-      },
-    }),
+  type ConvRow = {
+    id: string
+    characterId: string
+    updatedAt: Date
+    aiTypingUntil: Date | null
+    lastMessageRole: string | null
+    lastMessageContent: string | null
+    lastMessageCreatedAt: Date | null
+    lastMessageReadAt: Date | null
+    unreadCount: bigint
+  }
+
+  const [convRows, relationships] = await Promise.all([
+    // Tek query: her conversation için son mesaj (LATERAL) + okunmamış count
+    db.$queryRaw<ConvRow[]>`
+      SELECT
+        c.id,
+        c."characterId" AS "characterId",
+        c."updatedAt",
+        c."aiTypingUntil",
+        lm.role        AS "lastMessageRole",
+        lm.content     AS "lastMessageContent",
+        lm."createdAt" AS "lastMessageCreatedAt",
+        lm."readAt"    AS "lastMessageReadAt",
+        COALESCE(uc.unread_count, 0) AS "unreadCount"
+      FROM "AssistantConversation" c
+      LEFT JOIN LATERAL (
+        SELECT m.role, m.content, m."createdAt", m."readAt"
+        FROM "AssistantMessage" m
+        WHERE m."conversationId" = c.id
+        ORDER BY m."createdAt" DESC
+        LIMIT 1
+      ) lm ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*) AS unread_count
+        FROM "AssistantMessage" m2
+        WHERE m2."conversationId" = c.id
+          AND m2.role = 'assistant'
+          AND m2."readAt" IS NULL
+      ) uc ON TRUE
+      WHERE c."userId" = ${user.id}
+        AND c."characterId" = ANY(${characterIds})
+        AND c.archived = false
+      ORDER BY c."updatedAt" DESC
+    `,
     db.memoryRelationship.findMany({
       where: { userId: user.id, characterId: { in: characterIds } },
       select: {
@@ -73,26 +104,15 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
     }),
   ])
 
-  const convByCharacterId = new Map(conversations.map((c) => [c.characterId!, c]))
+  const convByCharacterId = new Map(convRows.map((c) => [c.characterId, c]))
   const relByCharacterId = new Map(relationships.map((r) => [r.characterId, r]))
-
-  // Okunmamış sayısı için tek query
-  const unreadCounts = await db.assistantMessage.groupBy({
-    by: ['conversationId'],
-    where: {
-      conversationId: { in: conversations.map((c) => c.id) },
-      role: 'assistant',
-      readAt: null,
-    },
-    _count: { _all: true },
-  })
-  const unreadByConvId = new Map(unreadCounts.map((u) => [u.conversationId, u._count._all]))
 
   const result = characters.map((c) => {
     const conv = convByCharacterId.get(c.id)
     const rel = relByCharacterId.get(c.id)
-    const lastMessage = conv?.messages[0] ?? null
     const isTyping = conv?.aiTypingUntil && new Date(conv.aiTypingUntil).getTime() > Date.now()
+
+    const hasLastMessage = conv?.lastMessageContent !== null && conv?.lastMessageRole !== null
 
     return {
       id: c.id,
@@ -107,16 +127,17 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
       status: c.status,
       arrivedAt: c.arrivedAt,
       conversationId: conv?.id ?? null,
-      lastMessage: lastMessage
-        ? {
-            role: lastMessage.role,
-            content: lastMessage.content,
-            createdAt: lastMessage.createdAt,
-            isRead: lastMessage.readAt !== null,
-          }
-        : null,
+      lastMessage:
+        conv && hasLastMessage
+          ? {
+              role: conv.lastMessageRole!,
+              content: conv.lastMessageContent!,
+              createdAt: conv.lastMessageCreatedAt!,
+              isRead: conv.lastMessageReadAt !== null,
+            }
+          : null,
       lastMessageAt: rel?.lastMessageAt ?? null,
-      unreadCount: conv ? (unreadByConvId.get(conv.id) ?? 0) : 0,
+      unreadCount: conv ? Number(conv.unreadCount) : 0,
       isTyping: !!isTyping,
       relationship: rel
         ? {
