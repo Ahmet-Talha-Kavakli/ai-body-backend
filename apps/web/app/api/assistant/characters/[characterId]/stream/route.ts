@@ -32,6 +32,7 @@ import {
   updateRelationshipAfterInteraction,
 } from '@/lib/assistant/character-relationship'
 import { loadGraphContext, formatGraphContextForPrompt } from '@/lib/assistant/graph-context'
+import { detectEmergency } from '@/lib/assistant/emergency'
 
 export const maxDuration = 60
 
@@ -114,6 +115,12 @@ export const POST = withAuth(async (req, { user, params }) => {
   })
   const localHour = parseInt(userLocalHour, 10) || 12
 
+  // === ACİL DURUM (EMERGENCY OVERRIDE) ===
+  // Karakterin durumu/ilişkisi ne olursa olsun (silent/broken bile),
+  // kullanıcı kriz mesajı yazmışsa karakter bypass eder ve hayat kurtarır.
+  // Kriz: intihar düşüncesi, fiziksel kritik (göğüs ağrısı, felç), tıbbi acil
+  const emergency = detectEmergency(content)
+
   // === HIZLI KATMAN ===
   const fast = fastDecisionLayer({
     characterStatus: character.status as
@@ -136,6 +143,58 @@ export const POST = withAuth(async (req, { user, params }) => {
       }
 
       try {
+        // === EMERGENCY OVERRIDE ===
+        // Kullanıcı kriz mesajı yazdıysa: karakterin status'ü/mood'u ne olursa olsun
+        // SOMUT acil hat bilgisi + destek mesajı dön. AI çağrısı YOK (deterministik).
+        // Karakter küs/sessiz olsa bile bypass eder — hayat > küslük.
+        if (emergency) {
+          // Karakter persona prefix'i (Mia/Kerem'in kendi sesinden)
+          const characterPrefix =
+            relationship?.status === 'broken' || relationship?.status === 'silent'
+              ? `Şu an seninle konuşmak istemiyordum ama bu önemli.\n\n`
+              : ''
+
+          const fullResponse = `${characterPrefix}${emergency.response}`
+
+          const aiMsg = await db.assistantMessage.create({
+            data: {
+              conversationId: conversation!.id,
+              role: 'assistant',
+              content: fullResponse,
+            },
+          })
+
+          // Stream et — UI'da chunk-by-chunk görünsün
+          // Karakter küs/sessiz idiyse override ettik → 'cold' state'e düşür (make-up dönemi)
+          if (relationship?.status === 'broken' || relationship?.status === 'silent') {
+            await db.memoryRelationship
+              .update({
+                where: { userId_characterId: { userId: user.id, characterId } },
+                data: { status: 'cold', recentMomentum: 0 },
+              })
+              .catch(() => {})
+          }
+
+          // RelationshipEvent log
+          await db.relationshipEvent
+            .create({
+              data: {
+                characterId,
+                targetType: 'user',
+                targetId: user.id,
+                eventType: 'emergency_response',
+                severity: 5,
+                reason: emergency.type,
+              },
+            })
+            .catch(() => {})
+
+          send({ type: 'message_chunk', delta: fullResponse })
+          send({ type: 'message_complete', messageId: aiMsg.id })
+          controller.close()
+          return
+        }
+
         // SKIP — karakter cevap vermiyor
         if (fast.action === 'skip') {
           send({ type: 'skipped', reason: fast.reason })
