@@ -30,6 +30,7 @@ import { useAuth } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
 import { font, C } from '../../../lib/theme';
 import { listCharacters, type CharacterListItem } from '../../../src/services/assistant/characters';
+import { listGroups, type GroupListItem } from '../../../src/services/assistant/groups';
 
 const MOOD_EMOJI: Record<string, string> = {
   calm: '🌿',
@@ -52,6 +53,80 @@ function relativeTime(iso: string | null): string {
   if (diff < 86400) return `${Math.floor(diff / 3600)}s`;
   if (diff < 7 * 86400) return `${Math.floor(diff / 86400)}g`;
   return `${date.getDate()}/${date.getMonth() + 1}`;
+}
+
+type ListItem =
+  | { kind: 'character'; data: CharacterListItem; sortAt: string }
+  | { kind: 'group'; data: GroupListItem; sortAt: string };
+
+function GroupRow({ item, onPress }: { item: GroupListItem; onPress: () => void }) {
+  const last = item.messages?.[0];
+  const lastText = last
+    ? last.senderType === 'user'
+      ? `Sen: ${last.content}`
+      : `${last.senderCharacter?.name ?? 'biri'}: ${last.content}`
+    : `${item.members.length} üye`;
+
+  // İlk 2 üyenin avatarı yan yana (kompozit)
+  const avatars = item.members.slice(0, 2);
+
+  return (
+    <Pressable
+      onPress={() => {
+        Haptics.selectionAsync();
+        onPress();
+      }}
+      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+    >
+      <View style={styles.avatarBox}>
+        <View style={styles.groupAvatarComposite}>
+          {avatars.map((m, idx) => (
+            <View
+              key={m.id}
+              style={[
+                styles.groupAvatarPart,
+                {
+                  left: idx === 0 ? 0 : 18,
+                  top: idx === 0 ? 0 : 18,
+                  zIndex: idx === 0 ? 2 : 1,
+                },
+              ]}
+            >
+              {m.character.avatarUrl ? (
+                <Image source={{ uri: m.character.avatarUrl }} style={styles.groupAvatarImg} />
+              ) : (
+                <View
+                  style={[
+                    styles.groupAvatarImg,
+                    {
+                      backgroundColor: C.accentSofter,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    },
+                  ]}
+                >
+                  <Text style={styles.avatarFallback}>{m.character.name[0]}</Text>
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+      </View>
+      <View style={styles.body}>
+        <View style={styles.titleLine}>
+          <Text style={styles.name} numberOfLines={1}>
+            {item.title}
+          </Text>
+          <Text style={styles.time}>{relativeTime(last?.createdAt ?? item.updatedAt)}</Text>
+        </View>
+        <View style={styles.previewLine}>
+          <Text style={styles.preview} numberOfLines={1}>
+            {lastText}
+          </Text>
+        </View>
+      </View>
+    </Pressable>
+  );
 }
 
 function CharacterRow({ item, onPress }: { item: CharacterListItem; onPress: () => void }) {
@@ -130,17 +205,24 @@ export default function CharactersScreen() {
   const insets = useSafeAreaInsets();
 
   const [characters, setCharacters] = useState<CharacterListItem[]>([]);
+  const [groups, setGroups] = useState<GroupListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [flagEnabled, setFlagEnabled] = useState(true);
+  const [groupFlagEnabled, setGroupFlagEnabled] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const token = await getToken();
       if (!token) return;
-      const data = await listCharacters(token);
-      setCharacters(data.characters);
-      setFlagEnabled(data.flagEnabled);
+      const [charData, groupData] = await Promise.all([
+        listCharacters(token),
+        listGroups(token).catch(() => ({ groups: [] as GroupListItem[], flagEnabled: false })),
+      ]);
+      setCharacters(charData.characters);
+      setFlagEnabled(charData.flagEnabled);
+      setGroups(groupData.groups);
+      setGroupFlagEnabled(groupData.flagEnabled);
     } catch (e) {
       console.error('[characters] load fail:', e);
     } finally {
@@ -172,25 +254,65 @@ export default function CharactersScreen() {
     );
   }
 
+  // Birleşik liste — son aktiviteye göre sırala
+  const combined: ListItem[] = [
+    ...characters.map((c) => ({
+      kind: 'character' as const,
+      data: c,
+      sortAt: c.lastMessageAt ?? c.arrivedAt,
+    })),
+    ...groups.map((g) => ({
+      kind: 'group' as const,
+      data: g,
+      sortAt: g.messages?.[0]?.createdAt ?? g.updatedAt,
+    })),
+  ].sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime());
+
+  const totalCount = characters.length + groups.length;
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Karakterler</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>Karakterler</Text>
+          {groupFlagEnabled && characters.length >= 2 && (
+            <Pressable
+              onPress={() => {
+                Haptics.selectionAsync();
+                router.push('/(app)/characters/new-group');
+              }}
+              hitSlop={12}
+              style={styles.newGroupBtn}
+            >
+              <Text style={styles.newGroupBtnText}>＋ Grup</Text>
+            </Pressable>
+          )}
+        </View>
         <Text style={styles.subtitle}>
           {flagEnabled
-            ? characters.length === 0
+            ? totalCount === 0
               ? 'Henüz biriyle tanışmadın — zaman içinde gelecekler'
-              : `${characters.length} kişi`
+              : `${totalCount} ${groups.length > 0 ? 'sohbet' : 'kişi'}`
             : 'Bu özellik henüz açık değil'}
         </Text>
       </View>
 
       <FlatList
-        data={characters}
-        keyExtractor={(c) => c.id}
-        renderItem={({ item }) => (
-          <CharacterRow item={item} onPress={() => router.push(`/(app)/characters/${item.id}`)} />
-        )}
+        data={combined}
+        keyExtractor={(item) => `${item.kind}:${item.data.id}`}
+        renderItem={({ item }) =>
+          item.kind === 'character' ? (
+            <CharacterRow
+              item={item.data}
+              onPress={() => router.push(`/(app)/characters/${item.data.id}`)}
+            />
+          ) : (
+            <GroupRow
+              item={item.data}
+              onPress={() => router.push(`/(app)/characters/group/${item.data.id}`)}
+            />
+          )
+        }
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.accent} />
@@ -210,6 +332,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
     paddingTop: 8,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  newGroupBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: C.accentSofter,
+    marginBottom: 6,
+  },
+  newGroupBtnText: {
+    fontFamily: font.semibold,
+    fontSize: 13,
+    color: C.accent,
+    letterSpacing: -0.2,
+  },
+  groupAvatarComposite: {
+    width: 56,
+    height: 56,
+    position: 'relative',
+  },
+  groupAvatarPart: {
+    position: 'absolute',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  groupAvatarImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 17,
   },
   title: {
     fontFamily: font.bold,
