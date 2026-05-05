@@ -343,7 +343,8 @@ export default function CharacterChatScreen() {
     setStreamingText('');
 
     try {
-      const token = await getToken();
+      // Fresh token — 401 spam azalt
+      const token = (await getToken({ skipCache: true })) ?? (await getToken());
       if (!token) throw new Error('No token');
 
       let accumulated = '';

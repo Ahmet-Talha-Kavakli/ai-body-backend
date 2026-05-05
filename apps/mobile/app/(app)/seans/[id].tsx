@@ -436,7 +436,7 @@ export default function SeansChatScreen() {
 
     let aiAccumulated = '';
     try {
-      const token = await getToken();
+      const token = (await getToken({ skipCache: true })) ?? (await getToken());
       await streamAssistantMessage({
         url: `${API_URL}/api/assistant/conversations/${id}/stream`,
         token: token ?? '',
@@ -464,7 +464,9 @@ export default function SeansChatScreen() {
             return;
           }
           if (event.type === 'error') {
-            console.error('[vision-stream]', event.message);
+            if (event.message !== 'http_401') {
+              console.error('[vision-stream]', event.message);
+            }
             setMessages((prev) => prev.filter((m) => m.id !== aiTmpId || !!m.content));
             return;
           }
@@ -556,7 +558,8 @@ export default function SeansChatScreen() {
     const collectedTools: ToolCallRecord[] = [];
 
     try {
-      const token = await getToken();
+      // Fresh token — Clerk 60sn cache'i bypass et, 401 spam'i azaltır
+      const token = (await getToken({ skipCache: true })) ?? (await getToken());
       await streamAssistantMessage({
         url: `${API_URL}/api/assistant/conversations/${id}/stream`,
         token: token ?? '',
@@ -643,14 +646,21 @@ export default function SeansChatScreen() {
           }
 
           if (event.type === 'error') {
-            console.error('[stream]', event.message);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            // 401 (token expired) sessize al — Clerk bir sonraki getToken'da yeniler
+            if (event.message !== 'http_401') {
+              console.error('[stream]', event.message);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            }
             setMessages((prev) => prev.filter((m) => m.id !== aiTmpId || !!m.content));
             return;
           }
         },
         onError: (e) => {
-          console.error('[stream/network]', e);
+          // 401 sessize al
+          const msg = e instanceof Error ? e.message : String(e);
+          if (!msg.includes('401')) {
+            console.error('[stream/network]', e);
+          }
           setMessages((prev) => prev.filter((m) => m.id !== aiTmpId));
         },
       });
