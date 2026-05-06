@@ -407,11 +407,13 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
 
       // Easy + tool-less mesajlarda hiç tool gönderme (büyük tasarruf)
       // Listen modunda veya yaşam olayı varsa tool gönderme — kullanıcı duygusal an yaşıyor
+      // toneAnalysis null olabilir (V4.5 perf: easy mesajlarda atlanır)
       const isListenMode =
-        toneAnalysis.supportNeeded === 'listen' ||
-        (toneAnalysis.tone !== 'neutral' &&
-          toneAnalysis.tone !== 'happy' &&
-          toneAnalysis.intensity > 0.6)
+        !!toneAnalysis &&
+        (toneAnalysis.supportNeeded === 'listen' ||
+          (toneAnalysis.tone !== 'neutral' &&
+            toneAnalysis.tone !== 'happy' &&
+            toneAnalysis.intensity > 0.6))
       const isLifeEventMode = !!lifeEvent && lifeEvent.severity !== 'minor'
       const toolCategoriesParam =
         isListenMode || isLifeEventMode
@@ -422,8 +424,11 @@ export async function POST(req: NextRequest, routeCtx: Ctx) {
               ? route.toolCategories
               : 'all'
 
+      const toneLog = toneAnalysis
+        ? `${toneAnalysis.tone}(${toneAnalysis.intensity.toFixed(1)},${toneAnalysis.supportNeeded})`
+        : 'skipped(easy)'
       console.log(
-        `[router] ${route.difficulty} → ${selectedModel} | tone: ${toneAnalysis.tone}(${toneAnalysis.intensity.toFixed(1)},${toneAnalysis.supportNeeded}) | event: ${lifeEvent?.event ?? 'none'} | tools: ${Array.isArray(toolCategoriesParam) ? toolCategoriesParam.join(',') || 'NONE' : 'all'}`
+        `[router] ${route.difficulty} → ${selectedModel} | tone: ${toneLog} | event: ${lifeEvent?.event ?? 'none'} | tools: ${Array.isArray(toolCategoriesParam) ? toolCategoriesParam.join(',') || 'NONE' : 'all'}`
       )
 
       try {
