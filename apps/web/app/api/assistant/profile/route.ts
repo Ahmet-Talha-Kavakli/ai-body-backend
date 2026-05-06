@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { db } from '@/lib/db/client'
 import { validateAssistantName } from '@/lib/assistant/profanity'
+import { cached, invalidateCache } from '@/lib/redis/client'
 
 // GET /api/assistant/profile — kullanıcının asistan profili
 export const GET = withAuth(async (_req: NextRequest, { user }) => {
-  const profile = await db.assistantProfile.findUnique({
-    where: { userId: user.id },
+  const profile = await cached(`profile:${user.id}`, 30, async () => {
+    return db.assistantProfile.findUnique({ where: { userId: user.id } })
   })
   return NextResponse.json({ profile })
 })
@@ -47,6 +48,7 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
     },
   })
 
+  invalidateCache(`profile:${user.id}`).catch(() => {})
   return NextResponse.json({ ...profile, firstConversationId: conv.id })
 })
 
@@ -96,5 +98,6 @@ export const PATCH = withAuth(async (req: NextRequest, { user }) => {
     },
   })
 
+  invalidateCache(`profile:${user.id}`).catch(() => {})
   return NextResponse.json(profile)
 })

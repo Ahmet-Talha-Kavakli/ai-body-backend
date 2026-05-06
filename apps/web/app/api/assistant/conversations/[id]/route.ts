@@ -4,14 +4,48 @@ import { db } from '@/lib/db/client'
 
 type Ctx = { params: Promise<{ id: string }> }
 
-export const GET = withAuth<Ctx>(async (_req, { user, params }) => {
+export const GET = withAuth<Ctx>(async (req, { user, params }) => {
   const { id } = await params
+  const url = new URL(req.url)
+  const take = Math.min(parseInt(url.searchParams.get('take') ?? '50', 10), 200)
+
   const conv = await db.assistantConversation.findFirst({
     where: { id, userId: user.id },
-    include: { messages: { orderBy: { createdAt: 'asc' } } },
+    select: {
+      id: true,
+      title: true,
+      archived: true,
+      pinnedAt: true,
+      mutedUntil: true,
+      aiTypingUntil: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   })
   if (!conv) return NextResponse.json({ error: 'not_found' }, { status: 404 })
-  return NextResponse.json(conv)
+
+  // Son N mesaj — embedding ve büyük JSON field'ları DIŞARIDA
+  const messages = await db.assistantMessage.findMany({
+    where: { conversationId: id },
+    orderBy: { createdAt: 'desc' },
+    take,
+    select: {
+      id: true,
+      role: true,
+      content: true,
+      toolCalls: true,
+      toolResults: true,
+      attachments: true,
+      isPinned: true,
+      starredAt: true,
+      starredBy: true,
+      repliedToMessageId: true,
+      readAt: true,
+      createdAt: true,
+    },
+  })
+
+  return NextResponse.json({ ...conv, messages: messages.reverse() })
 })
 
 export const PATCH = withAuth<Ctx>(async (req, { user, params }) => {

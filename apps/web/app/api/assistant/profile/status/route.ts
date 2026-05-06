@@ -17,17 +17,20 @@
 import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { db } from '@/lib/db/client'
+import { cached } from '@/lib/redis/client'
 
 export type AIStatus = 'online' | 'dozing' | 'sleeping' | 'cold' | 'silent' | 'blocked'
 
 export const GET = withAuth(async (_req, { user }) => {
-  const profile = await db.assistantProfile.findFirst({
-    where: { userId: user.id },
-    select: {
-      currentMood: true,
-      relationshipState: true,
-      blockedUntil: true,
-    },
+  const profile = await cached(`profile:status:${user.id}`, 30, async () => {
+    return db.assistantProfile.findFirst({
+      where: { userId: user.id },
+      select: {
+        currentMood: true,
+        relationshipState: true,
+        blockedUntil: true,
+      },
+    })
   })
 
   if (!profile) {
