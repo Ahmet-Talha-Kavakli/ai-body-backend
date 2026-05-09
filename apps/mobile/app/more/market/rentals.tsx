@@ -6,12 +6,25 @@
 
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActionSheetIOS,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { C, font } from '../../../lib/theme';
 import { useMarketApi } from '../../../lib/marketplace/marketApi';
+import {
+  RentalExtendSheet,
+  type RentalExtendSheetRef,
+} from '../../../components/marketplace/RentalExtendSheet';
 
 export default function RentalsScreen() {
   const router = useRouter();
@@ -23,12 +36,60 @@ export default function RentalsScreen() {
     null,
   );
   const [loading, setLoading] = useState(true);
+  const extendSheetRef = useRef<RentalExtendSheetRef>(null);
 
   const refresh = useCallback(async () => {
     const r = await apiRef.current.myRentals();
     if (r) setData(r);
     setLoading(false);
   }, []);
+
+  const onActiveRentalPress = useCallback(
+    (rental: any) => {
+      Haptics.selectionAsync();
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: rental.character.name,
+          message: rental.endsAt
+            ? `Bitiş: ${new Date(rental.endsAt).toLocaleDateString('tr-TR')}`
+            : undefined,
+          options: ['İptal', 'Süreyi uzat', 'Erken bitir'],
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: 2,
+          userInterfaceStyle: 'light',
+        },
+        (idx) => {
+          if (idx === 1) {
+            extendSheetRef.current?.open(rental.id, rental.character.name);
+          } else if (idx === 2) {
+            Alert.alert(
+              'Erken bitir',
+              `${rental.character.name} ile sohbeti şimdi kapat? İade yok ama hafıza kapsüllenir, ileride tekrar kiralarsan kaldığınız yerden devam edersiniz.`,
+              [
+                { text: 'Vazgeç', style: 'cancel' },
+                {
+                  text: 'Bitir',
+                  style: 'destructive',
+                  onPress: async () => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    const r = await apiRef.current.endRentalEarly(rental.id);
+                    if (r.ok) {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      refresh();
+                    } else {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                      Alert.alert('Hata', r.error ?? 'Tekrar dene.');
+                    }
+                  },
+                },
+              ],
+            );
+          }
+        },
+      );
+    },
+    [refresh],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -81,10 +142,7 @@ export default function RentalsScreen() {
                 rental={r}
                 badge="Aktif"
                 badgeColor={C.success}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  // V4.5 sohbet ekranına yönlendir (varsa)
-                }}
+                onPress={() => onActiveRentalPress(r)}
               />
             ))}
           </Section>
@@ -130,6 +188,8 @@ export default function RentalsScreen() {
 
         <View style={{ height: 60 }} />
       </ScrollView>
+
+      <RentalExtendSheet ref={extendSheetRef} onExtended={() => refresh()} />
     </>
   );
 }

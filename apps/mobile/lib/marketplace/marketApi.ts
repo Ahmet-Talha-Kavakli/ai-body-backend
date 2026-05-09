@@ -310,6 +310,56 @@ export function useMarketApi() {
     [authFetch],
   );
 
+  const getExtendInfo = useCallback(
+    async (
+      rentalId: string,
+    ): Promise<{
+      balance: number;
+      currentEndsAt: string | null;
+      options: { type: 'rent_7d' | 'rent_14d' | 'rent_30d'; days: number; price: number }[];
+    } | null> => {
+      const r = await authFetch(`/api/marketplace/rentals/${rentalId}/extend`);
+      if (!r.ok) return null;
+      return await r.json();
+    },
+    [authFetch],
+  );
+
+  const extendRental = useCallback(
+    async (
+      rentalId: string,
+      type: 'rent_7d' | 'rent_14d' | 'rent_30d',
+    ): Promise<{
+      ok: boolean;
+      error?: string;
+      endsAt?: string;
+      addedDays?: number;
+      cost?: number;
+      balance?: number;
+    }> => {
+      const r = await authFetch(`/api/marketplace/rentals/${rentalId}/extend`, {
+        method: 'POST',
+        body: JSON.stringify({ type }),
+      });
+      const data = await r.json();
+      if (!r.ok) return { ok: false, error: data.error };
+      return { ok: true, ...data };
+    },
+    [authFetch],
+  );
+
+  const endRentalEarly = useCallback(
+    async (rentalId: string): Promise<{ ok: boolean; error?: string }> => {
+      const r = await authFetch(`/api/marketplace/rentals/${rentalId}/end-early`, {
+        method: 'POST',
+      });
+      const data = await r.json();
+      if (!r.ok) return { ok: false, error: data.error };
+      return { ok: true };
+    },
+    [authFetch],
+  );
+
   return {
     listListings,
     getListing,
@@ -329,5 +379,8 @@ export function useMarketApi() {
     resetPasses,
     getBoostInfo,
     buyBoost,
+    getExtendInfo,
+    extendRental,
+    endRentalEarly,
   };
 }

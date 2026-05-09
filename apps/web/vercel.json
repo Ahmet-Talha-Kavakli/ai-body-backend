@@ -20,7 +20,9 @@
     { "path": "/api/cron/character-lifecycle", "schedule": "0 6 * * *" },
     { "path": "/api/cron/life-engine", "schedule": "30 4 * * *" },
 
-    { "path": "/api/cron/scheduled-character-dispatcher", "schedule": "0 12 * * *" },
+    { "path": "/api/cron/scheduled-character-dispatcher", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/message-delivery-tick", "schedule": "* * * * *" },
+    { "path": "/api/cron/group-reply-dispatcher", "schedule": "* * * * *" },
 
     { "path": "/api/cron/pending-reflection-dispatcher", "schedule": "30 9 * * *" },
     { "path": "/api/cron/follow-up-dispatcher", "schedule": "30 10 * * *" },
@@ -42,7 +44,7 @@
     { "path": "/api/cron/birthday-checker", "schedule": "15 7 * * *" },
     { "path": "/api/cron/routine-learner", "schedule": "15 4 * * *" },
     { "path": "/api/cron/gift-suggester", "schedule": "0 3 * * 1" },
-    { "path": "/api/cron/reminder-dispatcher", "schedule": "0 13 * * *" },
+    { "path": "/api/cron/reminder-dispatcher", "schedule": "0 * * * *" },
 
     { "path": "/api/cron/signature-phrase-rotator", "schedule": "0 4 * * 1" },
     { "path": "/api/cron/anniversary-checker", "schedule": "30 7 * * *" },
@@ -51,6 +53,6 @@
     { "path": "/api/cron/memory-recall-trigger", "schedule": "0 2 * * *" },
 
     { "path": "/api/cron/voice-trend-analyzer", "schedule": "30 2 * * *" },
-    { "path": "/api/cron/research-dispatcher", "schedule": "0 14 * * *" }
+    { "path": "/api/cron/research-dispatcher", "schedule": "0 * * * *" }
   ]
 }
