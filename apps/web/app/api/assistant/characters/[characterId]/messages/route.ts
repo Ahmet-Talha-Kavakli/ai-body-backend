@@ -16,33 +16,46 @@ export const GET = withAuth(async (req: NextRequest, { user, params }) => {
     return new NextResponse('Bad Request', { status: 400 })
   }
 
-  // Karakter sahipliği
-  const character = await db.character.findFirst({
-    where: { id: characterId, userId: user.id },
-    select: { id: true, name: true, bio: true, avatarUrl: true, currentMood: true },
-  })
-  if (!character) return new NextResponse('Not found', { status: 404 })
-
-  const conversation = await db.assistantConversation.findFirst({
-    where: { userId: user.id, characterId, archived: false },
-    select: { id: true },
-  })
-  if (!conversation) {
-    return NextResponse.json({ character, conversationId: null, messages: [] })
-  }
-
   const url = new URL(req.url)
   const beforeId = url.searchParams.get('before')
   const take = Math.min(parseInt(url.searchParams.get('take') ?? '50', 10), 100)
 
-  let cursor: { createdAt: Date } | undefined
-  if (beforeId) {
-    const beforeMsg = await db.assistantMessage.findUnique({
-      where: { id: beforeId },
-      select: { createdAt: true },
-    })
-    if (beforeMsg) cursor = { createdAt: beforeMsg.createdAt }
+  // Paralel: character + conversation + (varsa) beforeMsg cursor
+  const [character, conversation, beforeMsg] = await Promise.all([
+    db.character.findFirst({
+      where: { id: characterId, userId: user.id },
+      select: {
+        id: true,
+        name: true,
+        bio: true,
+        avatarUrl: true,
+        currentMood: true,
+        currentActivity: true,
+        currentLocation: true,
+        status: true,
+        lastMajorEvent: true,
+        lastSeenAt: true,
+      },
+    }),
+    db.assistantConversation.findFirst({
+      where: { userId: user.id, characterId, archived: false },
+      orderBy: { updatedAt: 'desc' },
+      select: { id: true },
+    }),
+    beforeId
+      ? db.assistantMessage.findUnique({
+          where: { id: beforeId },
+          select: { createdAt: true },
+        })
+      : Promise.resolve(null),
+  ])
+
+  if (!character) return new NextResponse('Not found', { status: 404 })
+  if (!conversation) {
+    return NextResponse.json({ character, conversationId: null, messages: [] })
   }
+
+  const cursor = beforeMsg ? { createdAt: beforeMsg.createdAt } : undefined
 
   const messages = await db.assistantMessage.findMany({
     where: {
@@ -59,6 +72,24 @@ export const GET = withAuth(async (req: NextRequest, { user, params }) => {
       starredAt: true,
       readAt: true,
       repliedToMessageId: true,
+      // V4.5 mesaj iletim durumu
+      deliveredAt: true,
+      seenByCharacterAt: true,
+      deletedByCharacterAt: true,
+      originalContent: true,
+      // V4.5 Madde 3 — Sesli mesaj
+      audioUrl: true,
+      audioDurationMs: true,
+      transcript: true,
+      // V4.6 M59 — Medya
+      mediaUrl: true,
+      mediaType: true,
+      // V4.7 Faz 7 — Özel kart metadata
+      attachments: true,
+      // V4.6 M69 — Reaksiyonlar
+      reactions: {
+        select: { emoji: true, fromType: true, fromCharId: true },
+      },
     },
   })
 
@@ -82,6 +113,7 @@ export const POST = withAuth(async (req: NextRequest, { user, params }) => {
 
   const conversation = await db.assistantConversation.findFirst({
     where: { userId: user.id, characterId, archived: false },
+    orderBy: { updatedAt: 'desc' },
     select: { id: true },
   })
   if (!conversation) return NextResponse.json({ ok: true, marked: 0 })

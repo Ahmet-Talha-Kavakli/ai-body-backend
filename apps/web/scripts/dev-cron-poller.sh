@@ -1,22 +1,29 @@
 #!/bin/bash
-# Dev test için lokal cron poller — 15sn'de bir grup cevap dispatcher'ını tetikler.
-# Production'da Vercel cron schedule devralacak; bu sadece dev/simulatör test fazı için.
+# V4.5 — Dev cron poller (multi-endpoint)
+# Production'da Vercel cron schedule devralacak; bu dev/simulatör test fazı için.
 #
 # Kullanım: ./apps/web/scripts/dev-cron-poller.sh
 # veya: pnpm --filter web dev:cron
 
-URL="${CRON_URL:-http://localhost:3000/api/cron/group-reply-dispatcher}"
-INTERVAL=15
+BASE="${CRON_BASE:-http://localhost:3000/api/cron}"
+INTERVAL=2
 
-echo "[dev-cron] Başlatıldı — her ${INTERVAL}sn'de tetikleniyor: $URL"
+ENDPOINTS=(
+  "group-reply-dispatcher"
+  "scheduled-character-dispatcher"
+  "message-delivery-tick"
+)
+
+echo "[dev-cron] Başlatıldı — her ${INTERVAL}sn'de ${#ENDPOINTS[@]} endpoint tetikleniyor"
 echo "[dev-cron] Durdurmak için Ctrl+C"
 
 while true; do
-  result=$(curl -s -m 30 "$URL" 2>&1)
   ts=$(date +"%H:%M:%S")
-  # Sadece "sent>0" veya "failed>0" durumlarında log yaz — sessiz mod
-  if echo "$result" | grep -qE '"sent":[1-9]|"failed":[1-9]|"reactivityScheduled":[1-9]'; then
-    echo "[$ts] $result"
-  fi
+  for ep in "${ENDPOINTS[@]}"; do
+    result=$(curl -s -m 15 "$BASE/$ep" 2>&1)
+    if echo "$result" | grep -qE '"sent":[1-9]|"failed":[1-9]|"delivered":[1-9]|"seen":[1-9]|"reactivityScheduled":[1-9]'; then
+      echo "[$ts] $ep → $result"
+    fi
+  done
   sleep $INTERVAL
 done

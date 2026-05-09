@@ -50,7 +50,27 @@ export interface CharacterMessage {
   starredAt: string | null;
   readAt: string | null;
   repliedToMessageId: string | null;
+  // V4.5 mesaj iletim durumu
+  deliveredAt: string | null;
+  seenByCharacterAt: string | null;
+  deletedByCharacterAt: string | null;
+  originalContent: string | null;
+  // V4.5 Madde 3 — Sesli mesaj
+  audioUrl: string | null;
+  audioDurationMs: number | null;
+  transcript: string | null;
+  // V4.6 M59 — Medya
+  mediaUrl?: string | null;
+  mediaType?: 'image' | 'video' | null;
+  // V4.7 Faz 7 — özel kart metadata
+  attachments?: SpecialAttachment | null;
 }
+
+// V4.7 Faz 7 — Özel kart tipleri
+export type SpecialAttachment =
+  | { kind: 'anniversary_letter'; year: number; characterName: string }
+  | { kind: 'symbolic_gift'; giftType: string; occasion: string }
+  | { kind: 'absence_recap'; daysAway: number };
 
 /**
  * Aktif karakterleri çek.
@@ -63,6 +83,129 @@ export async function listCharacters(token: string): Promise<{
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`listCharacters failed: ${res.status}`);
+  return res.json();
+}
+
+/**
+ * V4.6 M69 — Mesaja reaksiyon ekle/sil.
+ */
+export async function reactToMessage(
+  token: string,
+  args: { messageId: string; emoji: string },
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`${API_URL}/api/assistant/messages/${args.messageId}/reactions`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ emoji: args.emoji }),
+  });
+  if (!res.ok) throw new Error(`reactToMessage failed: ${res.status}`);
+  return res.json();
+}
+
+export async function removeReaction(token: string, messageId: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`${API_URL}/api/assistant/messages/${messageId}/reactions`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`removeReaction failed: ${res.status}`);
+  return res.json();
+}
+
+/**
+ * V4.6 M59 — Foto/video yükle (karakter sohbeti için).
+ * Mobile expo-image-picker ile dosyayı seçer, bu fonksiyon Blob'a upload eder, URL döner.
+ */
+export async function uploadCharacterMedia(
+  token: string,
+  args: { characterId: string; uri: string; type: 'image' | 'video'; mimeType?: string },
+): Promise<{ url: string; type: 'image' | 'video'; sizeBytes: number }> {
+  const formData = new FormData();
+  // RN: file objesi {uri, name, type}
+  formData.append('file', {
+    uri: args.uri,
+    name: `media.${args.type === 'image' ? 'jpg' : 'mp4'}`,
+    type: args.mimeType ?? (args.type === 'image' ? 'image/jpeg' : 'video/mp4'),
+  } as unknown as Blob);
+  formData.append('kind', args.type);
+
+  const res = await fetch(`${API_URL}/api/assistant/characters/${args.characterId}/upload-media`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData as unknown as BodyInit,
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`uploadCharacterMedia failed: ${res.status}: ${txt}`);
+  }
+  return res.json();
+}
+
+/**
+ * V4.6 M62 — Veri paylaşımı izni ver (@ menüsünden).
+ */
+export async function grantDataAccess(
+  token: string,
+  args: {
+    characterId: string;
+    category: 'nutrition' | 'water' | 'medication' | 'exercise' | 'body';
+    scope: 'today' | 'last7' | 'all';
+  },
+): Promise<{ ok: boolean; id?: string }> {
+  const res = await fetch(`${API_URL}/api/assistant/characters/${args.characterId}/data-share`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category: args.category, scope: args.scope }),
+  });
+  if (!res.ok) throw new Error(`grantDataAccess failed: ${res.status}`);
+  return res.json();
+}
+
+export async function revokeDataAccess(
+  token: string,
+  args: { characterId: string; category: string },
+): Promise<{ ok: boolean }> {
+  const res = await fetch(
+    `${API_URL}/api/assistant/characters/${args.characterId}/data-share?category=${args.category}`,
+    { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) throw new Error(`revokeDataAccess failed: ${res.status}`);
+  return res.json();
+}
+
+export async function listDataGrants(
+  token: string,
+  characterId: string,
+): Promise<{ ok: boolean; grants: Array<{ category: string; scope: string; grantedAt: string }> }> {
+  const res = await fetch(`${API_URL}/api/assistant/characters/${characterId}/data-share`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`listDataGrants failed: ${res.status}`);
+  return res.json();
+}
+
+/**
+ * V4.6 M6 — Aracılık iste.
+ * Engelli karaktere ulaşmak için ortak arkadaşa "ona şunu ilet" demek.
+ */
+export async function requestMediation(
+  token: string,
+  args: { mediatorCharId: string; blockedCharId: string; message: string },
+): Promise<{ ok: boolean; mediationId?: string; mediatorName?: string; blockedName?: string }> {
+  const res = await fetch(`${API_URL}/api/assistant/characters/${args.mediatorCharId}/mediate`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      blockedCharId: args.blockedCharId,
+      message: args.message,
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`requestMediation failed: ${res.status}: ${txt}`);
+  }
   return res.json();
 }
 
@@ -96,6 +239,29 @@ export async function fetchCharacterMessages(
 }
 
 /**
+ * Karaktere hediye gönder.
+ */
+export async function sendGiftToCharacter(
+  token: string,
+  characterId: string,
+  payload: { giftType: string; label: string; emoji: string; message?: string },
+): Promise<{ giftId: string; messageId: string }> {
+  const res = await fetch(`${API_URL}/api/assistant/characters/${characterId}/gifts`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`sendGift failed: ${res.status} ${txt}`);
+  }
+  return res.json();
+}
+
+/**
  * Karakter mesajlarını okundu işaretle.
  */
 export async function markCharacterAsRead(token: string, characterId: string): Promise<number> {
@@ -118,14 +284,50 @@ export async function streamCharacterMessage(
   content: string,
   callbacks: {
     onChunk?: (delta: string) => void;
-    onComplete?: (messageId: string) => void;
+    /** V4.7 A4 — cleanContent: server sanitize tarafından temizlenmiş tam metin.
+     *  Streaming sırasında bug cümle gönderildiyse mobile bunu kullanıp ekranı override etmeli. */
+    onComplete?: (messageId: string, cleanContent?: string) => void;
     onSkipped?: (reason: string) => void;
     onError?: (message: string) => void;
+    onVoiceMessage?: (data: {
+      messageId: string;
+      audioUrl: string;
+      durationMs: number;
+      transcript: string;
+    }) => void;
+    onDelayed?: (data: { reason: string; estimatedDelayMs: number }) => void;
+    /** V4.6 M6 — karakter kullanıcıyı engelliyor */
+    onBlocked?: (data: { permanent: boolean; until: string | null; reason: string | null }) => void;
+  },
+  options?: {
+    repliedToMessageId?: string | null;
+    voice?: { audioUrl: string; durationMs: number; transcript: string; tone: any } | null;
+    /** V4.6 M59 — Foto/video gönderimi */
+    media?: { url: string; type: 'image' | 'video'; metadata?: Record<string, unknown> } | null;
+    /** Dışarıdan iptal edilebilir — yeni mesaj geldiğinde eski stream iptal olsun */
+    abortSignal?: AbortSignal;
   },
 ): Promise<void> {
-  // 90sn timeout — donma koruma
+  // Timeout daha esnek — 55sn sync delay + 30sn AI yanıt = 85sn için 120sn yeter.
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 90_000);
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 120_000);
+  // Dışarıdan abort (yeni mesaj geldi vs.) — hata sayılmaz
+  let externalAbort = false;
+  if (options?.abortSignal) {
+    if (options.abortSignal.aborted) {
+      // Daha çağrılmadan abort olmuş — sessiz dön, hiç fetch yapma
+      clearTimeout(timeoutId);
+      return;
+    }
+    options.abortSignal.addEventListener('abort', () => {
+      externalAbort = true;
+      controller.abort();
+    });
+  }
   let res: Response;
   try {
     res = await fetch(`${API_URL}/api/assistant/characters/${characterId}/stream`, {
@@ -134,16 +336,45 @@ export async function streamCharacterMessage(
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({
+        content,
+        ...(options?.repliedToMessageId ? { repliedToMessageId: options.repliedToMessageId } : {}),
+        ...(options?.voice ? { voice: options.voice } : {}),
+        ...(options?.media ? { media: options.media } : {}),
+      }),
       signal: controller.signal,
     });
   } catch (e: any) {
     clearTimeout(timeoutId);
-    callbacks.onError?.(e?.name === 'AbortError' ? 'timeout' : 'network');
+    // Manuel abort (yeni mesaj geldi) → sessizce dön, hata sayma
+    if (externalAbort) return;
+    // Gerçek timeout
+    if (timedOut || e?.name === 'AbortError') {
+      callbacks.onError?.('timeout');
+      return;
+    }
+    callbacks.onError?.('network');
     return;
   }
 
   if (!res.ok) {
+    // V4.6 M6 — 403 + blocked: özel handler
+    if (res.status === 403) {
+      const body = (await res.json().catch(() => null)) as {
+        blocked?: boolean;
+        permanent?: boolean;
+        until?: string | null;
+        reason?: string | null;
+      } | null;
+      if (body?.blocked) {
+        callbacks.onBlocked?.({
+          permanent: !!body.permanent,
+          until: body.until ?? null,
+          reason: body.reason ?? null,
+        });
+        return;
+      }
+    }
     const txt = await res.text().catch(() => '');
     callbacks.onError?.(`HTTP ${res.status}: ${txt}`);
     return;
@@ -169,7 +400,28 @@ export async function streamCharacterMessage(
             if (typeof event.delta === 'string') callbacks.onChunk?.(event.delta);
             break;
           case 'message_complete':
-            if (typeof event.messageId === 'string') callbacks.onComplete?.(event.messageId);
+            if (typeof event.messageId === 'string') {
+              const clean = typeof event.cleanContent === 'string' ? event.cleanContent : undefined;
+              callbacks.onComplete?.(event.messageId, clean);
+            }
+            break;
+          case 'delayed':
+            if (typeof event.reason === 'string') {
+              callbacks.onDelayed?.({
+                reason: event.reason,
+                estimatedDelayMs: event.estimatedDelayMs ?? 0,
+              });
+            }
+            break;
+          case 'voice_message':
+            if (typeof event.messageId === 'string' && typeof event.audioUrl === 'string') {
+              callbacks.onVoiceMessage?.({
+                messageId: event.messageId,
+                audioUrl: event.audioUrl,
+                durationMs: event.durationMs ?? 0,
+                transcript: event.transcript ?? '',
+              });
+            }
             break;
           case 'skipped':
             callbacks.onSkipped?.(event.reason ?? 'unknown');
@@ -198,11 +450,13 @@ export async function streamCharacterMessage(
       if (buffer) processBuffer('\n\n');
       return;
     } catch (e) {
-      // Reader hatası — fall back to text()
-      if (receivedAnyEvent) {
-        // Zaten mesaj geldi, sessizce bitir (yarım kalmış olabilir ama kullanıcı görüyor)
+      // Manuel abort → sessiz
+      if (externalAbort) {
+        clearTimeout(timeoutId);
         return;
       }
+      // Reader hatası — fall back to text()
+      if (receivedAnyEvent) return;
       // Hiç event gelmediyse text() fallback'ine düş
     }
   }
@@ -211,11 +465,11 @@ export async function streamCharacterMessage(
   try {
     const fullText = await res.text();
     processBuffer(fullText);
-    if (!receivedAnyEvent) {
+    if (!receivedAnyEvent && !externalAbort) {
       callbacks.onError?.('Empty stream response');
     }
   } catch (e) {
-    if (!receivedAnyEvent) {
+    if (!externalAbort && !receivedAnyEvent) {
       callbacks.onError?.(e instanceof Error ? e.message : 'stream read failed');
     }
   } finally {

@@ -42,6 +42,10 @@ import * as Haptics from 'expo-haptics';
 import { font, C, API_URL } from '../../../lib/theme';
 import { listCharacters, type CharacterListItem } from '../../../src/services/assistant/characters';
 import { listGroups, type GroupListItem } from '../../../src/services/assistant/groups';
+import { fetchStatusFeed, type StatusGroup } from '../../../src/services/assistant/status';
+import { StatusStrip } from '../../../src/components/messaging/StatusStrip';
+import { StatusViewer } from '../../../src/components/messaging/StatusViewer';
+import { CreateStatusSheet } from '../../../src/components/messaging/CreateStatusSheet';
 
 interface JarvisConv {
   id: string;
@@ -78,8 +82,19 @@ function relTime(iso: string | null | undefined): string {
 }
 
 function isCharacterOnline(char: CharacterListItem): boolean {
-  // Karakterler "AI" — uyumadıkça aktif
-  return char.currentActivity !== 'sleeping' && char.currentActivity !== 'sleep';
+  // V4.6 M2: Online state backend tarafından kullanıcıdan bağımsız hesaplanıyor.
+  // Backend `isCurrentlyOnline` döndürürse onu kullan; eski kayıtlar için
+  // fallback: sadece son 5 dakika içinde lastSeenAt güncellenmişse online.
+  const anyChar = char as unknown as {
+    isCurrentlyOnline?: boolean | null;
+    lastSeenAt?: string | null;
+  };
+  if (typeof anyChar.isCurrentlyOnline === 'boolean') return anyChar.isCurrentlyOnline;
+  if (anyChar.lastSeenAt) {
+    const last = new Date(anyChar.lastSeenAt).getTime();
+    if (!isNaN(last) && Date.now() - last < 5 * 60 * 1000) return true;
+  }
+  return false;
 }
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
@@ -292,6 +307,22 @@ export default function SessionsScreen() {
   const [searchFocused, setSearchFocused] = useState(false);
   const searchGlow = useRef(new Animated.Value(0)).current;
 
+  // V4.6 M75 — Status sistemi
+  const [statusGroups, setStatusGroups] = useState<StatusGroup[]>([]);
+  const [viewerGroup, setViewerGroup] = useState<StatusGroup | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const loadStatus = useCallback(async () => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetchStatusFeed(token);
+      setStatusGroups(res.groups);
+    } catch {
+      /* sessiz */
+    }
+  }, [getToken]);
+
   useEffect(() => {
     Animated.timing(searchGlow, {
       toValue: searchFocused ? 1 : 0,
@@ -343,6 +374,8 @@ export default function SessionsScreen() {
       setCharacters(charData.characters);
       setGroups(groupData.groups);
       setGroupFlagEnabled(groupData.flagEnabled);
+      // Status feed'i paralel yükle
+      loadStatus();
     } catch {
       // sessize al
     } finally {
@@ -465,20 +498,25 @@ export default function SessionsScreen() {
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
           />
-          <SymbolView
-            name="mic.fill"
-            size={15}
-            tintColor="#8E8E93"
-            fallback={
-              <Text style={{ color: '#8E8E93', fontSize: 14, fontFamily: font.regular }}>🎤</Text>
-            }
-          />
         </Animated.View>
       </View>
 
       <FlatList
         data={items}
         keyExtractor={(it) => `${it.kind}:${it.data.id}`}
+        ListHeaderComponent={
+          <StatusStrip
+            groups={statusGroups}
+            onPressGroup={(g) => {
+              Haptics.selectionAsync();
+              setViewerGroup(g);
+            }}
+            onPressCreate={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setCreateOpen(true);
+            }}
+          />
+        }
         renderItem={({ item }) => {
           if (item.kind === 'jarvis') {
             const last = item.data.messages?.[0];
@@ -552,6 +590,33 @@ export default function SessionsScreen() {
           />
         }
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+      />
+
+      {/* V4.6 M75 — Status viewer + create sheet */}
+      <StatusViewer
+        visible={!!viewerGroup}
+        group={viewerGroup}
+        onClose={() => {
+          setViewerGroup(null);
+          loadStatus();
+        }}
+        onReplied={({ characterId }) => {
+          setViewerGroup(null);
+          router.push(`/(app)/characters/${characterId}`);
+        }}
+      />
+      <CreateStatusSheet
+        visible={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          setCreateOpen(false);
+          loadStatus();
+        }}
+        characters={characters.map((c) => ({
+          id: c.id,
+          name: c.name,
+          avatarUrl: c.avatarUrl,
+        }))}
       />
     </View>
   );

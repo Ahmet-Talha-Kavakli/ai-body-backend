@@ -20,11 +20,11 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
     return NextResponse.json({ characters: [], flagEnabled: false })
   }
 
-  const cacheKey = `chars:list:${user.id}`
-  const cachedResult = await cached(cacheKey, 5, async () => {
-    return await loadCharacters(user.id)
-  })
-  return NextResponse.json({ characters: cachedResult, flagEnabled: true })
+  // V4.6 Faz 1 — schema değişikliği sonrası cache'i bypass et (geçici).
+  // Eski cache'de isCurrentlyOnline yoktu, mobile field eksiğiyle bozuluyor olabilir.
+  // 24-48 saat sonra `cached()` geri eklenecek.
+  const result = await loadCharacters(user.id)
+  return NextResponse.json({ characters: result, flagEnabled: true })
 })
 
 async function loadCharacters(userId: string) {
@@ -43,6 +43,9 @@ async function loadCharacters(userId: string) {
       currentLocation: true,
       status: true,
       arrivedAt: true,
+      // V4.6 M2 — kullanıcıdan bağımsız online state
+      isCurrentlyOnline: true,
+      lastSeenAt: true,
     },
   })
 
@@ -109,6 +112,11 @@ async function loadCharacters(userId: string) {
         loveScore: true,
         intimacyDepth: true,
         lastMessageAt: true,
+        // V4.6 M9 — 5 eksen
+        respectScore: true,
+        tensionScore: true,
+        familiarityScore: true,
+        relationshipType: true,
       },
     }),
   ])
@@ -135,6 +143,9 @@ async function loadCharacters(userId: string) {
       currentLocation: c.currentLocation,
       status: c.status,
       arrivedAt: c.arrivedAt,
+      // V4.6 M2 — UI için online state
+      isCurrentlyOnline: c.isCurrentlyOnline,
+      lastSeenAt: c.lastSeenAt,
       conversationId: conv?.id ?? null,
       lastMessage:
         conv && hasLastMessage
@@ -154,6 +165,11 @@ async function loadCharacters(userId: string) {
             trustScore: rel.trustScore,
             loveScore: rel.loveScore,
             intimacyDepth: rel.intimacyDepth,
+            // V4.6 M9
+            respectScore: rel.respectScore,
+            tensionScore: rel.tensionScore,
+            familiarityScore: rel.familiarityScore,
+            relationshipType: rel.relationshipType,
           }
         : null,
     }

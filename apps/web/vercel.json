@@ -2,73 +2,55 @@
   "buildCommand": "pnpm install && pnpm build",
   "installCommand": "pnpm install",
   "crons": [
-    {
-      "path": "/api/cron/weekly-summary",
-      "schedule": "0 6 * * 1"
-    },
-    {
-      "path": "/api/cron/morning-sync",
-      "schedule": "0 7 * * *"
-    },
-    {
-      "path": "/api/cron/smart-notification",
-      "schedule": "0 18 * * *"
-    },
-    {
-      "path": "/api/cron/water-streak-check",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/notifications-water",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/notifications-daily",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/notifications-streak",
-      "schedule": "0 20 * * *"
-    },
-    {
-      "path": "/api/cron/assistant-memory-decay",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/assistant-proactive",
-      "schedule": "0 9,15,19 * * *"
-    },
-    {
-      "path": "/api/cron/summary-rollup",
-      "schedule": "0 4 * * *"
-    },
-    {
-      "path": "/api/cron/mood-rotation",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/surprise-arcs",
-      "schedule": "0 11 * * *"
-    },
-    {
-      "path": "/api/cron/ai-aging",
-      "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/cron/graph-pattern",
-      "schedule": "0 2 * * 0"
-    },
-    {
-      "path": "/api/cron/graph-essence",
-      "schedule": "0 1 1 * *"
-    },
-    {
-      "path": "/api/cron/character-lifecycle",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/cron/life-engine",
-      "schedule": "0 4 * * *"
-    }
+    { "path": "/api/cron/weekly-summary", "schedule": "0 6 * * 1" },
+    { "path": "/api/cron/morning-sync", "schedule": "0 7 * * *" },
+    { "path": "/api/cron/smart-notification", "schedule": "0 18 * * *" },
+    { "path": "/api/cron/water-streak-check", "schedule": "0 1 * * *" },
+    { "path": "/api/cron/notifications-water", "schedule": "0 9 * * *" },
+    { "path": "/api/cron/notifications-daily", "schedule": "0 8 * * *" },
+    { "path": "/api/cron/notifications-streak", "schedule": "0 20 * * *" },
+    { "path": "/api/cron/assistant-memory-decay", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/assistant-proactive", "schedule": "0 15 * * *" },
+    { "path": "/api/cron/summary-rollup", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/mood-rotation", "schedule": "30 3 * * *" },
+    { "path": "/api/cron/surprise-arcs", "schedule": "0 11 * * *" },
+    { "path": "/api/cron/ai-aging", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/graph-pattern", "schedule": "0 2 * * 0" },
+    { "path": "/api/cron/graph-essence", "schedule": "0 1 1 * *" },
+    { "path": "/api/cron/character-lifecycle", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/life-engine", "schedule": "30 4 * * *" },
+
+    { "path": "/api/cron/scheduled-character-dispatcher", "schedule": "0 12 * * *" },
+
+    { "path": "/api/cron/pending-reflection-dispatcher", "schedule": "30 9 * * *" },
+    { "path": "/api/cron/follow-up-dispatcher", "schedule": "30 10 * * *" },
+    { "path": "/api/cron/contradiction-scanner", "schedule": "0 22 * * *" },
+    { "path": "/api/cron/user-pattern-analyzer", "schedule": "0 23 * * 0" },
+    { "path": "/api/cron/engagement-monitor", "schedule": "30 22 * * *" },
+
+    { "path": "/api/cron/cross-character-leak-scanner", "schedule": "0 21 * * 1" },
+    { "path": "/api/cron/jealousy-detector", "schedule": "30 21 * * *" },
+    { "path": "/api/cron/social-reaction-dispatcher", "schedule": "30 12 * * *" },
+    { "path": "/api/cron/secret-share-trigger", "schedule": "0 21 * * 4" },
+
+    { "path": "/api/cron/daily-life-generator", "schedule": "15 6 * * *" },
+    { "path": "/api/cron/obsession-manager", "schedule": "30 6 * * *" },
+    { "path": "/api/cron/music-share-suggester", "schedule": "0 16 * * *" },
+
+    { "path": "/api/cron/verbatim-scorer", "schedule": "0 5 * * 0" },
+
+    { "path": "/api/cron/birthday-checker", "schedule": "15 7 * * *" },
+    { "path": "/api/cron/routine-learner", "schedule": "15 4 * * *" },
+    { "path": "/api/cron/gift-suggester", "schedule": "0 3 * * 1" },
+    { "path": "/api/cron/reminder-dispatcher", "schedule": "0 13 * * *" },
+
+    { "path": "/api/cron/signature-phrase-rotator", "schedule": "0 4 * * 1" },
+    { "path": "/api/cron/anniversary-checker", "schedule": "30 7 * * *" },
+    { "path": "/api/cron/distance-phase-manager", "schedule": "15 5 * * *" },
+    { "path": "/api/cron/absence-recap-builder", "schedule": "30 5 * * *" },
+    { "path": "/api/cron/memory-recall-trigger", "schedule": "0 2 * * *" },
+
+    { "path": "/api/cron/voice-trend-analyzer", "schedule": "30 2 * * *" },
+    { "path": "/api/cron/research-dispatcher", "schedule": "0 14 * * *" }
   ]
 }

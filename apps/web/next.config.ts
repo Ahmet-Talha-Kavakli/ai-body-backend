@@ -10,7 +10,10 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  experimental: {},
+  experimental: {
+    // Next 15'te turbo config experimental içinde
+    turbo: {},
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },
@@ -21,7 +24,6 @@ const nextConfig: NextConfig = {
     ],
     formats: ['image/avif', 'image/webp'],
   },
-  turbopack: {},
   webpack: (config) => {
     config.experiments = { ...config.experiments, asyncWebAssembly: true }
     return config

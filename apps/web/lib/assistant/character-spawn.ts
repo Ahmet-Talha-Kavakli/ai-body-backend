@@ -22,6 +22,11 @@ import {
   getCharacterTemplate,
   type CharacterTemplate,
 } from './character-templates'
+import {
+  validateFirstContact,
+  recordCharacterIntroduction,
+  templateScenarioToValidatable,
+} from './first-contact'
 
 // Karakter geliş sırası — ön koşul zinciri
 // Mia → Kerem (paralel olabilir) → Selin (Mia sonrası) → Ayşe (Selin sonrası) → Mehmet (en son)
@@ -166,6 +171,39 @@ export async function spawnCharacter(userId: string, template: CharacterTemplate
       },
     })
   } catch {}
+
+  // 4) V4.5 — İlk temas doğrulama + CharacterIntroduction kaydı
+  // Karakterin physicalCity'sini realism seed'inden çekmek için tekrar oku
+  try {
+    const seeded = await db.character.findUnique({
+      where: { id: character.id },
+      select: { physicalCity: true },
+    })
+    const proposedScenario = templateScenarioToValidatable(template)
+    const validated = await validateFirstContact({
+      userId,
+      templateKey: template.templateKey,
+      proposedScenario,
+      characterPhysicalCity: seeded?.physicalCity ?? null,
+    })
+    await recordCharacterIntroduction({
+      userId,
+      characterId: character.id,
+      scenario: validated.scenario,
+      platform: validated.platform,
+      viaCharacterId: validated.viaCharacterId,
+      reasonText: validated.reasonText,
+      physicalProximityCity: validated.physicalProximityCity,
+    })
+    if (validated.rewritten) {
+      console.info(
+        `[spawn] ${template.templateKey} ilk temas senaryosu fallback'a düştü:`,
+        validated.rewriteReasons.join('; ')
+      )
+    }
+  } catch (err) {
+    console.warn('[spawn] first-contact validation skipped:', err)
+  }
 
   return character.id
 }

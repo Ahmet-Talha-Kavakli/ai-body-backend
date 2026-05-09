@@ -25,6 +25,7 @@
  */
 
 import { db } from '@/lib/db/client'
+import { parseRecentBreakingPoints } from './cross-context-state'
 
 export type RelationshipStatus = 'active' | 'cold' | 'silent' | 'broken' | 'recovering'
 
@@ -206,6 +207,19 @@ export async function loadRelationshipSnapshot(
   accumulationDays: number
   totalInteractions: number
   daysSinceLastInteraction: number | null
+  recentBreakingPoints: ReturnType<typeof parseRecentBreakingPoints>
+  // V4.6 M9 — 5 eksen
+  respectScore: number
+  tensionScore: number
+  familiarityScore: number
+  // V4.6 M7 — İlişki tipi
+  relationshipType: string
+  typeIntensity: number
+  pendingTypeChange: { proposedType?: string; proposedAt?: string; status?: string } | null
+  // V4.6 M6 — Engelleme
+  blockedUntil: Date | null
+  blockReason: string | null
+  permanentlyEnded: boolean
 } | null> {
   const rel = await db.memoryRelationship.findUnique({
     where: { userId_characterId: { userId, characterId } },
@@ -225,5 +239,19 @@ export async function loadRelationshipSnapshot(
     accumulationDays: rel.accumulationDays,
     totalInteractions: rel.totalInteractions,
     daysSinceLastInteraction: daysSince,
+    // V4.6 M3 — Cross-context conflict memory
+    recentBreakingPoints: parseRecentBreakingPoints(rel.breakingPoints),
+    // V4.6 M9 — 5 eksen skor
+    respectScore: rel.respectScore,
+    tensionScore: rel.tensionScore,
+    familiarityScore: rel.familiarityScore,
+    // V4.6 M7 — İlişki katmanları
+    relationshipType: rel.relationshipType,
+    typeIntensity: rel.typeIntensity,
+    pendingTypeChange: (rel.pendingTypeChange as Record<string, string> | null) ?? null,
+    // V4.6 M6 — Engelleme
+    blockedUntil: rel.blockedUntil,
+    blockReason: rel.blockReason,
+    permanentlyEnded: rel.permanentlyEnded,
   }
 }

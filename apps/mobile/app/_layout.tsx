@@ -52,6 +52,12 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(app)" />
         <Stack.Screen name="(showcase)" />
+        <Stack.Screen name="more" />
+        <Stack.Screen name="health" />
+        <Stack.Screen name="nutrition" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="session" />
+        <Stack.Screen name="milestones" />
       </Stack>
     </RootProviders>
   );

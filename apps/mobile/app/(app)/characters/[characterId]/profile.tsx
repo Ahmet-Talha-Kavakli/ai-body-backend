@@ -174,6 +174,27 @@ export default function CharacterProfileScreen() {
             <View style={{ marginTop: 14 }}>
               <ScoreBar label="Güven" value={character.relationship.trustScore} />
               <ScoreBar label="Sevgi" value={character.relationship.loveScore} />
+              {/* V4.6 M9 — 5 eksen */}
+              {(() => {
+                const r = character.relationship as unknown as {
+                  respectScore?: number;
+                  tensionScore?: number;
+                  familiarityScore?: number;
+                };
+                return (
+                  <>
+                    {typeof r.respectScore === 'number' && (
+                      <ScoreBar label="Saygı" value={r.respectScore} />
+                    )}
+                    {typeof r.familiarityScore === 'number' && (
+                      <ScoreBar label="Tanışıklık" value={r.familiarityScore} />
+                    )}
+                    {typeof r.tensionScore === 'number' && r.tensionScore > 0 && (
+                      <ScoreBar label="Gerginlik" value={r.tensionScore} />
+                    )}
+                  </>
+                );
+              })()}
             </View>
           </View>
         )}
