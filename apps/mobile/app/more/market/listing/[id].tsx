@@ -23,6 +23,7 @@ import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { ShareCard } from '../../../../components/marketplace/ShareCard';
 import { BoostSheet, type BoostSheetRef } from '../../../../components/marketplace/BoostSheet';
+import { GiftSheet, type GiftSheetRef } from '../../../../components/marketplace/GiftSheet';
 import { C, font } from '../../../../lib/theme';
 import {
   useMarketApi,
@@ -51,6 +52,7 @@ export default function ListingDetailScreen() {
   const [actionLoading, setActionLoading] = useState(false);
   const cardRef = useRef<View>(null);
   const boostSheetRef = useRef<BoostSheetRef>(null);
+  const giftSheetRef = useRef<GiftSheetRef>(null);
 
   const refresh = useCallback(async () => {
     if (!id) return;
@@ -134,51 +136,15 @@ export default function ListingDetailScreen() {
 
   const onGift = () => {
     if (!data) return;
-    Alert.prompt(
-      'Hediye Et',
-      `${data.listing.character.name} kira hediye edeceğin yaratıcı handle (@kullanici)`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Devam',
-          onPress: (handle) => {
-            if (!handle) return;
-            Alert.alert('Hediye türü', 'Hangi süreyi hediye edersin?', [
-              { text: 'İptal', style: 'cancel' },
-              ...(data.listing.rentPrice14d
-                ? [
-                    {
-                      text: `14 gün · ${data.listing.rentPrice14d} cr`,
-                      onPress: () => sendGift(handle, 'rent_14d'),
-                    },
-                  ]
-                : []),
-              ...(data.listing.rentPrice30d
-                ? [
-                    {
-                      text: `30 gün · ${data.listing.rentPrice30d} cr`,
-                      onPress: () => sendGift(handle, 'rent_30d'),
-                    },
-                  ]
-                : []),
-            ]);
-          },
-        },
-      ],
-      'plain-text',
-    );
-  };
-
-  const sendGift = async (handle: string, type: any) => {
-    if (!data) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const r = await apiRef.current.giftRental(data.listing.id, handle, type);
-    if (!r.ok) Alert.alert('Hata', r.error ?? 'Hediye gönderilemedi');
-    else
-      Alert.alert(
-        'Hediye Gönderildi',
-        `@${handle} kullanıcısına ${data.listing.character.name} hediye ettin.`,
-      );
+    Haptics.selectionAsync();
+    giftSheetRef.current?.open({
+      listingId: data.listing.id,
+      characterName: data.listing.character.name,
+      avatarUrl: data.listing.character.avatarUrl,
+      rentPrice7d: data.listing.rentPrice7d,
+      rentPrice14d: data.listing.rentPrice14d,
+      rentPrice30d: data.listing.rentPrice30d,
+    });
   };
 
   const onShare = async () => {
@@ -635,25 +601,34 @@ export default function ListingDetailScreen() {
                 />
               )}
 
-              {/* Gift */}
-              <Pressable onPress={onGift} disabled={actionLoading}>
-                {({ pressed }) => (
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      gap: 6,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      paddingVertical: 10,
-                      opacity: pressed ? 0.7 : 1,
-                    }}
-                  >
-                    <SymbolView name="gift" tintColor={C.textMuted} size={14} />
-                    <Text style={{ fontFamily: font.semibold, fontSize: 13, color: C.textMuted }}>
-                      Bir arkadaşına hediye et
-                    </Text>
-                  </View>
-                )}
+              {/* Gift CTA — kira'ya eşit ağırlıkta secondary buton */}
+              <Pressable
+                onPress={onGift}
+                disabled={actionLoading}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  backgroundColor: C.accentSoft,
+                  paddingVertical: 14,
+                  borderRadius: 14,
+                  marginTop: 6,
+                  minHeight: 52,
+                  opacity: actionLoading ? 0.5 : 1,
+                }}
+              >
+                <SymbolView name="gift.fill" tintColor={C.accent} size={16} />
+                <Text
+                  style={{
+                    fontFamily: font.bold,
+                    fontSize: 15,
+                    color: C.accent,
+                    letterSpacing: -0.2,
+                  }}
+                >
+                  Bir arkadaşına hediye et
+                </Text>
               </Pressable>
             </>
           )}
@@ -666,6 +641,8 @@ export default function ListingDetailScreen() {
           refresh();
         }}
       />
+
+      <GiftSheet ref={giftSheetRef} />
     </>
   );
 }
