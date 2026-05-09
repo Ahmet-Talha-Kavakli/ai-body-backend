@@ -45,10 +45,30 @@ export async function cached<T>(key: string, ttlSec: number, loader: () => Promi
   return value
 }
 
-/** Belirli prefix'li cache satırlarını temizle (mesaj atınca invalidate için) */
+/** Belirli key'leri temizle (mesaj atınca invalidate için) */
 export async function invalidateCache(...keys: string[]) {
   try {
     if (keys.length > 0) await redis.del(...keys)
+  } catch {
+    // sessize al
+  }
+}
+
+/** Prefix'le başlayan tüm cache key'lerini temizle (örn "mp:list:" → tüm listing cache'leri) */
+export async function invalidateCachePrefix(prefix: string) {
+  try {
+    // Upstash Redis SCAN ile prefix taraması
+    let cursor: string | number = 0
+    const matched: string[] = []
+    do {
+      const [next, batch] = (await redis.scan(cursor, { match: `${prefix}*`, count: 100 })) as [
+        string,
+        string[],
+      ]
+      matched.push(...batch)
+      cursor = next
+    } while (cursor !== '0' && cursor !== 0)
+    if (matched.length > 0) await redis.del(...matched)
   } catch {
     // sessize al
   }

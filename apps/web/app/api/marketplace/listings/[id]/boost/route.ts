@@ -13,6 +13,7 @@ import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { db } from '@/lib/db/client'
 import { spendCredits, getUserBalance } from '@/lib/marketplace/credit-ledger'
+import { invalidateCachePrefix } from '@/lib/redis/client'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -86,6 +87,9 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
     where: { id },
     data: { boostUntil: newBoostUntil, boostTier: tier },
   })
+
+  // Listings cache + bu listing'in detay cache'ini temizle, sıralama anında değişsin
+  await Promise.all([invalidateCachePrefix('mp:list:'), invalidateCachePrefix(`mp:listing:${id}`)])
 
   return NextResponse.json({
     ok: true,

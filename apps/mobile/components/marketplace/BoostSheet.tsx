@@ -1,11 +1,18 @@
 /**
  * V4.8 Faz F — Listing Boost satın alma sheet
  *
- * Apple App Store iAP paterni:
- *   - 3 paket kartı (24 Saat / 1 Hafta / 30 Gün Sponsorlu)
- *   - Her kartta süre + kazandıracağı görünürlük açıklaması + fiyat
- *   - "Satın Al" CTA → native confirm Alert
- *   - Aktif boost varsa üstte mevcut durumu gösterir
+ * Apple One / iCloud+ subscription seçim paterni:
+ *   - Üstte ikon + büyük başlık + kısa açıklama (hero)
+ *   - 3 paket dikey kart, her biri seçilebilir (radio paterni)
+ *   - Seçili kart: accent border + soft accent bg + sağda checkmark
+ *   - En altta full-width "X kredi · Satın Al" CTA (canlı accent)
+ *   - Aktif boost varsa üstte yeşil banner (kalan süre)
+ *
+ * Kurallar:
+ *   - Pressable callback style YOK (CLAUDE.md KRİTİK BUTON KURALI)
+ *   - Pressable + row YOK; row hep ayrı View içinde
+ *   - bgColor / textColor const olarak çıkarılı, JSX okunabilir
+ *   - Native @gorhom/bottom-sheet (UISheet) + native Alert (UIAlertController)
  */
 
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
@@ -44,22 +51,13 @@ interface Props {
   onPurchased?: (newBoostUntil: string) => void;
 }
 
-const TIER_DESC: Record<string, string> = {
-  '24h': 'Listenin en üstünde 1 gün',
-  '7d': 'Trend listesinde 1 hafta',
-  sponsored: 'Tüm kategorilerde 30 gün',
-};
-
-const TIER_ICON: Record<string, string> = {
-  '24h': 'bolt.fill',
-  '7d': 'flame.fill',
-  sponsored: 'crown.fill',
-};
-
-const TIER_COLOR: Record<string, string> = {
-  '24h': '#5E5CE6',
-  '7d': '#FF9F0A',
-  sponsored: '#FFCC00',
+const TIER_META: Record<
+  string,
+  { icon: string; color: string; sub: string; recommended?: boolean }
+> = {
+  '24h': { icon: 'bolt.fill', color: '#5E5CE6', sub: '1 gün' },
+  '7d': { icon: 'flame.fill', color: '#FF9F0A', sub: '7 gün', recommended: true },
+  sponsored: { icon: 'crown.fill', color: '#FFCC00', sub: '30 gün' },
 };
 
 export const BoostSheet = forwardRef<BoostSheetRef, Props>(function BoostSheet(
@@ -74,10 +72,10 @@ export const BoostSheet = forwardRef<BoostSheetRef, Props>(function BoostSheet(
   const [listingId, setListingId] = useState<string | null>(null);
   const [info, setInfo] = useState<BoostInfo | null>(null);
   const [loading, setLoading] = useState(false);
-  const [purchasingTier, setPurchasingTier] = useState<string | null>(null);
-  const [selectedTier, setSelectedTier] = useState<string | null>('7d');
+  const [purchasing, setPurchasing] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<string>('7d');
 
-  const snapPoints = useMemo(() => ['85%'], []);
+  const snapPoints = useMemo(() => ['82%'], []);
 
   const load = useCallback(async (id: string) => {
     setLoading(true);
@@ -89,6 +87,7 @@ export const BoostSheet = forwardRef<BoostSheetRef, Props>(function BoostSheet(
   useImperativeHandle(ref, () => ({
     open: (id: string) => {
       setListingId(id);
+      setSelectedTier('7d');
       load(id);
       sheetRef.current?.expand();
     },
@@ -96,58 +95,59 @@ export const BoostSheet = forwardRef<BoostSheetRef, Props>(function BoostSheet(
   }));
 
   const onConfirmPurchase = useCallback(() => {
-    if (!listingId || !info || !selectedTier) return;
+    if (!listingId || !info) return;
     const pkg = info.packages.find((p) => p.tier === selectedTier);
     if (!pkg) return;
     const insufficient = info.balance < pkg.price;
+    if (insufficient) {
+      Alert.alert(
+        'Yetersiz bakiye',
+        `${pkg.label} için ${pkg.price} kredi gerekli. Bakiyen: ${info.balance}.`,
+        [{ text: 'Tamam' }],
+      );
+      return;
+    }
     Alert.alert(
       `${pkg.label} öne çıkar`,
-      insufficient
-        ? `Bu paket ${pkg.price} kredi tutuyor. Bakiyen ${info.balance}. Yeterli krediyi yükle, sonra tekrar dene.`
-        : `Bu işlem ${pkg.price} kredi düşecek. Bakiyen: ${info.balance} → ${info.balance - pkg.price}.`,
-      insufficient
-        ? [{ text: 'Tamam' }]
-        : [
-            { text: 'Vazgeç', style: 'cancel' },
-            {
-              text: 'Onayla',
-              style: 'default',
-              onPress: async () => {
-                setPurchasingTier(pkg.tier);
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                const r = await apiRef.current.buyBoost(listingId, pkg.tier as Package['tier']);
-                setPurchasingTier(null);
-                if (r.ok) {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  if (r.boostUntil) onPurchased?.(r.boostUntil);
-                  Alert.alert(
-                    'Boost aktif',
-                    `Listingn ${pkg.label.toLowerCase()} boyunca öne çıkacak.`,
-                    [{ text: 'Tamam', onPress: () => sheetRef.current?.close() }],
-                  );
-                  if (r.balance != null) {
-                    setInfo((cur) =>
-                      cur
-                        ? {
-                            ...cur,
-                            balance: r.balance!,
-                            isActive: true,
-                            boostUntil: r.boostUntil!,
-                            boostTier: pkg.tier,
-                          }
-                        : cur,
-                    );
-                  }
-                } else {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                  Alert.alert(
-                    'Satın alma başarısız',
-                    r.error ?? 'Bir sorun oldu, daha sonra tekrar dene.',
-                  );
-                }
-              },
-            },
-          ],
+      `${pkg.price} kredi düşecek. Bakiyen: ${info.balance} → ${info.balance - pkg.price}.`,
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Onayla',
+          style: 'default',
+          onPress: async () => {
+            setPurchasing(true);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            const r = await apiRef.current.buyBoost(listingId, pkg.tier as Package['tier']);
+            setPurchasing(false);
+            if (r.ok) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              if (r.boostUntil) onPurchased?.(r.boostUntil);
+              if (r.balance != null) {
+                setInfo((cur) =>
+                  cur
+                    ? {
+                        ...cur,
+                        balance: r.balance!,
+                        isActive: true,
+                        boostUntil: r.boostUntil!,
+                        boostTier: pkg.tier,
+                      }
+                    : cur,
+                );
+              }
+              Alert.alert(
+                'Boost aktif',
+                `Listingn ${pkg.label.toLowerCase()} boyunca öne çıkacak.`,
+                [{ text: 'Tamam', onPress: () => sheetRef.current?.close() }],
+              );
+            } else {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert('Satın alma başarısız', r.error ?? 'Bir sorun oldu, tekrar dene.');
+            }
+          },
+        },
+      ],
     );
   }, [listingId, info, selectedTier, onPurchased]);
 
@@ -168,40 +168,8 @@ export const BoostSheet = forwardRef<BoostSheetRef, Props>(function BoostSheet(
       backgroundStyle={{ backgroundColor: C.page }}
       handleIndicatorStyle={{ backgroundColor: C.textDim }}
     >
-      <BottomSheetView style={{ flex: 1, paddingHorizontal: 20, paddingBottom: 32 }}>
-        <View style={{ alignItems: 'center', marginTop: 4, marginBottom: 18 }}>
-          <View
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
-              backgroundColor: C.accentSoft,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 12,
-            }}
-          >
-            <SymbolView name="bolt.fill" tintColor={C.accent} size={28} />
-          </View>
-          <Text
-            style={{ fontFamily: font.extrabold, fontSize: 22, color: C.text, letterSpacing: -0.4 }}
-          >
-            Listenini öne çıkar
-          </Text>
-          <Text
-            style={{
-              fontFamily: font.regular,
-              fontSize: 14,
-              color: C.textMuted,
-              textAlign: 'center',
-              marginTop: 6,
-              lineHeight: 20,
-            }}
-          >
-            Boost'lu listingler kategori başında, Trend section'ında ve Keşfet'in üst sıralarında
-            gösterilir.
-          </Text>
-        </View>
+      <BottomSheetView style={{ flex: 1, paddingHorizontal: 20 }}>
+        <Hero />
 
         {loading || !info ? (
           <View style={{ paddingTop: 60, alignItems: 'center' }}>
@@ -210,63 +178,30 @@ export const BoostSheet = forwardRef<BoostSheetRef, Props>(function BoostSheet(
         ) : (
           <>
             {info.isActive && info.boostUntil && (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 10,
-                  backgroundColor: '#30D15822',
-                  borderRadius: 12,
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                  marginBottom: 14,
-                }}
-              >
-                <SymbolView name="checkmark.circle.fill" tintColor="#30D158" size={18} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: font.bold, fontSize: 13, color: '#30D158' }}>
-                    Aktif boost
-                  </Text>
-                  <Text
-                    style={{
-                      fontFamily: font.regular,
-                      fontSize: 12,
-                      color: C.textMuted,
-                      marginTop: 1,
-                    }}
-                  >
-                    {formatRemaining(new Date(info.boostUntil))}
-                  </Text>
-                </View>
-              </View>
+              <ActiveBanner until={new Date(info.boostUntil)} tier={info.boostTier} />
             )}
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-              <SymbolView name="bolt.fill" tintColor={C.accent} size={14} />
-              <Text style={{ fontFamily: font.bold, fontSize: 14, color: C.accent }}>
-                {info.balance} kredi
-              </Text>
-              <Text style={{ fontFamily: font.regular, fontSize: 13, color: C.textMuted }}>
-                · bakiyen
-              </Text>
+            <View style={{ marginTop: 4 }}>
+              {info.packages.map((pkg) => (
+                <PackageCard
+                  key={pkg.tier}
+                  pkg={pkg}
+                  selected={selectedTier === pkg.tier}
+                  insufficient={info.balance < pkg.price}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setSelectedTier(pkg.tier);
+                  }}
+                />
+              ))}
             </View>
 
-            {info.packages.map((pkg) => (
-              <PackageCard
-                key={pkg.tier}
-                pkg={pkg}
-                selected={selectedTier === pkg.tier}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setSelectedTier(pkg.tier);
-                }}
-              />
-            ))}
+            <BalanceRow balance={info.balance} />
 
             <PurchaseCTA
               info={info}
               selectedTier={selectedTier}
-              isPurchasing={purchasingTier !== null}
+              isPurchasing={purchasing}
               onPress={onConfirmPurchase}
             />
 
@@ -276,11 +211,11 @@ export const BoostSheet = forwardRef<BoostSheetRef, Props>(function BoostSheet(
                 fontSize: 11,
                 color: C.textMuted,
                 textAlign: 'center',
-                marginTop: 12,
+                marginTop: 10,
                 lineHeight: 16,
               }}
             >
-              Boost süresi dolduğunda listing normal sıralamaya döner. İade yok.
+              Süre dolduğunda listing normal sıralamaya döner. İade yok.
             </Text>
           </>
         )}
@@ -289,90 +224,128 @@ export const BoostSheet = forwardRef<BoostSheetRef, Props>(function BoostSheet(
   );
 });
 
-function PurchaseCTA({
-  info,
-  selectedTier,
-  isPurchasing,
-  onPress,
-}: {
-  info: BoostInfo;
-  selectedTier: string | null;
-  isPurchasing: boolean;
-  onPress: () => void;
-}) {
-  const pkg = info.packages.find((p) => p.tier === selectedTier);
-  const disabled = !pkg || isPurchasing;
-  const insufficient = pkg ? info.balance < pkg.price : false;
-
-  const bgColor = insufficient ? C.surface : C.accent;
-  const textColor = insufficient ? C.text : '#FFFFFF';
-
+function Hero() {
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
+    <View style={{ alignItems: 'center', paddingTop: 4, paddingBottom: 20 }}>
+      <View
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 16,
+          backgroundColor: C.accentSoft,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 14,
+        }}
+      >
+        <SymbolView name="bolt.fill" tintColor={C.accent} size={28} />
+      </View>
+      <Text
+        style={{ fontFamily: font.extrabold, fontSize: 22, color: C.text, letterSpacing: -0.4 }}
+      >
+        Listenini öne çıkar
+      </Text>
+      <Text
+        style={{
+          fontFamily: font.regular,
+          fontSize: 14,
+          color: C.textMuted,
+          textAlign: 'center',
+          marginTop: 6,
+          lineHeight: 20,
+          paddingHorizontal: 8,
+        }}
+      >
+        Boost'lu listingler kategori başında ve Trend'de üstte gösterilir.
+      </Text>
+    </View>
+  );
+}
+
+function ActiveBanner({ until, tier }: { until: Date; tier: string | null }) {
+  const remaining = formatRemaining(until);
+  const tierLabel = tier ? (TIER_META[tier]?.sub ?? '') : '';
+  return (
+    <View
       style={{
-        backgroundColor: bgColor,
-        borderRadius: 14,
-        paddingVertical: 16,
-        marginTop: 16,
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: 56,
-        opacity: disabled ? 0.5 : 1,
+        backgroundColor: '#30D15822',
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 11,
+        marginBottom: 14,
       }}
     >
-      {isPurchasing ? (
-        <ActivityIndicator color="#FFFFFF" />
-      ) : (
-        <Text
-          style={{
-            fontFamily: font.bold,
-            fontSize: 16,
-            color: textColor,
-            letterSpacing: -0.2,
-          }}
-        >
-          {!pkg
-            ? 'Bir paket seç'
-            : insufficient
-              ? `${pkg.price} kredi gerekli`
-              : `${pkg.price} kredi · Satın Al`}
+      <SymbolView name="checkmark.circle.fill" tintColor="#30D158" size={18} />
+      <View style={{ flex: 1, marginLeft: 10 }}>
+        <Text style={{ fontFamily: font.bold, fontSize: 13, color: '#30D158' }}>Aktif boost</Text>
+        <Text style={{ fontFamily: font.regular, fontSize: 12, color: C.textMuted, marginTop: 1 }}>
+          {tierLabel ? `${tierLabel} · ` : ''}
+          {remaining}
         </Text>
-      )}
-    </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function BalanceRow({ balance }: { balance: number }) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 14,
+        paddingHorizontal: 4,
+      }}
+    >
+      <SymbolView name="bolt.fill" tintColor={C.accent} size={13} />
+      <Text style={{ fontFamily: font.bold, fontSize: 13, color: C.accent, marginLeft: 5 }}>
+        {balance}
+      </Text>
+      <Text style={{ fontFamily: font.regular, fontSize: 13, color: C.textMuted, marginLeft: 4 }}>
+        kredi bakiyen
+      </Text>
+    </View>
   );
 }
 
 function PackageCard({
   pkg,
   selected,
+  insufficient,
   onPress,
 }: {
   pkg: Package;
   selected: boolean;
+  insufficient: boolean;
   onPress: () => void;
 }) {
-  const color = TIER_COLOR[pkg.tier] ?? C.accent;
-  const icon = TIER_ICON[pkg.tier] ?? 'bolt.fill';
-  const desc = TIER_DESC[pkg.tier] ?? '';
+  const meta = TIER_META[pkg.tier];
+  const color = meta?.color ?? C.accent;
+  const icon = meta?.icon ?? 'bolt.fill';
+  const recommended = meta?.recommended ?? false;
+
+  // Pressable'a callback style verme — düz inline (CLAUDE.md kuralı)
+  const cardBg = selected ? C.accentSoft : C.card;
+  const cardBorderColor = selected ? C.accent : 'transparent';
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => ({
-        backgroundColor: selected ? C.accentSoft : C.card,
+      style={{
+        backgroundColor: cardBg,
         borderRadius: 14,
         paddingHorizontal: 14,
-        height: 76,
-        justifyContent: 'center',
+        paddingVertical: 14,
         marginBottom: 10,
         borderWidth: 2,
-        borderColor: selected ? C.accent : 'transparent',
-        opacity: pressed ? 0.85 : 1,
-      })}
+        borderColor: cardBorderColor,
+      }}
     >
+      {/* Pressable'a row vermek bug, içte ayrı View */}
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        {/* Sol — tier ikonu */}
         <View
           style={{
             width: 40,
@@ -386,33 +359,75 @@ function PackageCard({
         >
           <SymbolView name={icon as any} tintColor={color} size={20} />
         </View>
+
+        {/* Orta — başlık + alt yazı */}
         <View style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text
               numberOfLines={1}
-              style={{ fontFamily: font.bold, fontSize: 16, color: C.text, letterSpacing: -0.2 }}
+              style={{
+                fontFamily: font.bold,
+                fontSize: 16,
+                color: C.text,
+                letterSpacing: -0.2,
+              }}
             >
               {pkg.label}
             </Text>
-            <Text
-              numberOfLines={1}
-              style={{ fontFamily: font.semibold, fontSize: 13, color: C.textMuted }}
-            >
-              {pkg.price} cr
-            </Text>
+            {recommended && (
+              <View
+                style={{
+                  marginLeft: 8,
+                  backgroundColor: C.accent,
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  borderRadius: 5,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: font.bold,
+                    fontSize: 9,
+                    color: '#FFFFFF',
+                    letterSpacing: 0.4,
+                  }}
+                >
+                  ÖNERİLEN
+                </Text>
+              </View>
+            )}
           </View>
           <Text
             numberOfLines={1}
-            style={{ fontFamily: font.regular, fontSize: 13, color: C.textMuted, marginTop: 2 }}
+            style={{
+              fontFamily: font.semibold,
+              fontSize: 14,
+              color: C.text,
+              marginTop: 2,
+            }}
           >
-            {desc}
+            {pkg.price} kredi
           </Text>
+          {insufficient && (
+            <Text
+              style={{
+                fontFamily: font.regular,
+                fontSize: 11,
+                color: '#FF3B30',
+                marginTop: 2,
+              }}
+            >
+              Bakiye yetersiz
+            </Text>
+          )}
         </View>
+
+        {/* Sağ — radio circle */}
         <View
           style={{
-            width: 22,
-            height: 22,
-            borderRadius: 11,
+            width: 24,
+            height: 24,
+            borderRadius: 12,
             borderWidth: 2,
             borderColor: selected ? C.accent : C.border,
             backgroundColor: selected ? C.accent : 'transparent',
@@ -420,9 +435,66 @@ function PackageCard({
             justifyContent: 'center',
           }}
         >
-          {selected && <SymbolView name="checkmark" tintColor="#FFFFFF" size={12} />}
+          {selected && <SymbolView name="checkmark" tintColor="#FFFFFF" size={13} />}
         </View>
       </View>
+    </Pressable>
+  );
+}
+
+function PurchaseCTA({
+  info,
+  selectedTier,
+  isPurchasing,
+  onPress,
+}: {
+  info: BoostInfo;
+  selectedTier: string;
+  isPurchasing: boolean;
+  onPress: () => void;
+}) {
+  const pkg = info.packages.find((p) => p.tier === selectedTier);
+  const insufficient = pkg ? info.balance < pkg.price : false;
+  const disabled = !pkg || isPurchasing;
+
+  // CLAUDE.md KRİTİK BUTON KURALI: dinamik bg + Pressable inline style
+  const bgColor = !pkg || insufficient ? C.surface : C.accent;
+  const textColor = !pkg || insufficient ? C.textMuted : '#FFFFFF';
+  const label = !pkg
+    ? 'Bir paket seç'
+    : insufficient
+      ? `${pkg.price} kredi gerekli`
+      : `${pkg.price} kredi · Satın Al`;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={{
+        backgroundColor: bgColor,
+        borderRadius: 14,
+        paddingVertical: 17,
+        marginTop: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 56,
+        opacity: isPurchasing ? 0.7 : 1,
+      }}
+    >
+      {isPurchasing ? (
+        <ActivityIndicator color="#FFFFFF" />
+      ) : (
+        <Text
+          style={{
+            fontFamily: font.bold,
+            fontSize: 16,
+            color: textColor,
+            letterSpacing: -0.2,
+          }}
+        >
+          {label}
+        </Text>
+      )}
     </Pressable>
   );
 }
