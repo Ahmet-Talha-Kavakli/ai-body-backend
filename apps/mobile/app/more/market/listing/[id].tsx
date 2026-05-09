@@ -50,14 +50,37 @@ export default function ListingDetailScreen() {
   const [data, setData] = useState<ListingDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [similar, setSimilar] = useState<
+    {
+      id: string;
+      character: {
+        id: string;
+        name: string;
+        age: number;
+        avatarUrl: string | null;
+        bio: string | null;
+        hometown: string | null;
+        category: string;
+      };
+      ownerHandle: string | null;
+      rentPrice7d: number | null;
+      averageRating: number | null;
+      totalRentals: number;
+      isBoosted: boolean;
+    }[]
+  >([]);
   const cardRef = useRef<View>(null);
   const boostSheetRef = useRef<BoostSheetRef>(null);
   const giftSheetRef = useRef<GiftSheetRef>(null);
 
   const refresh = useCallback(async () => {
     if (!id) return;
-    const r = await apiRef.current.getListing(id);
+    const [r, sim] = await Promise.all([
+      apiRef.current.getListing(id),
+      apiRef.current.getSimilarListings(id, 6),
+    ]);
     if (r) setData(r);
+    if (sim) setSimilar(sim.items);
     setLoading(false);
   }, [id]);
 
@@ -526,6 +549,17 @@ export default function ListingDetailScreen() {
             ))}
           </Section>
         )}
+
+        {/* Similar listings */}
+        {similar.length > 0 && (
+          <SimilarRow
+            listings={similar}
+            onPressItem={(sid) => {
+              Haptics.selectionAsync();
+              router.push(`/more/market/listing/${sid}` as any);
+            }}
+          />
+        )}
       </ScrollView>
 
       {/* Bottom CTA */}
@@ -767,6 +801,152 @@ function FlexCTA({
         </View>
       )}
     </Pressable>
+  );
+}
+
+function SimilarRow({
+  listings,
+  onPressItem,
+}: {
+  listings: {
+    id: string;
+    character: {
+      id: string;
+      name: string;
+      age: number;
+      avatarUrl: string | null;
+      bio: string | null;
+      hometown: string | null;
+      category: string;
+    };
+    rentPrice7d: number | null;
+    averageRating: number | null;
+    isBoosted: boolean;
+  }[];
+  onPressItem: (id: string) => void;
+}) {
+  return (
+    <View style={{ marginTop: 24 }}>
+      <Text
+        style={{
+          fontFamily: font.bold,
+          fontSize: 22,
+          color: C.text,
+          paddingHorizontal: 20,
+          paddingBottom: 4,
+          letterSpacing: -0.3,
+        }}
+      >
+        Bunlar da hoşuna gidebilir
+      </Text>
+      <Text
+        style={{
+          fontFamily: font.regular,
+          fontSize: 13,
+          color: C.textMuted,
+          paddingHorizontal: 20,
+          paddingBottom: 12,
+        }}
+      >
+        Aynı kategoride trend olanlar
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
+      >
+        {listings.map((l) => (
+          <Pressable
+            key={l.id}
+            onPress={() => onPressItem(l.id)}
+            style={{
+              width: 150,
+              backgroundColor: C.card,
+              borderRadius: 16,
+              overflow: 'hidden',
+            }}
+          >
+            <View
+              style={{
+                width: 150,
+                height: 180,
+                backgroundColor: C.surface,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {l.character.avatarUrl ? (
+                <Image
+                  source={{ uri: l.character.avatarUrl }}
+                  style={{ width: 150, height: 180 }}
+                  contentFit="cover"
+                />
+              ) : (
+                <SymbolView name="person.fill" tintColor={C.textMuted} size={42} />
+              )}
+              {l.isBoosted && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 3,
+                    backgroundColor: '#FFCC00',
+                    paddingHorizontal: 6,
+                    paddingVertical: 3,
+                    borderRadius: 6,
+                  }}
+                >
+                  <SymbolView name="bolt.fill" tintColor="#1C1C1E" size={9} />
+                  <Text
+                    style={{
+                      fontFamily: font.bold,
+                      fontSize: 9,
+                      color: '#1C1C1E',
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    BOOST
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={{ padding: 10 }}>
+              <Text
+                numberOfLines={1}
+                style={{ fontFamily: font.bold, fontSize: 14, color: C.text, letterSpacing: -0.2 }}
+              >
+                {l.character.name}
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={{ fontFamily: font.regular, fontSize: 11, color: C.textMuted, marginTop: 2 }}
+              >
+                {l.character.age}
+                {l.character.hometown ? ` · ${l.character.hometown}` : ''}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                {l.averageRating != null && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                    <SymbolView name="star.fill" tintColor="#FFCC00" size={9} />
+                    <Text style={{ fontFamily: font.semibold, fontSize: 11, color: C.text }}>
+                      {l.averageRating.toFixed(1)}
+                    </Text>
+                  </View>
+                )}
+                {l.rentPrice7d != null && (
+                  <Text style={{ fontFamily: font.semibold, fontSize: 11, color: C.accent }}>
+                    {l.rentPrice7d} cr
+                  </Text>
+                )}
+              </View>
+            </View>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 

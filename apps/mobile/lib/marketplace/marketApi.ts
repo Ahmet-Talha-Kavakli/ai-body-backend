@@ -360,6 +360,39 @@ export function useMarketApi() {
     [authFetch],
   );
 
+  const getSimilarListings = useCallback(
+    async (
+      listingId: string,
+      limit = 4,
+    ): Promise<{
+      sourceCategory: string;
+      items: {
+        id: string;
+        character: {
+          id: string;
+          name: string;
+          age: number;
+          avatarUrl: string | null;
+          bio: string | null;
+          hometown: string | null;
+          category: string;
+        };
+        ownerHandle: string | null;
+        rentPrice7d: number | null;
+        rentPrice14d: number | null;
+        rentPrice30d: number | null;
+        averageRating: number | null;
+        totalRentals: number;
+        isBoosted: boolean;
+      }[];
+    } | null> => {
+      const r = await authFetch(`/api/marketplace/listings/${listingId}/similar?limit=${limit}`);
+      if (!r.ok) return null;
+      return await r.json();
+    },
+    [authFetch],
+  );
+
   const getRentalRecap = useCallback(
     async (
       rentalId: string,
@@ -406,5 +439,6 @@ export function useMarketApi() {
     extendRental,
     endRentalEarly,
     getRentalRecap,
+    getSimilarListings,
   };
 }
