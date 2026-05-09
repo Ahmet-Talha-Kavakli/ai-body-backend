@@ -360,6 +360,29 @@ export function useMarketApi() {
     [authFetch],
   );
 
+  const getRentalRecap = useCallback(
+    async (
+      rentalId: string,
+    ): Promise<{
+      character: { id: string; name: string; avatarUrl: string | null };
+      durationDays: number;
+      totalMessages: number;
+      userMessages: number;
+      characterMessages: number;
+      totalWords: number;
+      topWords: { word: string; count: number }[];
+      quickReplies: number;
+      mostActiveDay: { date: string; count: number } | null;
+      firstUserMessage: string | null;
+      lastUserMessage: string | null;
+    } | null> => {
+      const r = await authFetch(`/api/marketplace/rentals/${rentalId}/recap`);
+      if (!r.ok) return null;
+      return await r.json();
+    },
+    [authFetch],
+  );
+
   return {
     listListings,
     getListing,
@@ -382,5 +405,6 @@ export function useMarketApi() {
     getExtendInfo,
     extendRental,
     endRentalEarly,
+    getRentalRecap,
   };
 }

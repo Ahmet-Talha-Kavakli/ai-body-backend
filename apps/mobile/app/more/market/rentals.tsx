@@ -75,6 +75,8 @@ export default function RentalsScreen() {
                     const r = await apiRef.current.endRentalEarly(rental.id);
                     if (r.ok) {
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      // Kira bitti → hatıraları göster (Spotify Wrapped paterni)
+                      router.push(`/more/market/recap/${rental.id}` as any);
                       refresh();
                     } else {
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -155,8 +157,12 @@ export default function RentalsScreen() {
               <RentalRow
                 key={r.id}
                 rental={r}
-                badge={r.rating ? `${r.rating}★` : 'Bitti'}
-                badgeColor={C.textMuted}
+                badge={r.rating ? `${r.rating}★` : 'Hatıralar'}
+                badgeColor={r.rating ? '#FFCC00' : C.accent}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  router.push(`/more/market/recap/${r.id}` as any);
+                }}
               />
             ))}
           </Section>
