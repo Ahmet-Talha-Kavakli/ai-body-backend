@@ -205,15 +205,28 @@ export default function ListingManagementScreen() {
         options={{
           title: 'Markette',
           headerRight: () => (
-            <Pressable onPress={onSave} disabled={saving} hitSlop={12}>
-              {saving ? (
-                <ActivityIndicator color={C.accent} />
-              ) : (
-                <Text style={{ fontFamily: font.semibold, fontSize: 16, color: C.accent }}>
-                  {listing ? 'Güncelle' : 'Yayınla'}
-                </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              {listing && (
+                <Pressable
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    router.push(`/more/market/listing/${listing.id}?preview=1` as any);
+                  }}
+                  hitSlop={12}
+                >
+                  <SymbolView name="eye" tintColor={C.textMuted} size={20} />
+                </Pressable>
               )}
-            </Pressable>
+              <Pressable onPress={onSave} disabled={saving} hitSlop={12}>
+                {saving ? (
+                  <ActivityIndicator color={C.accent} />
+                ) : (
+                  <Text style={{ fontFamily: font.semibold, fontSize: 16, color: C.accent }}>
+                    {listing ? 'Güncelle' : 'Yayınla'}
+                  </Text>
+                )}
+              </Pressable>
+            </View>
           ),
         }}
       />

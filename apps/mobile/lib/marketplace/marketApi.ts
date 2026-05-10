@@ -105,8 +105,9 @@ export function useMarketApi() {
   );
 
   const getListing = useCallback(
-    async (id: string): Promise<ListingDetail | null> => {
-      const r = await authFetch(`/api/marketplace/listings/${id}`);
+    async (id: string, opts: { preview?: boolean } = {}): Promise<ListingDetail | null> => {
+      const qs = opts.preview ? '?preview=1' : '';
+      const r = await authFetch(`/api/marketplace/listings/${id}${qs}`);
       if (!r.ok) return null;
       return (await r.json()) as ListingDetail;
     },

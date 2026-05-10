@@ -10,6 +10,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SymbolView } from 'expo-symbols';
 import { useSession } from '@clerk/expo';
 import { C, font } from '../../../lib/theme';
+import { DemandChart } from '../../../components/marketplace/DemandChart';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -34,6 +35,11 @@ interface DashboardData {
       remainingEarnings: number;
     };
     today?: { demos: number; rentals: number; views: number };
+  };
+  demand?: {
+    series: { date: string; rentals: number; views: number }[];
+    last7: { rentals: number; views: number };
+    delta: { rentals: number; views: number };
   };
   listings: any[];
   recentRentals: any[];
@@ -237,6 +243,29 @@ export default function DashboardScreen() {
               </View>
             </View>
           )}
+
+        {/* Talep grafiği — son 30 gün */}
+        {data.demand && (
+          <View style={{ marginHorizontal: 16, marginTop: 12 }}>
+            <Text
+              style={{
+                fontFamily: font.semibold,
+                fontSize: 13,
+                color: C.textMuted,
+                letterSpacing: 0.4,
+                marginBottom: 10,
+                marginLeft: 4,
+              }}
+            >
+              TALEP
+            </Text>
+            <DemandChart
+              series={data.demand.series}
+              last7={data.demand.last7}
+              delta={data.demand.delta}
+            />
+          </View>
+        )}
 
         {/* Listings */}
         {data.listings.length > 0 && (

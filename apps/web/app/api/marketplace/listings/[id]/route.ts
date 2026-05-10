@@ -5,8 +5,9 @@ import { cached } from '@/lib/redis/client'
 
 type Ctx = { params: Promise<{ id: string }> }
 
-export const GET = withAuth<Ctx>(async (_req, { user, params }) => {
+export const GET = withAuth<Ctx>(async (req, { user, params }) => {
   const { id } = await params!
+  const isPreview = new URL(req.url).searchParams.get('preview') === '1'
 
   // Listing + reviews cache (60s)
   const baseData = await cached(`mp:detail:${id}`, 60, async () => {
@@ -99,8 +100,8 @@ export const GET = withAuth<Ctx>(async (_req, { user, params }) => {
     }),
   ])
 
-  // View kaydet — sadece sahip değilse, 24h unique
-  if (!isOwner) {
+  // View kaydet — sadece sahip değilse + preview değilse, 24h unique
+  if (!isOwner && !isPreview) {
     const viewDate = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
     try {
       await db.listingView.create({

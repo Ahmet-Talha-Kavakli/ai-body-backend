@@ -41,7 +41,8 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 export default function ListingDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, preview } = useLocalSearchParams<{ id: string; preview?: string }>();
+  const isPreview = preview === '1';
   const router = useRouter();
   const api = useMarketApi();
   const apiRef = useRef(api);
@@ -76,13 +77,13 @@ export default function ListingDetailScreen() {
   const refresh = useCallback(async () => {
     if (!id) return;
     const [r, sim] = await Promise.all([
-      apiRef.current.getListing(id),
-      apiRef.current.getSimilarListings(id, 6),
+      apiRef.current.getListing(id, { preview: isPreview }),
+      isPreview ? Promise.resolve(null) : apiRef.current.getSimilarListings(id, 6),
     ]);
     if (r) setData(r);
     if (sim) setSimilar(sim.items);
     setLoading(false);
-  }, [id]);
+  }, [id, isPreview]);
 
   useEffect(() => {
     refresh();
@@ -108,14 +109,21 @@ export default function ListingDetailScreen() {
     );
   }
 
+  const previewBlock = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    Alert.alert('Önizleme', 'Bu önizlemede butonlar pasiftir. Yayınlandığında çalışacak.');
+  };
+
   const onDemo = () => {
     if (!id) return;
+    if (isPreview) return previewBlock();
     Haptics.selectionAsync();
     router.push(`/more/market/demo/${id}` as any);
   };
 
   const onRent = (type: RentalType) => {
     if (!id) return;
+    if (isPreview) return previewBlock();
     Alert.alert(
       'Onay',
       type === 'outright_buy'
@@ -150,6 +158,7 @@ export default function ListingDetailScreen() {
 
   const onWishlistToggle = async () => {
     if (!data) return;
+    if (isPreview) return previewBlock();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const r = await apiRef.current.toggleWishlist(data.listing.id);
     if (r) {
@@ -159,6 +168,7 @@ export default function ListingDetailScreen() {
 
   const onGift = () => {
     if (!data) return;
+    if (isPreview) return previewBlock();
     Haptics.selectionAsync();
     giftSheetRef.current?.open({
       listingId: data.listing.id,
@@ -207,35 +217,43 @@ export default function ListingDetailScreen() {
   };
 
   const ch = data.listing.character;
-  const isOwner = data.userState.isOwner;
+  const isOwner = data.userState.isOwner && !isPreview;
   const hasRental = data.userState.hasActiveRental;
 
   return (
     <>
       <Stack.Screen
         options={{
-          title: ch.name,
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-              {!isOwner && (
-                <Pressable onPress={onWishlistToggle} hitSlop={12}>
-                  <SymbolView
-                    name={data.userState.isWishlisted ? 'heart.fill' : 'heart'}
-                    tintColor={data.userState.isWishlisted ? '#FF3B30' : C.textMuted}
-                    size={20}
-                  />
+          title: isPreview ? 'Önizleme' : ch.name,
+          headerRight: isPreview
+            ? () => (
+                <Pressable onPress={() => router.back()} hitSlop={12}>
+                  <Text style={{ fontFamily: font.semibold, fontSize: 16, color: C.accent }}>
+                    Bitti
+                  </Text>
                 </Pressable>
-              )}
-              <Pressable onPress={onShare} hitSlop={12}>
-                <SymbolView name="square.and.arrow.up" tintColor={C.accent} size={18} />
-              </Pressable>
-              {!isOwner && (
-                <Pressable onPress={onReport} hitSlop={12}>
-                  <SymbolView name="flag" tintColor={C.textMuted} size={18} />
-                </Pressable>
-              )}
-            </View>
-          ),
+              )
+            : () => (
+                <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+                  {!isOwner && (
+                    <Pressable onPress={onWishlistToggle} hitSlop={12}>
+                      <SymbolView
+                        name={data.userState.isWishlisted ? 'heart.fill' : 'heart'}
+                        tintColor={data.userState.isWishlisted ? '#FF3B30' : C.textMuted}
+                        size={20}
+                      />
+                    </Pressable>
+                  )}
+                  <Pressable onPress={onShare} hitSlop={12}>
+                    <SymbolView name="square.and.arrow.up" tintColor={C.accent} size={18} />
+                  </Pressable>
+                  {!isOwner && (
+                    <Pressable onPress={onReport} hitSlop={12}>
+                      <SymbolView name="flag" tintColor={C.textMuted} size={18} />
+                    </Pressable>
+                  )}
+                </View>
+              ),
         }}
       />
 
@@ -258,9 +276,38 @@ export default function ListingDetailScreen() {
       </View>
       <ScrollView
         style={{ flex: 1, backgroundColor: C.page }}
-        contentContainerStyle={{ paddingBottom: isOwner ? 40 : 200 }}
+        contentContainerStyle={{ paddingBottom: isPreview ? 40 : isOwner ? 40 : 200 }}
       >
-        {isOwner && (
+        {isPreview && (
+          <View
+            style={{
+              marginHorizontal: 16,
+              marginTop: 12,
+              backgroundColor: '#FFF7E0',
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: '#FFCC00',
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <SymbolView name="eye.fill" tintColor="#B8860B" size={18} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: font.semibold, fontSize: 14, color: '#5C4400' }}>
+                Önizleme
+              </Text>
+              <Text
+                style={{ fontFamily: font.regular, fontSize: 12, color: '#7A5E00', marginTop: 1 }}
+              >
+                Kullanıcılar listing'ini böyle görecek. Butonlar pasif.
+              </Text>
+            </View>
+          </View>
+        )}
+        {!isPreview && isOwner && (
           <>
             <Pressable onPress={() => router.push(`/more/characters/${ch.id}/listing` as any)}>
               {({ pressed }) => (
