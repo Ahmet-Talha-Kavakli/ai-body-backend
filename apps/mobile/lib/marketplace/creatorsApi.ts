@@ -59,6 +59,11 @@ export interface CreatorDashboard {
     totalEarnings: number;
     activeRentals: number;
   };
+  demand: {
+    series: { date: string; rentals: number; views: number }[];
+    last7: { rentals: number; views: number };
+    delta: { rentals: number; views: number };
+  };
   listings: {
     id: string;
     character: {

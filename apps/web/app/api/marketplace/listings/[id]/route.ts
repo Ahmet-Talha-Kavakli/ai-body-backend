@@ -59,12 +59,31 @@ export const GET = withAuth<Ctx>(async (_req, { user, params }) => {
       where: { characterId: listing.characterId, status: 'active' },
     })
 
-    return { listing, reviews, activeRental }
+    const now = new Date()
+    const last7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    const prev7 = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+    const [r7, rPrev, v7, vPrev] = await Promise.all([
+      db.rentalAgreement.count({
+        where: { characterId: listing.characterId, startedAt: { gte: last7 } },
+      }),
+      db.rentalAgreement.count({
+        where: { characterId: listing.characterId, startedAt: { gte: prev7, lt: last7 } },
+      }),
+      db.listingView.count({ where: { listingId: listing.id, createdAt: { gte: last7 } } }),
+      db.listingView.count({
+        where: { listingId: listing.id, createdAt: { gte: prev7, lt: last7 } },
+      }),
+    ])
+    const rentalsUp = r7 >= 3 && r7 > rPrev * 1.3
+    const viewsUp = v7 >= 20 && v7 > vPrev * 1.5
+    const trending = rentalsUp || viewsUp
+
+    return { listing, reviews, activeRental, trending }
   })
 
   if (!baseData) return NextResponse.json({ error: 'Listing bulunamadı' }, { status: 404 })
 
-  const { listing, reviews, activeRental } = baseData
+  const { listing, reviews, activeRental, trending } = baseData
   const isOwner = listing.owner.id === user.id
 
   // User-specific (cache dışı)
@@ -116,6 +135,7 @@ export const GET = withAuth<Ctx>(async (_req, { user, params }) => {
       averageRating: listing.averageRating,
       totalRentals: listing.totalRentals,
       isBoosted: listing.boostUntil ? listing.boostUntil > new Date() : false,
+      trending,
     },
     reviews: reviews.map((r) => ({
       id: r.id,

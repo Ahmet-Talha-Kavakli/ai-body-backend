@@ -421,6 +421,36 @@ export default function ListingDetailScreen() {
               {ch.hometown ? ` · ${ch.hometown}` : ''}
             </Text>
 
+            {data.listing.trending && (
+              <View
+                style={{
+                  alignSelf: 'flex-start',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                  marginTop: 12,
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.28)',
+                }}
+              >
+                <SymbolView name="flame.fill" tintColor="#FF9F0A" size={11} />
+                <Text
+                  style={{
+                    fontFamily: font.semibold,
+                    fontSize: 12,
+                    color: '#FFFFFF',
+                    letterSpacing: -0.1,
+                  }}
+                >
+                  Bu hafta trend
+                </Text>
+              </View>
+            )}
+
             <View style={{ flexDirection: 'row', gap: 18, marginTop: 14 }}>
               {data.listing.averageRating != null && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>

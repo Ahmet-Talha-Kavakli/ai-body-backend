@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { C, font } from '../../../lib/theme';
 import { useCreatorsApi, type CreatorDashboard } from '../../../lib/marketplace/creatorsApi';
 import { BoostSheet, type BoostSheetRef } from '../../../components/marketplace/BoostSheet';
+import { DemandChart } from '../../../components/marketplace/DemandChart';
 
 const TIER_COLOR: Record<string, string> = {
   bronze: '#CD7F32',
@@ -178,6 +179,29 @@ export default function CreatorDashboardScreen() {
               <TodayBlock label="Kira" value={data.summary.today.rentals} icon="cart.fill" />
             </View>
           </View>
+
+          {/* Talep grafiği — son 30 gün */}
+          {data.demand && (
+            <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
+              <Text
+                style={{
+                  fontFamily: font.semibold,
+                  fontSize: 13,
+                  color: C.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5,
+                  marginBottom: 8,
+                }}
+              >
+                Talep
+              </Text>
+              <DemandChart
+                series={data.demand.series}
+                last7={data.demand.last7}
+                delta={data.demand.delta}
+              />
+            </View>
+          )}
 
           {/* Aktif kira */}
           {data.summary.activeRentals > 0 && (
