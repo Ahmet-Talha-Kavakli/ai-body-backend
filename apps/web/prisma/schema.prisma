@@ -6100,6 +6100,7 @@ model MarketplaceListing {
   rentEnabled     Boolean   @default(true)
   boostUntil      DateTime?
   boostTier       String? // '24h' | '7d' | 'sponsored'
+  vipUntil        DateTime? // V4.8 #13 — bu tarihe kadar sadece takipçiler görür (48h early access)
   publishedAt     DateTime?
   averageRating   Float?
   totalRentals    Int       @default(0)
@@ -6115,6 +6116,7 @@ model MarketplaceListing {
   @@index([ownerId])
   @@index([boostUntil])
   @@index([publishedAt])
+  @@index([vipUntil])
 }
 
 // V4.8 Faz E — Wishlist (kullanıcı bir listing'i favoriliyor)

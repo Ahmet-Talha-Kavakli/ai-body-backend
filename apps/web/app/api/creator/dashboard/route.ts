@@ -140,6 +140,7 @@ export const GET = withAuth(async (_req: NextRequest, { user }) => {
         totalViews: l.totalViews,
         averageRating: l.averageRating,
         isBoosted: l.boostUntil ? l.boostUntil > new Date() : false,
+        vipUntil: l.vipUntil ? l.vipUntil.toISOString() : null,
       })),
       recentRentals: recentRentals.map((r) => ({
         id: r.id,

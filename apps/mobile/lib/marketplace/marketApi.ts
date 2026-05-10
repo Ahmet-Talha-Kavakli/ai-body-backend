@@ -38,6 +38,8 @@ export interface MarketListing {
   boostTier: string | null;
   trendingBadge: 'rising' | 'new' | 'loved' | 'rare' | null;
   trending?: boolean;
+  vipUntil?: string | null;
+  isVip?: boolean;
   demo?: { messageCount: number; ended: boolean } | null;
 }
 

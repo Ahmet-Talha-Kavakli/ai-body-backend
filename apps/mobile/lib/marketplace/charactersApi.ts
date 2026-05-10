@@ -234,6 +234,7 @@ export function useCharactersApi() {
         buyEnabled?: boolean;
         rentEnabled?: boolean;
         concurrentLimit?: number;
+        vipEarlyAccess?: boolean;
       },
     ): Promise<{ ok: boolean; error?: string; listing?: any }> => {
       const r = await authFetch(`/api/characters/${characterId}/listing`, {

@@ -46,6 +46,7 @@ export default function ListingManagementScreen() {
   const [rent30d, setRent30d] = useState('');
   const [buyPrice, setBuyPrice] = useState('');
   const [concurrentLimit, setConcurrentLimit] = useState('1');
+  const [vipEarlyAccess, setVipEarlyAccess] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!id) return;
@@ -95,6 +96,9 @@ export default function ListingManagementScreen() {
       if (rent30d) data.rentPrice30d = parseInt(rent30d, 10);
     }
     if (buyEnabled && buyPrice) data.buyPrice = parseInt(buyPrice, 10);
+
+    // V4.8 #13 — VIP early access (sadece ilk yayında, güncellemede pas geçilir)
+    if (!listing && vipEarlyAccess) data.vipEarlyAccess = true;
 
     const result = listing
       ? await apiRef.current.updateListing(id, data)
@@ -382,6 +386,47 @@ export default function ListingManagementScreen() {
             Yüksek limit (10+): popüler karakter, hacim odaklı.
           </Text>
         </Section>
+
+        {/* V4.8 #13 — VIP Early Access (sadece ilk yayın) */}
+        {!listing && (
+          <Section
+            title="VIP Erken Erişim"
+            subtitle="İlk 48 saat sadece takipçilerin görür, sonra herkese açılır"
+          >
+            <ToggleRow
+              label="48 saat takipçilere özel"
+              sublabel="Takipçilerini özel hisset­tirir, takip etmeyi değerli yapar"
+              value={vipEarlyAccess}
+              onChange={setVipEarlyAccess}
+            />
+            {vipEarlyAccess && (
+              <View
+                style={{
+                  marginTop: 12,
+                  padding: 12,
+                  backgroundColor: '#FFF7E0',
+                  borderRadius: 10,
+                  flexDirection: 'row',
+                  gap: 8,
+                  alignItems: 'flex-start',
+                }}
+              >
+                <SymbolView name="crown.fill" tintColor="#B8860B" size={14} />
+                <Text
+                  style={{
+                    flex: 1,
+                    fontFamily: font.regular,
+                    fontSize: 12,
+                    color: '#5C4400',
+                    lineHeight: 18,
+                  }}
+                >
+                  Yayınladıktan 48 saat sonra otomatik olarak herkese açılır.
+                </Text>
+              </View>
+            )}
+          </Section>
+        )}
 
         {/* Komisyon bilgisi */}
         <View

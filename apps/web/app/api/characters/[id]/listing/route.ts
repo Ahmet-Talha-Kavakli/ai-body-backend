@@ -61,6 +61,9 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
   const err = validatePrices(body)
   if (err) return NextResponse.json({ error: err }, { status: 400 })
 
+  // V4.8 #13 — VIP early access (48 saat takipçilere özel)
+  const vipUntil = body.vipEarlyAccess === true ? new Date(Date.now() + 48 * 60 * 60 * 1000) : null
+
   const listing = await db.marketplaceListing.create({
     data: {
       characterId: id,
@@ -72,6 +75,7 @@ export const POST = withAuth<Ctx>(async (req, { user, params }) => {
       buyEnabled: body.buyEnabled ?? false,
       rentEnabled: body.rentEnabled ?? true,
       concurrentLimit: body.concurrentLimit ?? 1,
+      vipUntil,
       publishedAt: new Date(),
     },
   })

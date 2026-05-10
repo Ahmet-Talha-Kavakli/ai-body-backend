@@ -87,6 +87,20 @@ export const GET = withAuth<Ctx>(async (req, { user, params }) => {
   const { listing, reviews, activeRental, trending } = baseData
   const isOwner = listing.owner.id === user.id
 
+  // VIP early access: takipçi değilse + sahip değilse + preview değilse → 403
+  const vipActive = listing.vipUntil && listing.vipUntil > new Date()
+  if (vipActive && !isOwner && !isPreview) {
+    const follow = await db.creatorFollow.findUnique({
+      where: { followerId_creatorId: { followerId: user.id, creatorId: listing.owner.id } },
+    })
+    if (!follow) {
+      return NextResponse.json(
+        { error: 'Bu karakter henüz takipçilere özel. Yaratıcıyı takip et.' },
+        { status: 403 }
+      )
+    }
+  }
+
   // User-specific (cache dışı)
   const [demoSession, ownRental, wishlistEntry] = await Promise.all([
     db.characterDemoSession.findUnique({
@@ -137,6 +151,8 @@ export const GET = withAuth<Ctx>(async (req, { user, params }) => {
       totalRentals: listing.totalRentals,
       isBoosted: listing.boostUntil ? listing.boostUntil > new Date() : false,
       trending,
+      vipUntil: listing.vipUntil ? listing.vipUntil.toISOString() : null,
+      isVip: !!vipActive,
     },
     reviews: reviews.map((r) => ({
       id: r.id,

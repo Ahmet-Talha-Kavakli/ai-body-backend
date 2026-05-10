@@ -318,6 +318,39 @@ export default function DashboardScreen() {
                           {l.totalEarnings} cr
                         </Text>
                       </View>
+                      {l.vipUntil && new Date(l.vipUntil) > new Date() && (
+                        <View
+                          style={{
+                            backgroundColor: '#FFCC0022',
+                            paddingHorizontal: 6,
+                            paddingVertical: 2,
+                            borderRadius: 5,
+                            marginRight: 6,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 3,
+                          }}
+                        >
+                          <SymbolView name="crown.fill" tintColor="#B8860B" size={9} />
+                          <Text
+                            style={{
+                              fontFamily: font.bold,
+                              fontSize: 9,
+                              color: '#B8860B',
+                              letterSpacing: 0.4,
+                            }}
+                          >
+                            VIP{' '}
+                            {Math.max(
+                              0,
+                              Math.ceil(
+                                (new Date(l.vipUntil).getTime() - Date.now()) / (60 * 60 * 1000),
+                              ),
+                            )}
+                            h
+                          </Text>
+                        </View>
+                      )}
                       {l.isBoosted && (
                         <View
                           style={{

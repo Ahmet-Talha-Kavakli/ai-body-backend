@@ -85,13 +85,39 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
         isBoosted: l.boostUntil ? l.boostUntil > new Date() : false,
         boostTier: l.boostTier,
         trendingBadge: computeTrendingBadge(l, sevenDaysAgo),
+        vipUntil: l.vipUntil ? l.vipUntil.toISOString() : null,
+        ownerId: l.ownerId,
       })),
       total,
     }
   })
 
+  // VIP filtreleme — vipUntil > now ve user owner değil ve takipçi değilse listing'i gizle
+  const now = new Date()
+  const vipOwnerIds = Array.from(
+    new Set(
+      (baseData.listings as any[])
+        .filter((l) => l.vipUntil && new Date(l.vipUntil) > now && l.ownerId !== user.id)
+        .map((l) => l.ownerId)
+    )
+  )
+  const followedSet = new Set<string>()
+  if (vipOwnerIds.length > 0) {
+    const follows = await db.creatorFollow.findMany({
+      where: { followerId: user.id, creatorId: { in: vipOwnerIds } },
+      select: { creatorId: true },
+    })
+    follows.forEach((f) => followedSet.add(f.creatorId))
+  }
+  const filteredListings = (baseData.listings as any[]).filter((l) => {
+    if (!l.vipUntil) return true
+    if (new Date(l.vipUntil) <= now) return true
+    if (l.ownerId === user.id) return true
+    return followedSet.has(l.ownerId)
+  })
+
   // Demo durumu user-specific, cache dışı
-  const charIds = baseData.listings.map((l: any) => l.characterId)
+  const charIds = filteredListings.map((l: any) => l.characterId)
   const demoSessions =
     charIds.length > 0
       ? await db.characterDemoSession.findMany({
@@ -102,8 +128,9 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
   const demoMap = new Map(demoSessions.map((d) => [d.characterId, d]))
 
   return NextResponse.json({
-    listings: baseData.listings.map((l: any) => ({
+    listings: filteredListings.map((l: any) => ({
       ...l,
+      isVip: !!l.vipUntil && new Date(l.vipUntil) > now,
       demo: demoMap.get(l.characterId)
         ? {
             messageCount: demoMap.get(l.characterId)!.messageCount,
