@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Easing,
   FlatList,
@@ -36,7 +37,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 import { Swipeable } from 'react-native-gesture-handler';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '@clerk/expo';
+import { useAuth, useUser } from '@clerk/expo';
 import { SymbolView } from 'expo-symbols';
 import * as Haptics from 'expo-haptics';
 import { font, C, API_URL } from '../../../lib/theme';
@@ -296,6 +297,57 @@ export default function SessionsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { getToken } = useAuth();
+  const { user: clerkUser } = useUser();
+  const ADMIN_EMAILS = ['ahmettalhakavakli32@gmail.com', 'atalhakavakli@gmail.com'];
+  const isAdmin =
+    !!clerkUser?.emailAddresses?.[0]?.emailAddress &&
+    ADMIN_EMAILS.includes(clerkUser.emailAddresses[0].emailAddress.toLowerCase());
+  const [seeding, setSeeding] = useState(false);
+
+  const onSeedCharacters = async () => {
+    if (seeding) return;
+    setSeeding(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const token = await getToken();
+      if (!token) {
+        Alert.alert('Hata', 'Token alınamadı');
+        return;
+      }
+      // 1) Jarvis sohbeti garanti
+      await fetch(`${API_URL}/api/assistant/conversations`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // 2) Mia + Kerem + Selin + Ayşe spawn
+      const r = await fetch(`${API_URL}/api/assistant/admin/spawn-character`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ templateKey: 'all' }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        Alert.alert('Hata', data?.error ?? `HTTP ${r.status}`);
+        return;
+      }
+      const spawned = (data?.spawned ?? []) as Array<{ key: string; alreadyExists: boolean }>;
+      const newCount = spawned.filter((s) => !s.alreadyExists).length;
+      Alert.alert(
+        'Hazır',
+        newCount > 0
+          ? `${newCount} yeni karakter eklendi. Jarvis hazır. Sayfa yenilenecek.`
+          : 'Karakterler zaten var. Jarvis hazır. Sayfa yenilenecek.',
+        [{ text: 'Tamam', onPress: () => router.replace('/(tabs)/sessions' as any) }],
+      );
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'Bilinmeyen hata');
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   const [jarvis, setJarvis] = useState<JarvisConv | null>(null);
   const [characters, setCharacters] = useState<CharacterListItem[]>([]);
@@ -440,6 +492,29 @@ export default function SessionsScreen() {
           <Text style={s.title} numberOfLines={1} adjustsFontSizeToFit>
             Sohbetler
           </Text>
+          {isAdmin && (
+            <Pressable
+              onPress={onSeedCharacters}
+              disabled={seeding}
+              hitSlop={12}
+              style={[s.composeBtn, { marginRight: 8, opacity: seeding ? 0.4 : 1 }]}
+            >
+              {seeding ? (
+                <ActivityIndicator color={C.accent} size="small" />
+              ) : (
+                <SymbolView
+                  name="sparkles"
+                  size={20}
+                  tintColor={C.accent}
+                  fallback={
+                    <Text style={{ color: C.accent, fontSize: 18, fontFamily: font.regular }}>
+                      ✨
+                    </Text>
+                  }
+                />
+              )}
+            </Pressable>
+          )}
           {canCreateGroup && (
             <Pressable
               onPress={() => {
