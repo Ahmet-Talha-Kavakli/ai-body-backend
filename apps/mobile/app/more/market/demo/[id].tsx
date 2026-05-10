@@ -197,30 +197,8 @@ export default function DemoChatScreen() {
           }}
         />
 
-        {/* Banner */}
-        <View
-          style={{
-            backgroundColor: C.accentSoft,
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            borderBottomWidth: StyleSheet.hairlineWidth,
-            borderBottomColor: C.hairline,
-          }}
-        >
-          <SymbolView name="info.circle.fill" tintColor={C.accent} size={14} />
-          <Text style={{ flex: 1, fontFamily: font.medium, fontSize: 13, color: C.text }}>
-            Demo modu · {remaining} mesaj kaldı
-          </Text>
-          <Pressable
-            onPress={() => router.replace(`/more/market/listing/${id}` as any)}
-            hitSlop={8}
-          >
-            <Text style={{ fontFamily: font.semibold, fontSize: 13, color: C.accent }}>Kirala</Text>
-          </Pressable>
-        </View>
+        {/* Banner — kalan mesaja göre dramatik tonlama */}
+        <DemoBanner remaining={remaining} onCTAPress={openEndSheet} />
 
         {/* Messages */}
         <FlatList
@@ -300,6 +278,101 @@ export default function DemoChatScreen() {
         }}
       />
     </>
+  );
+}
+
+function DemoBanner({ remaining, onCTAPress }: { remaining: number; onCTAPress: () => void }) {
+  // Kalan mesaj sayısına göre dramatik tonlama
+  const config =
+    remaining === 0
+      ? {
+          bg: '#FF3B3022',
+          accent: '#FF3B30',
+          label: 'Demo bitti',
+          sub: 'Konuşmaya devam etmek için kirala',
+        }
+      : remaining === 1
+        ? { bg: '#FF3B3022', accent: '#FF3B30', label: `Son mesajın`, sub: 'Şimdi karar ver' }
+        : remaining === 2
+          ? {
+              bg: '#FF9F0A22',
+              accent: '#FF9F0A',
+              label: `${remaining} mesaj kaldı`,
+              sub: 'Sona yaklaşıyorsun',
+            }
+          : {
+              bg: C.accentSoft,
+              accent: C.accent,
+              label: `Demo modu`,
+              sub: `${remaining} mesaj kaldı`,
+            };
+
+  return (
+    <View
+      style={{
+        backgroundColor: config.bg,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: C.hairline,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 10,
+            backgroundColor: config.accent,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 10,
+          }}
+        >
+          <SymbolView
+            name={remaining <= 1 ? 'exclamationmark' : 'sparkles'}
+            tintColor="#FFFFFF"
+            size={14}
+          />
+        </View>
+        <View style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
+          <Text
+            numberOfLines={1}
+            style={{
+              fontFamily: font.bold,
+              fontSize: 14,
+              color: config.accent,
+              letterSpacing: -0.2,
+            }}
+          >
+            {config.label}
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={{ fontFamily: font.regular, fontSize: 12, color: C.textMuted, marginTop: 1 }}
+          >
+            {config.sub}
+          </Text>
+        </View>
+        <Pressable
+          onPress={onCTAPress}
+          hitSlop={6}
+          style={{
+            backgroundColor: config.accent,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 12,
+            alignSelf: 'center',
+          }}
+        >
+          <Text
+            style={{ fontFamily: font.bold, fontSize: 13, color: '#FFFFFF', letterSpacing: -0.1 }}
+          >
+            Kirala
+          </Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 

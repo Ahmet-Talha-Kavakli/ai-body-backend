@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-bg font-sans text-ink;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(48, 209, 88, 0.18), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 30%, rgba(127, 240, 154, 0.06), transparent),
+      radial-gradient(ellipse 60% 40% at 20% 60%, rgba(48, 209, 88, 0.05), transparent);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    @apply bg-accent/30 text-ink;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #f5f5f7 0%, #5de87e 50%, #30d158 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass {
+    background: rgba(18, 18, 26, 0.6);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+  }
+
+  .prose-legal {
+    @apply text-[16px] leading-relaxed text-ink-muted;
+  }
+  .prose-legal h2 {
+    @apply mb-4 mt-12 text-[24px] font-bold tracking-tight text-ink sm:text-[28px];
+  }
+  .prose-legal h3 {
+    @apply mb-3 mt-8 text-[18px] font-semibold tracking-tight text-ink sm:text-[20px];
+  }
+  .prose-legal p {
+    @apply mb-5;
+  }
+  .prose-legal ul {
+    @apply mb-6 list-disc space-y-2 pl-6;
+  }
+  .prose-legal a {
+    @apply text-accent transition-colors hover:text-accent-bright;
+  }
+  .prose-legal strong {
+    @apply font-semibold text-ink;
+  }
+
+  .noise {
+    position: relative;
+  }
+
+  .noise::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.02;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.5'/></svg>");
+  }
+}
