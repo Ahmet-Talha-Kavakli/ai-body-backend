@@ -2,16 +2,21 @@
  * V4.8 Faz E — Karakter Avatar Üretici (kullanıcı yaratımı)
  *
  * Kullanıcı kutuya açıklama yazar ("30 yaşında, sakallı, koyu kahve gözlü, mavi tişört, düşünceli bakış"),
- * AI prompt'u iyileştirir, DALL-E 3 portrait üretir, Blob'a kaydeder.
+ * GPT-4o-mini prompt'u iyileştirir, Fal.ai Flux 1.1 Pro Ultra portrait üretir, Blob'a kaydeder.
  *
  * Karakter master avatar'ı set edilir (Character.masterAvatarUrl + avatarUrl).
  */
 
 import OpenAI from 'openai'
+import { fal } from '@fal-ai/client'
 import { put } from '@vercel/blob'
 import { db } from '@/lib/db/client'
 
 const openai = new OpenAI()
+
+if (process.env.FAL_API_KEY) {
+  fal.config({ credentials: process.env.FAL_API_KEY })
+}
 
 const PORTRAIT_PROMPT_PREFIX =
   'A high-quality character portrait illustration. Soft, painted/illustrated style (NOT photorealistic). ' +
@@ -53,26 +58,38 @@ export async function generateCharacterAvatar(
   const refined = await refinePrompt(args.userPrompt, args.characterContext)
   if (!refined) return { ok: false, reason: 'Prompt zenginleştirilemedi' }
 
-  // Adım 2: DALL-E 3 ile portrait üret
-  const imageRes = await openai.images.generate({
-    model: 'dall-e-3',
-    prompt: refined,
-    n: 1,
-    size: '1024x1024',
-    quality: 'standard',
-    style: 'natural',
-  })
-  const tempUrl = imageRes.data?.[0]?.url
-  if (!tempUrl) return { ok: false, reason: 'DALL-E URL alınamadı' }
+  // Adım 2: Fal.ai Flux 1.1 Pro Ultra ile portrait üret
+  if (!process.env.FAL_API_KEY) {
+    return { ok: false, reason: 'FAL_API_KEY tanımlı değil' }
+  }
 
-  // Adım 3: Vercel Blob'a kaydet (DALL-E URL'leri 1 saatte expire)
+  let tempUrl: string
+  try {
+    const result = await fal.subscribe('fal-ai/flux-pro/v1.1-ultra', {
+      input: {
+        prompt: refined,
+        aspect_ratio: '1:1',
+        num_images: 1,
+        output_format: 'jpeg',
+        raw: false,
+      },
+    })
+    // @ts-ignore - FAL types loose
+    tempUrl = result?.data?.images?.[0]?.url
+    if (!tempUrl) return { ok: false, reason: 'Flux URL alınamadı' }
+  } catch (e) {
+    console.error('[generateCharacterAvatar] flux error', e)
+    return { ok: false, reason: `Flux fail: ${e instanceof Error ? e.message : 'unknown'}` }
+  }
+
+  // Adım 3: Vercel Blob'a kaydet
   try {
     const fetched = await fetch(tempUrl)
     if (!fetched.ok) return { ok: false, reason: `Blob fetch fail: ${fetched.status}` }
     const buffer = Buffer.from(await fetched.arrayBuffer())
-    const blob = await put(`marketplace-avatars/${args.characterId}-${Date.now()}.png`, buffer, {
+    const blob = await put(`marketplace-avatars/${args.characterId}-${Date.now()}.jpg`, buffer, {
       access: 'public',
-      contentType: 'image/png',
+      contentType: 'image/jpeg',
     })
 
     // Adım 4: Character'a yaz
@@ -106,7 +123,7 @@ async function refinePrompt(
   userPrompt: string,
   ctx: AvatarGenerateArgs['characterContext']
 ): Promise<string | null> {
-  const systemMsg = `Sen DALL-E 3 prompt mühendisisin. Kullanıcının ham karakter açıklamasını al, DALL-E için zengin İngilizce portrait prompt'u üret.
+  const systemMsg = `Sen Flux Pro prompt mühendisisin. Kullanıcının ham karakter açıklamasını al, Flux için zengin İngilizce portrait prompt'u üret.
 
 Kurallar:
 - BASE prefix kullanılacak (sen YAZMAYACAKSIN), sen sadece karakter detaylarını üret.
@@ -128,7 +145,7 @@ Kurallar:
 Kullanıcının görsel açıklaması:
 "${userPrompt}"
 
-Bu detayları DALL-E için zenginleştirilmiş İngilizce prompt'a çevir.`
+Bu detayları Flux için zenginleştirilmiş İngilizce prompt'a çevir.`
 
   try {
     const completion = await openai.chat.completions.create({
