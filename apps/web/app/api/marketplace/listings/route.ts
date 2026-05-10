@@ -93,6 +93,15 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
   })
 
   // VIP filtreleme — vipUntil > now ve user owner değil ve takipçi değilse listing'i gizle
+  // Admin/test hesabı (ENV: MARKET_ADMIN_EMAILS comma-separated) bypass eder
+  const adminEmails = (
+    process.env.MARKET_ADMIN_EMAILS ?? 'ahmettalhakavakli32@gmail.com,atalhakavakli@gmail.com'
+  )
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+  const isAdminViewer = !!user.email && adminEmails.includes(user.email.toLowerCase())
+
   const now = new Date()
   const vipOwnerIds = Array.from(
     new Set(
@@ -102,7 +111,7 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
     )
   )
   const followedSet = new Set<string>()
-  if (vipOwnerIds.length > 0) {
+  if (vipOwnerIds.length > 0 && !isAdminViewer) {
     const follows = await db.creatorFollow.findMany({
       where: { followerId: user.id, creatorId: { in: vipOwnerIds } },
       select: { creatorId: true },
@@ -110,6 +119,7 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
     follows.forEach((f) => followedSet.add(f.creatorId))
   }
   const filteredListings = (baseData.listings as any[]).filter((l) => {
+    if (isAdminViewer) return true
     if (!l.vipUntil) return true
     if (new Date(l.vipUntil) <= now) return true
     if (l.ownerId === user.id) return true

@@ -88,8 +88,17 @@ export const GET = withAuth<Ctx>(async (req, { user, params }) => {
   const isOwner = listing.owner.id === user.id
 
   // VIP early access: takipçi değilse + sahip değilse + preview değilse → 403
+  // Admin/test hesabı bypass eder
+  const adminEmails = (
+    process.env.MARKET_ADMIN_EMAILS ?? 'ahmettalhakavakli32@gmail.com,atalhakavakli@gmail.com'
+  )
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+  const isAdminViewer = !!user.email && adminEmails.includes(user.email.toLowerCase())
+
   const vipActive = listing.vipUntil && listing.vipUntil > new Date()
-  if (vipActive && !isOwner && !isPreview) {
+  if (vipActive && !isOwner && !isPreview && !isAdminViewer) {
     const follow = await db.creatorFollow.findUnique({
       where: { followerId_creatorId: { followerId: user.id, creatorId: listing.owner.id } },
     })
